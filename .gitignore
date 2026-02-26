@@ -1,0 +1,23 @@
+# Environments
+.env
+.env.*
+!.env.example
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Node
+node_modules/
+
+# OS Files
+.DS_Store
+Thumbs.db
