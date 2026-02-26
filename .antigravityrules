@@ -1,0 +1,10 @@
+# DebateMeBro
+A full-stack application using FastAPI and Next.js for AI-Powered Structured Debates.
+
+## Tech Stack
+- Frontend: Next.js 15+ (App Router), React, TailwindCSS, Zustand
+- Backend: FastAPI (Python), LangGraph
+- Database: PostgreSQL 16+ with pgvector
+- Cache: Redis
+
+Please refer to the Docs/ directory for full PRD and setup details.
