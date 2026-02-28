@@ -39,11 +39,13 @@ Someone trying to form an informed opinion on a policy issue. They want to see t
 *As a frustrated thinker, I want to pick from a curated list of debate topics and watch two AI agents argue both sides in real time, so I can immediately see what genuine intellectual engagement looks like.*
 
 Acceptance Criteria:
-- [ ] Landing page displays 3 preset debate topics with brief descriptions
+- [ ] Landing page displays 3+ preset debate topics with brief descriptions
 - [ ] Clicking a topic launches a debate with pre-loaded research for both sides
-- [ ] Two AI agents debate using the 5-phase structure: Research Summary → Opening Arguments → Rebuttals → Closing Statements → Judging
+- [ ] Both AI agents receive the FULL research (Pro + Con) so they can anticipate opponent arguments
+- [ ] Debate follows the full pipeline: Research Consultation → Opening Arguments → [Evaluation] → Rebuttals → [Evaluation] → Closing Statements → Judging
 - [ ] Arguments stream token-by-token in a split-screen view (Pro left, Con right)
 - [ ] Each argument includes inline citations referencing the pre-loaded research
+- [ ] Internal evaluation phases show transition messages to the user (e.g., "Agents evaluating opposing arguments...")
 - [ ] Debate completes and transitions to the judging phase
 
 **US-2: Live Debate Streaming**  
@@ -82,13 +84,15 @@ Acceptance Criteria:
 *As a frustrated thinker, I want to debate a topic of my choice by uploading research I've gathered, so I'm not limited to the preset topics.*
 
 Acceptance Criteria:
-- [ ] User enters a custom debate topic
-- [ ] System generates a high-quality research prompt tailored for the topic, with separate Pro and Con research directions
-- [ ] User can copy the prompt to use with their preferred AI research tool (Claude Research, OpenAI Deep Research, etc.)
+- [ ] User enters a custom debate resolution
+- [ ] User can optionally add specific lines of argumentation they want either or both sides to explore — these are additive (must be included) but not restrictive (the system and research should also pursue any other strong arguments independently)
+- [ ] System generates argument dimensions, key values/frameworks for each side, and two optimized research prompts (Pro + Con)
+- [ ] Research prompts instruct for comprehensive, balanced evidence gathering — not cherry-picking
+- [ ] User can copy the prompts to use with their preferred AI research tool
 - [ ] User can upload the resulting research documents (text/PDF) for Pro and Con sides
-- [ ] Uploaded research is parsed, chunked, and made available to both debate agents
-- [ ] Debate proceeds using the uploaded research as the evidence base
-- [ ] Both agents have access to all uploaded research (shared evidence pool)
+- [ ] Uploaded research is parsed into a structured format the debate agents can reference
+- [ ] Both agents receive ALL uploaded research (shared evidence pool)
+- [ ] Debate proceeds using the uploaded research following the same pipeline as preset topics
 
 **US-6: AI Judging Panel**  
 *As an educator, I want a panel of AI judges to score both sides on a transparent rubric with visible reasoning, so I can use the scores as a teaching tool for what makes arguments strong or weak.*
@@ -128,7 +132,7 @@ Acceptance Criteria:
 - [ ] Winner determined by largest net opinion shift
 - [ ] Visual showing how opinions shifted
 
-**US-10: Automated Research Pipeline**  
+**US-11: Automated Research Pipeline**  
 *As a user, I want the system to automatically research any topic I enter without me needing to supply external research, so I can get a fully automated debate experience.*
 
 Acceptance Criteria:
@@ -151,52 +155,94 @@ Acceptance Criteria:
 
 ## 4. Research Strategy: Three-Tier Approach
 
-The research phase is architecturally decoupled from the debate engine. The debate agents consume structured evidence documents regardless of how they were produced. This enables a phased rollout:
+The research phase is architecturally decoupled from the debate engine. The debate agents consume structured evidence documents regardless of how they were produced. This enables a phased rollout.
 
-### Tier 1: Pre-Loaded Research (Sprint 1 — MVP)
-The platform ships with 3 curated debate topics, each with pre-researched evidence documents for both sides. These documents are generated once during development using high-quality AI research tools (Claude Research Mode or OpenAI Deep Research) and stored as structured files. This eliminates all research API costs at runtime and guarantees high-quality evidence for the demo experience.
+**Critical design decision: Both sides see ALL research.** Unlike some debate platform designs that restrict each side to its own evidence pool, DebateMeBro gives both agents access to the complete body of research for both Pro and Con. This mirrors real competitive debate, where both teams research the same topic. The skill is in argumentation — selecting, framing, and deploying evidence persuasively — not in information asymmetry. This also produces better debates: agents can anticipate opponent attack vectors and prepare stronger rebuttals.
+
+### Tier 1: Pre-Loaded Research (Sprint 1 — Must Have)
+The platform ships with 3+ curated debate topics, each with pre-researched evidence documents. These documents are generated once during development using high-quality AI research tools (Claude Research Mode or ChatGPT Deep Research) and stored as structured files. This eliminates all research API costs at runtime and guarantees high-quality evidence for the demo experience.
 
 **Preset Topics (initial set):**
 1. "Should the United States adopt universal healthcare?"
 2. "Is remote work better than in-office work for knowledge workers?"
 3. "Should AI-generated art be eligible for copyright protection?"
 
-Each topic includes: a Pro research document (8-15 pages of sourced evidence), a Con research document (8-15 pages of sourced evidence), pre-generated position statements and argument dimensions.
+**How research is conducted (during development, not at runtime):**
+For each topic, we run two separate research sessions using an AI research tool:
+- **Pro research session:** Comprehensive research on arguments, evidence, and sources supporting the Pro position
+- **Con research session:** Comprehensive research on arguments, evidence, and sources supporting the Con position
 
-### Tier 2: User-Supplied Research via Prompt Generation (Sprint 2)
+**Research approach — data-first, not conclusion-first:** The research prompts should NOT cherry-pick data to support a predetermined argument. Instead, the prompt should ask the research tool to survey the full landscape of evidence on each side — including the strongest and weakest points, common counterarguments, and areas of genuine uncertainty. The debate agents then construct their arguments from this honest evidence base. This produces better debates because agents must work with real evidence rather than curated talking points.
+
+**Each topic includes:**
+- A Pro research document (8-15 pages with sourced evidence, key claims, and cited sources)
+- A Con research document (8-15 pages with sourced evidence, key claims, and cited sources)
+- Pre-generated position statements and 3-5 argument dimensions
+
+**How agents consume research:** Both debate agents receive the FULL research (Pro + Con) as context. The system prompt instructs each agent to prioritize evidence that supports its assigned position while also understanding the opponent's evidence base in order to anticipate and counter their arguments. The research documents should be structured with clear sections, source citations, and key claims so that agents can efficiently locate and reference relevant evidence.
+
+### Tier 2: User-Supplied Research via Prompt Generation (Sprint 2 — Should Have)
 For custom topics, the system generates a tailored research prompt that the user can take to any AI research tool. The workflow:
-1. User enters a custom topic
-2. System analyzes the topic (Claude Haiku) and generates argument dimensions
+1. User enters a custom debate resolution
+2. System analyzes the topic (Claude Haiku) and generates argument dimensions and key values/frameworks for each side
 3. System produces two optimized research prompts — one for Pro evidence, one for Con evidence
-4. User runs these prompts in their preferred research tool (Claude Research, OpenAI Deep Research, Perplexity, etc.)
-5. User uploads the resulting research documents to the platform
-6. System parses and chunks the uploaded research
-7. Debate agents use the uploaded evidence as their shared knowledge base
+4. Each prompt includes: the resolution, argument dimensions, suggested values, output format requirements (structured Markdown with hyperlinked sources), and instructions to find deep, well-sourced advocacy evidence
+5. User runs these prompts in their preferred research tool (Claude Research, ChatGPT Deep Research, Perplexity, etc.)
+6. User uploads the resulting research documents to the platform
+7. System parses the uploaded research into a structured format
+8. Debate proceeds with both agents having access to all uploaded research
 
-This approach leverages the user's existing AI tool subscriptions, produces higher-quality research than a budget pipeline, and costs the platform nothing in API fees for the research phase.
+**Could Have enhancement:** Users can optionally supply specific argumentation lines or values they want explored (see US-9). These are additive — the system includes them but still pursues all other strong arguments independently.
 
-### Tier 3: Automated Research Pipeline (Future Enhancement)
-A fully automated pipeline using Tavily search + Claude Haiku classification (budget tier) or Claude Web Search (standard tier). This is architecturally designed but not implemented in P2. The evidence format consumed by the debate agents is identical across all three tiers, so adding automated research later requires no changes to the debate engine.
+This approach leverages the user's existing AI tool subscriptions, produces higher-quality research than a budget pipeline, and costs the platform nothing in API fees.
+
+### Tier 3: Automated Research Pipeline (Future — Could Have)
+A fully automated pipeline using Tavily search + Claude Haiku classification (budget tier) or Claude Web Search (standard tier). This is architecturally designed but likely not implemented within the P2 timeline. The evidence format consumed by the debate agents is identical across all three tiers, so adding automated research later requires no changes to the debate engine.
 
 ---
 
 ## 5. Debate Structure
 
-Every debate follows a five-phase structure. Each phase has a distinct purpose and the agents' prompts are tailored accordingly.
+Every debate follows a structured pipeline. The agents' prompts are tailored to each phase, and each phase builds on the outputs of the previous one.
 
-### Phase 1: Research Display
-The system shows what evidence is available to the agents. For preset topics, this displays a summary of the pre-loaded research. For custom topics, this shows the parsed content from user-uploaded documents.
+### Phase 1: Research Consultation
+Both agents receive the FULL body of research (Pro + Con documents). Each agent's system prompt instructs it to:
+- Read and internalize all available evidence
+- Identify the strongest arguments and evidence supporting its assigned position
+- Identify the opponent's likely strongest arguments and evidence
+- Anticipate the opponent's attack vectors and prepare counter-strategies
+- Note areas of genuine uncertainty or weakness in its own position
+
+This phase is internal (no output streamed to the user). The user sees a summary of what evidence is available.
 
 ### Phase 2: Opening Arguments
-Each agent delivers a comprehensive opening statement presenting its case. The Pro agent goes first. The system prompt instructs each agent to: present their core thesis with supporting evidence, cite sources from the research documents, structure the argument logically with clear claims and warrants. Neither agent has seen the other's opening at this point.
+Each agent delivers a comprehensive opening statement presenting its case. The Pro agent goes first. The system prompt instructs each agent to:
+- Present their core thesis with supporting evidence from the research
+- Cite specific sources from the research documents
+- Structure the argument logically with clear claims and warrants
+- Neither agent has seen the other's opening at this point
 
-### Phase 3: Rebuttals
-Each agent receives the opponent's opening argument and constructs a targeted rebuttal. The system prompt requires agents to: explicitly steelman the opponent's strongest point before responding, address specific claims rather than general positions, introduce new evidence not used in the opening, identify the weakest element of the opponent's case.
+### Phase 3: Evaluation of Opposing Opening (internal)
+Each agent receives the opponent's opening argument. This is an internal reasoning step — the agent reads and analyzes the opponent's case before writing a rebuttal. No output is streamed. The user sees a transition message: "Agents are evaluating each other's opening arguments..."
 
-### Phase 4: Closing Statements
-Each agent delivers a final synthesis considering all previous arguments. The system prompt requires agents to: acknowledge where the opponent made strong points, identify where the debate narrowed and where genuine disagreement remains, make a final case for why their position is stronger overall, avoid simply restating earlier arguments.
+### Phase 4: Rebuttals
+Each agent constructs a targeted rebuttal. The system prompt requires agents to:
+- Explicitly steelman the opponent's strongest point before responding
+- Address specific claims from the opponent's opening rather than general positions
+- Introduce evidence not used in the opening (from the shared research pool)
+- Identify the weakest element of the opponent's case and attack it
 
-### Phase 5: Judging
+### Phase 5: Evaluation of Full Debate (internal)
+Each agent receives the complete debate so far (both openings + both rebuttals). Again internal — the agent reflects on all arguments before writing its closing. Transition message: "Agents are considering all arguments before closing statements..."
+
+### Phase 6: Closing Statements
+Each agent delivers a final synthesis. The system prompt requires agents to:
+- Acknowledge where the opponent made genuinely strong points
+- Identify where the debate narrowed and where real disagreement remains
+- Make a final case for why their position is stronger overall
+- Avoid simply restating earlier arguments — synthesize and conclude
+
+### Phase 7: Judging
 Three AI judges evaluate the complete debate transcript on a four-criterion rubric. Each judgment is run twice with position-swapped evaluation. Results are displayed with expandable reasoning.
 
 ---
@@ -264,27 +310,30 @@ The following features are part of the long-term vision but explicitly excluded 
 ### Evidence Flow
 ```
 PRESET TOPICS:
-  Pre-researched docs (stored as files) → Loaded into agent context → Debate
+  Pre-researched docs (Pro + Con, stored as files)
+    → Both loaded into BOTH agents' context → Debate
 
 CUSTOM TOPICS (Sprint 2):
-  User enters topic
-    → Topic Analysis (Claude Haiku) → Argument dimensions
-    → Research Prompt Generator → Two optimized prompts (Pro + Con)
+  User enters resolution + optional argumentation lines
+    → Topic Analysis (Claude Haiku) → Argument dimensions + values/frameworks
+    → Research Prompt Generator → Two prompts (Pro + Con, balanced not cherry-picked)
     → User runs prompts externally → Uploads results
-    → Parser extracts text → Loaded into agent context → Debate
+    → Parser extracts structured text → Both loaded into BOTH agents' context → Debate
 ```
 
 ### Debate State Machine (LangGraph)
 ```
-topic_selection
-  → research_display
-    → opening_pro → opening_con
-      → [agents evaluate opponent's opening]
-        → rebuttal_pro → rebuttal_con
-          → [agents consider all arguments]
-            → closing_pro → closing_con
-              → judging (3 judges × 2 orderings)
-                → complete
+research_consultation (internal — both agents read all evidence)
+  → opening_pro (streamed)
+    → opening_con (streamed)
+      → evaluation_of_openings (internal — agents analyze opponent's case)
+        → rebuttal_pro (streamed)
+          → rebuttal_con (streamed)
+            → evaluation_of_full_debate (internal — agents reflect on everything)
+              → closing_pro (streamed)
+                → closing_con (streamed)
+                  → judging (3 judges × 2 orderings)
+                    → complete
 ```
 
 ### Project Structure
