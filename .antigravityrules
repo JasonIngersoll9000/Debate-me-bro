@@ -1,3 +1,266 @@
+# DebateMeBro — Workspace Rules
+
+> **Purpose:** This file gives AI coding assistants (Claude, Cursor, etc.) a single, well-commented place to learn how to work on the DebateMeBro project. It summarizes project context, PRD & design references, workflow instructions, and Do's/Don'ts.  
+> For more detailed per-area rules, see `.agent/rules/*.md`.
+
+---
+
+## 1. Project Context
+
+### 1.1 Tech Stack and Versions
+
+- **Frontend**
+  - Next.js 15+ (App Router), React, TypeScript.
+  - TailwindCSS for styling and layout.
+  - Zustand for client-side state.
+  - See `frontend/package.json` for exact versions.
+
+- **Backend**
+  - FastAPI (Python) for HTTP API.
+  - LangGraph for debate state machine orchestration.
+  - SQLAlchemy + Alembic for ORM/migrations.
+  - PostgreSQL 16+ with pgvector.
+  - Redis for caching / SSE fan-out / session state.
+  - Anthropic APIs (Claude Haiku + Claude Sonnet) for topic analysis, debate, and judging.
+  - See `backend/requirements.txt` for library versions.
+
+> **AI Reminder:** Before suggesting major architectural changes or new dependencies, check the Tech Stack section in `Docs/debatemebro-prd.md` and keep proposals consistent unless there is a very strong reason to diverge.
+
+### 1.2 Architecture Overview (Folders & Key Patterns)
+
+High-level structure (see `Docs/file_tree.md` for full details):
+
+- `backend/`
+  - `app/main.py`: FastAPI entry point; route registration, CORS, app lifespan.
+  - `app/models/`: Pydantic schemas (`debate.py`, `research.py`, `judging.py`).
+  - `app/debate/`: Core debate orchestration (`graph.py`, `agents.py`, `evidence.py`).
+  - `app/judging/`: AI judging panel (panel orchestration, rubric, position swap).
+  - `app/topics/`: Topic analysis, research prompt generation, preset topics.
+  - `app/routes/`: Thin FastAPI routers (`debates`, `topics`, `research`, `votes`, `auth`).
+  - `app/db/`: DB engine, tables, migrations.
+  - `evidence/`: Pre-loaded research docs for preset topics.
+  - `tests/`: Backend unit + integration tests.
+
+- `frontend/`
+  - `app/`: Next.js App Router pages (`page.tsx`, `debates/*`, `dashboard/page.tsx`).
+  - `components/`: UI components grouped by domain (`debate`, `topics`, `judging`, `shared`).
+  - `lib/`: API client, SSE handling, Zustand store.
+  - `tests/`: Component tests and e2e tests (preset debate flow).
+
+- `Docs/` or `docs/`
+  - `Docs/debatemebro-prd.md` / `docs/PRD.md`: Product Requirements Document v2.
+  - `Docs/Github_Issues.md`: Canonical definition of GitHub Issues and acceptance criteria.
+  - `Docs/file_tree.md`: Target file/folder structure (this README reflects its intent).
+  - `Docs/debatemebro-mockup.tsx` / `docs/mockup-screenshots/`: High-fidelity UI mockups.
+
+> **Pattern:** Three-layer architecture (PRD §9): Presentation (Next.js) → Orchestration (FastAPI + LangGraph) → Intelligence (Claude). Evidence is decoupled from debate logic: debate agents consume structured documents regardless of how they were produced.
+
+### 1.3 Naming Conventions and Coding Standards
+
+- **General**
+  - Use clear, descriptive names (avoid cryptic abbreviations).
+  - Keep modules/components focused; avoid “god files”.
+
+- **Frontend (TypeScript + React)**
+  - Components: `PascalCase` (`DebateView`, `ScoreCard`).
+  - Hooks: `useXxx` (`useDebateStore`).
+  - Filenames:
+    - Components: `ComponentName.tsx`.
+    - Utilities/hooks: `useThing.ts`, `thingUtils.ts`.
+  - Prefer functional components + hooks; no class components.
+  - Use TailwindCSS for styling; don’t mix in ad-hoc inline styles unless necessary.
+
+- **Backend (Python)**
+  - Modules: `snake_case.py`.
+  - Classes: `PascalCase` (`DebateState`, `JudgeScore`).
+  - Functions/variables: `snake_case`.
+  - FastAPI routes stay thin; push business logic into `debate/`, `judging/`, `topics/`, `db/`.
+
+> **More detail:** See `.agent/rules/project-context.md` (overall) and `.agent/rules/dos-and-donts.md` (guardrails). If a choice is ambiguous, favor consistency with existing code in the same folder.
+
+### 1.4 Testing Strategy (Frameworks, Patterns, Coverage)
+
+- **Goal:** Maintain **≥ 80% test coverage** across unit, integration, and e2e tests (see PRD §6).
+
+- **Backend**
+  - Framework: `pytest`.
+  - Layout:
+    - `backend/app/tests/unit/`: model validation, debate/judging logic, evidence parsing.
+    - `backend/app/tests/integration/`: end-to-end API flows (debates, auth, SSE, votes) with mocked external services.
+  - Patterns:
+    - Use fixtures in `tests/conftest.py` for DB/session and Anthropic mocks.
+    - Unit tests mock network I/O; integration tests test orchestration with realistic wiring.
+
+- **Frontend**
+  - Component tests:
+    - Use React Testing Library + modern runner (Jest/Vitest) under `frontend/tests/components/`.
+  - E2E tests:
+    - Use Playwright (or similar) under `frontend/tests/e2e/` for preset debate flows (topic selection → streaming → judging → voting).
+
+- **General**
+  - Every user-facing behavior change should be accompanied by at least one relevant test.
+  - Derive test cases from:
+    - PRD user stories (US-1 … US-8).
+    - Acceptance criteria in `Docs/Github_Issues.md`.
+
+---
+
+## 2. PRD & Design References
+
+> **Rule:** For any significant UI, debate-flow, or API change, **read the PRD, the relevant Issue(s), and the mockup before coding.**
+
+### 2.1 Primary Documents
+
+- **PRD** — `Docs/debatemebro-prd.md`
+  - Problem statement, target users, user stories (US-1..US-10).
+  - Debate structure (5 phases) and judging rubric.
+  - Tech stack and architecture overview.
+
+- **GitHub Issues Spec** — `Docs/Github_Issues.md`
+  - Defines Issues #1–#15, labels, milestones, and acceptance criteria.
+  - Provides concrete expectations for each feature.
+
+- **Mockups / Prototypes**
+  - High-fidelity React prototype: `Docs/debatemebro-mockup.tsx`.
+  - Screenshot folder (if present): `docs/mockup-screenshots/`.
+
+### 2.2 Key Screens & Behavior
+
+- **Landing Page**
+  - PRD: US-1 (Preset Topic Debate), US-2 (Live Debate Streaming).
+  - Issue: #8 "Frontend — Landing page with preset topics".
+  - Expect:
+    - App title + tagline ("See Both Sides. For Real.").
+    - Topic input with enter-to-start behavior.
+    - 3 preset topics below the input.
+    - “How it works” section: 🔍 Research → 📖 Opening → ⚔️ Rebuttal → 🏁 Closing → 📊 Judging.
+    - Styling aligned with the dark, gradient-heavy mockup.
+
+- **Live Debate View & Judging**
+  - PRD: User stories US-2, US-6, US-7; Debate Structure §5.
+  - Issues: #9 (live debate view), #10/#13/#14 (judging + voting).
+  - Expect:
+    - Split-screen Pro (left, blue) vs Con (right, red) layout.
+    - Phase nav with clickable completed phases.
+    - Streaming text animation and inline citation badges.
+    - Judging panel with rubric scores, judge reasoning, and human vote controls.
+
+### 2.3 Required Flows
+
+Assistants must preserve these core flows unless the PRD explicitly changes:
+
+- **Preset Topic Flow (Sprint 1)**
+  1. User selects preset topic on landing page.
+  2. Backend launches debate and returns an ID.
+  3. Frontend navigates to `/debates/[id]` and streams the 5-phase debate.
+  4. After debating, judges score and user may vote.
+
+- **Custom Topic + User Research (Sprint 2)**
+  1. User enters custom topic and gets Pro/Con research prompts.
+  2. User runs prompts in external AI tools and uploads research documents.
+  3. Debate agents consume uploaded evidence via the same evidence pipeline.
+
+> For more detailed guidance on how to use these references, see `.agent/rules/prd-and-design.md`.
+
+---
+
+## 3. Scrum & Workflow Instructions
+
+### 3.1 Work Items
+
+- Issues defined in `Docs/Github_Issues.md` are the **single source of truth** for what needs to be built.
+- Sprint 1: Issues #1–#10.  
+  Sprint 2: Issues #11–#15.
+- Project board columns: **Backlog | Sprint Todo | In Progress | In Review | Done**.
+
+### 3.2 Branch Naming
+
+Branches should encode type, issue, and a short description:
+
+- `feature/<issue-number>-<short-description>`
+- `chore/<issue-number>-<short-description>`
+- `bugfix/<issue-number>-<short-description>`
+
+Examples:
+
+- `feature/8-frontend-landing-page`
+- `feature/9-live-debate-view`
+- `chore/1-scaffolding-and-docker-compose`
+
+### 3.3 Commit Messages
+
+Use a conventional style with scope and issue number:
+
+`<type>(<scope>): <short description> (#<issue-number>)`
+
+- Types: `feat`, `fix`, `chore`, `docs`, `test`.
+- Scopes: `frontend`, `backend`, `db`, `docs`, `infra`, etc.
+
+Examples:
+
+- `feat(frontend): implement landing page preset topics (#8)`
+- `fix(backend): correct debate phase transition state updates (#5)`
+
+### 3.4 Pull Requests & Issue References
+
+- PR titles should reference the primary issue:
+  - `feat: Frontend landing page with preset topics (#8)`
+- PR body should:
+  - Link issues with `Closes #<issue>` / `Refs #<issue>`.
+  - Describe what changed (high level) and why, tying back to PRD and acceptance criteria.
+  - List tests added/updated.
+- Commits and PRs should stay **scoped to a single primary issue** whenever possible.
+
+> See `.agent/rules/scrum-workflow.md` for a more detailed workflow narrative.
+
+---
+
+## 4. Do's and Don'ts (Patterns, Dependencies, Security, Accessibility)
+
+### 4.1 General
+
+- **DO**
+  - Read PRD + relevant issues before major changes.
+  - Keep to the three-layer architecture and LangGraph-based debate orchestration.
+  - Add or update tests when behavior changes.
+- **DON'T**
+  - Implement major features that are not represented in the PRD/issues.
+  - Bypass the debate state machine with ad-hoc logic.
+
+### 4.2 Frontend
+
+- **DO**
+  - Use Next.js App Router, React, TypeScript, TailwindCSS, and Zustand.
+  - Reuse existing components under `frontend/components/**`.
+  - Follow the dark-theme + gradient styling from the mockup.
+  - Consider accessibility (keyboard navigation, semantics, color contrast).
+- **DON'T**
+  - Introduce new UI frameworks or global state libraries without explicit PRD/issue approval.
+  - Hard-code secrets or endpoints into UI code.
+
+### 4.3 Backend
+
+- **DO**
+  - Keep FastAPI routes thin; delegate to `debate/`, `judging/`, `topics/`, and `db/`.
+  - Centralize AI provider calls and configuration.
+  - Use SQLAlchemy + Alembic for DB schema evolution.
+- **DON'T**
+  - Store plaintext passwords or sensitive tokens.
+  - Expose raw error traces or secrets in API responses.
+
+### 4.4 Security & Accessibility
+
+- **Security**
+  - Hash passwords with passlib bcrypt; never store them in plaintext.
+  - Use JWT-based auth and validate tokens on protected routes.
+  - Load secrets from environment variables / config, not from source.
+
+- **Accessibility**
+  - Ensure important flows are keyboard-accessible and screen-reader friendly.
+  - Avoid relying solely on color; always pair with labels/icons/text.
+
+> For more detailed guardrails, see `.agent/rules/dos-and-donts.md`.
+
 # DebateMeBro
 A full-stack application using FastAPI and Next.js for AI-Powered Structured Debates.
 
