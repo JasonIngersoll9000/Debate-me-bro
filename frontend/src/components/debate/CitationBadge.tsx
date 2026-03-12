@@ -8,11 +8,19 @@ interface Props {
   onClick: () => void;
 }
 
+/** Allow only http/https URLs to prevent javascript:/data: XSS. */
+function sanitizeCitationUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? url : "#";
+  } catch {
+    return "#";
+  }
+}
+
 export function CitationBadge({ citationId, citations, isExpanded, onClick }: Props) {
   const citation = citations.find(c => c.id === citationId) || { id: citationId, url: "#" };
-
-  // Only allow http/https URLs to prevent javascript: and data: injection
-  const safeUrl = citation.url && /^https?:\/\//i.test(citation.url) ? citation.url : null;
+  const safeUrl = citation.url ? sanitizeCitationUrl(citation.url) : "#";
   
   return (
     <span className="inline-block relative mx-1 align-baseline z-30">
@@ -28,7 +36,7 @@ export function CitationBadge({ citationId, citations, isExpanded, onClick }: Pr
         {citation.id.length > 30 ? citation.id.slice(0, 30) + "..." : citation.id}
       </button>
       
-      {isExpanded && safeUrl && (
+      {isExpanded && safeUrl !== "#" && (
         <span className="absolute left-1/2 -translate-x-1/2 bottom-full mb-3 w-72 p-4 bg-slate-900/95 backdrop-blur-xl border border-emerald-500/40 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.5)] z-50 animate-in fade-in zoom-in duration-200">
           <span className="block font-bold text-emerald-400 text-sm mb-2 break-words text-center">
             <a href={safeUrl} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-300 transition-colors underline decoration-emerald-500/30 underline-offset-4">
