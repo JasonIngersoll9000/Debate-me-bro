@@ -4,7 +4,7 @@ sqlalchemy
 asyncpg
 pydantic-settings
 passlib
-bcrypt
+bcrypt==3.2.2
 python-jose[cryptography]
 alembic
 langgraph
@@ -14,3 +14,6 @@ pgvector
 psycopg2-binary
 pytest
 email-validator
+python-multipart
+httpx
+pytest-asyncio
