@@ -126,14 +126,39 @@ async def stream_debate_events(
                                 break
                     else:
                         try:
-                            text = (
-                                getattr(output, "content", None)
-                                or str(output)
+                            content = getattr(
+                                output, "content", None
                             )
+                            if isinstance(content, str):
+                                text = content
+                            elif content is not None:
+                                # Non-string 'content' attribute; ignore.
+                                logger.warning(
+                                    "Unexpected non-string "
+                                    "content attr: %r",
+                                    type(content),
+                                )
+                                text = ""
+                            elif isinstance(output, str):
+                                # Allow direct string output.
+                                text = output
+                            else:
+                                # Don't stringify arbitrary objects.
+                                logger.warning(
+                                    "Unexpected output "
+                                    "type %r; ignoring",
+                                    type(output),
+                                )
+                                text = ""
                         except Exception:
-                            text = str(output)
+                            logger.exception(
+                                "Error extracting text "
+                                "from output: %r",
+                                type(output),
+                            )
+                            text = ""
 
-                    if text and text not in ("None", "{}"):
+                    if text and text.strip():
                         chunk_size = 200
                         for i in range(0, len(text), chunk_size):
                             chunk = text[i:i + chunk_size]
