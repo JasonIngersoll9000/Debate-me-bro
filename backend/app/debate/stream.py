@@ -126,14 +126,62 @@ async def stream_debate_events(
                                 break
                     else:
                         try:
-                            text = (
-                                getattr(output, "content", None)
-                                or str(output)
+                            content = getattr(
+                                output, "content", None
                             )
+                            if isinstance(content, str):
+                                text = content
+                            elif content is not None:
+                                # Non-string 'content' attribute; ignore.
+                                logger.warning(
+                                    "Unexpected non-string "
+                                    "content attr type: %r",
+                                    type(content),
+                                )
+                                text = ""
+                            elif isinstance(output, str):
+                                # Allow direct string output.
+                                text = output
+                            else:
+                                # Don't stringify arbitrary objects.
+                                logger.warning(
+                                    "Unexpected output "
+                                    "type %r; ignoring",
+                                    type(output),
+                                )
+                                text = ""
                         except Exception:
-                            text = str(output)
+                            logger.exception(
+                                "Error extracting text "
+                                "from output: %r",
+                                type(output),
+                            )
+                            text = ""
 
-                    if text and text not in ("None", "{}"):
+                    # Normalize non-string text values to avoid runtime
+                    # errors when calling .strip() or slicing for chunks.
+                    if text is not None and not isinstance(text, str):
+                        if isinstance(text, (list, tuple)):
+                            # Join only string-like parts, ignoring others.
+                            parts = []
+                            for part in text:
+                                if isinstance(part, str):
+                                    parts.append(part)
+                                else:
+                                    logger.debug(
+                                        "Ignoring non-string segment in "
+                                        "text list: type=%r",
+                                        type(part),
+                                    )
+                            text = "".join(parts)
+                        else:
+                            logger.warning(
+                                "Non-string text value of type %r; ignoring",
+                                type(text),
+                            )
+                            text = ""
+
+                    if isinstance(text, str) and text.strip():
                         chunk_size = 200
                         for i in range(0, len(text), chunk_size):
                             chunk = text[i:i + chunk_size]
