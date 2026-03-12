@@ -434,14 +434,7 @@ export default function DebatePage() {
     const es = new EventSource(`${API_BASE_URL}/debates/${id}/stream`);
     eventSourceRef.current = es;
     es.onmessage = (event) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let data: any;
-      try {
-        data = JSON.parse(event.data);
-      } catch {
-        // Ignore non-JSON messages (keepalive pings, partial frames, etc.)
-        return;
-      }
+      const data = JSON.parse(event.data);
       if (data.type === "phase_transition") {
         setActivePhase(mapPhase(data.phase));
         setPhaseTransitionMsg(data.message);
@@ -451,13 +444,11 @@ export default function DebatePage() {
         setPhaseTransitionMsg(null);
         const mp = mapPhase(data.phase);
         const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
-        if (data.phase_type === "internal") {
-          setActivePhase(mp);
-          appendInternalAnalysis(mp, side, data.chunk || "");
-        } else {
-          setActivePhase(mp);
-          appendStreamToken(side, mp, data.chunk || "");
-        }
+        // In live mode, the backend streams only debate content chunks (phase_type is "streamed"),
+        // and does not emit separate internal-analysis chunks. Treat all streamed content here
+        // as debate turns and append via appendStreamToken.
+        setActivePhase(mp);
+        appendStreamToken(side, mp, data.chunk || "");
       } else if (data.type === "complete") {
         setStreaming(false);
         setActivePhase("judging");
