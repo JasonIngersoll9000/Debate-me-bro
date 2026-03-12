@@ -69,3 +69,15 @@
 **Action Items for Next Issues:**
 - Always ensure legacy security dependencies (like passlib) are pinned against known stable sub-tier versions (like bcrypt 3.2.2).
 - Always use explicit `is None` or `is not None` context evaluations on objects extracted from SQLAlchemy queries.
+
+### Preset topics and evidence loader
+**Status:** Completed
+**What Went Well:**
+- Seamlessly extended the predefined `schemas.py` without interfering with prebuilt Alembic SQL migrations. The Pydantic isolation is proving highly modular.
+- The `EvidenceLoader` Regex parser implementation worked perfectly inside the Pytest Async runner on the very very first execution without throwing typing issues or dropping complex string citations.
+
+**Challenges & Insights:**
+- I opted for strict Regex `\[([^\]]+)\]\(([^\)]+)\)` mapping over a Heavy Markdown AST Parser (`markdown-it-py`). Because our generated LLM research documents use explicit, simplistic citation link formatting natively, dropping the heavy python dependency keeps processing lightning fast prior to LangGraph ingestions.
+
+**Action Items for Next Issues:**
+- Continue maintaining separate routing tables (`topics.py` vs `auth.py`) mapped to unified endpoints in `main.py`! The FastAPI structure scale is holding perfectly.
