@@ -135,7 +135,7 @@ async def stream_debate_events(
                                 # Non-string 'content' attribute; ignore.
                                 logger.warning(
                                     "Unexpected non-string "
-                                    "content attr: %r",
+                                    "content attr type: %r",
                                     type(content),
                                 )
                                 text = ""
@@ -158,7 +158,30 @@ async def stream_debate_events(
                             )
                             text = ""
 
-                    if text and text.strip():
+                    # Normalize non-string text values to avoid runtime
+                    # errors when calling .strip() or slicing for chunks.
+                    if text is not None and not isinstance(text, str):
+                        if isinstance(text, (list, tuple)):
+                            # Join only string-like parts, ignoring others.
+                            parts = []
+                            for part in text:
+                                if isinstance(part, str):
+                                    parts.append(part)
+                                else:
+                                    logger.debug(
+                                        "Ignoring non-string segment in "
+                                        "text list: type=%r",
+                                        type(part),
+                                    )
+                            text = "".join(parts)
+                        else:
+                            logger.warning(
+                                "Non-string text value of type %r; ignoring",
+                                type(text),
+                            )
+                            text = ""
+
+                    if isinstance(text, str) and text.strip():
                         chunk_size = 200
                         for i in range(0, len(text), chunk_size):
                             chunk = text[i:i + chunk_size]
