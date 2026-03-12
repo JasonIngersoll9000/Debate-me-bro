@@ -1,29 +1,101 @@
+"""
+Dynamic persona generation — prompts-doc.md §1.
+Generates a structured Persona tailored to the topic + evidence.
+Uses Claude Haiku for speed/cost (persona gen is a setup step).
+"""
+import json
+import logging
+
 from langchain_anthropic import ChatAnthropic
-from langchain_core.prompts import PromptTemplate
+from langchain_core.messages import HumanMessage
 
-# Prompt Template to generate a dynamic persona
-PERSONA_PROMPT = """You are an expert debate coach and identity designer.
-Given the debate topic below, invent a specific, highly credentialed professional identity (a "persona") perfectly suited to argue the given position assertively and persuasively.
+from app.models.schemas import Persona
 
-For example, if the topic is Healthcare and the position is Pro, the persona might be: "A former federal health policy director and health economist who values systematic efficiency and views healthcare access as a fundamental human right."
+logger = logging.getLogger(__name__)
 
-Topic: {topic}
-Position: {position}
+PERSONA_GENERATION_PROMPT = """\
+You are setting up a structured debate on the following resolution:
 
-Output ONLY a 2-3 sentence description characterizing this persona, how they speak, and what core values they appeal to. Do not include any other text or explanation.
+**Resolution:** {resolution}
+**Your assigned side:** {side} ({position_statement})
+
+You have access to the following research summary:
+{evidence_summary}
+
+## Your Task
+Design the ideal advocate persona for the {side} side of this specific debate. \
+Consider:
+
+1. **Expertise:** What professional background would make someone the most credible \
+   and effective advocate for this position on THIS topic? (Not a generic debater — \
+   a specific type of expert whose knowledge directly serves this argument.)
+
+2. **Values framework:** What core values does this position appeal to? \
+   (e.g., individual liberty, collective welfare, empirical rigor, moral duty, \
+   precautionary principle, innovation, tradition, justice, pragmatism)
+
+3. **Rhetorical approach:** Based on the available evidence, what argumentative \
+   style will be most effective? (e.g., lead with data, lead with moral framing, \
+   lead with historical precedent, lead with comparative analysis, lead with \
+   first-principles reasoning)
+
+4. **Name and identity:** Give this advocate a name and a 1-sentence professional \
+   identity that establishes credibility for this specific topic.
+
+## Output Format (JSON)
+{{
+  "name": "Dr./Prof. [Name]",
+  "identity": "[1-sentence professional description relevant to this topic]",
+  "expertise_areas": ["area1", "area2"],
+  "core_values": ["value1", "value2", "value3"],
+  "rhetorical_approach": "[How this advocate builds arguments]",
+  "why_this_persona": "[1-2 sentences explaining why this persona is the ideal advocate for this side on this topic]"
+}}
+
+Choose a persona that gives this side its BEST possible chance of winning — not a \
+generic debater, but the specific expert who would be most devastating in this role.
 """
 
-async def generate_persona(topic: str, position: str) -> str:
+
+async def generate_persona(
+    resolution: str,
+    side: str,
+    position_statement: str,
+    evidence_summary: str = "",
+) -> Persona:
     """
-    Calls Claude 3 Haiku to generate a dynamic persona tailored to the topic and side.
+    Calls Claude Haiku to generate a dynamic persona tailored to this debate.
+    Returns a structured Persona object.
     """
-    # Using Haiku for speed/cost for initial persona generation
     llm = ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.7)
-    
-    prompt = PromptTemplate.from_template(PERSONA_PROMPT)
-    chain = prompt | llm
-    
-    response = await chain.ainvoke({"topic": topic, "position": position})
-    
-    # Return the raw text content of the message
-    return response.content.strip()
+
+    prompt_text = PERSONA_GENERATION_PROMPT.format(
+        resolution=resolution,
+        side=side.upper(),
+        position_statement=position_statement,
+        evidence_summary=evidence_summary or "No research summary provided yet.",
+    )
+
+    response = await llm.ainvoke([HumanMessage(content=prompt_text)])
+    raw = response.content.strip()
+
+    # Parse JSON from response (may be wrapped in ```json blocks)
+    try:
+        # Strip markdown code fences if present
+        if "```" in raw:
+            start = raw.find("{")
+            end = raw.rfind("}") + 1
+            raw = raw[start:end]
+        data = json.loads(raw)
+        return Persona(**data)
+    except (json.JSONDecodeError, ValueError) as e:
+        logger.warning("Failed to parse persona JSON, using fallback: %s", e)
+        # Fallback: create a basic persona from the raw text
+        return Persona(
+            name=f"{'Dr. A. Proctor' if side == 'pro' else 'Dr. R. Counter'}",
+            identity=raw[:200] if raw else f"An expert debater arguing the {side} position.",
+            expertise_areas=[],
+            core_values=[],
+            rhetorical_approach="Data-driven argumentation grounded in evidence.",
+            why_this_persona=f"Generated as fallback for {side} side.",
+        )
