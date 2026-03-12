@@ -27,7 +27,12 @@ async def get_debate(debate_id: str):
     if data is None:
         return JSONResponse(
             status_code=404,
-            content={"detail": f"Debate '{debate_id}' not found. Start it via the streaming endpoint."}
+            content={
+                "detail": (
+                    f"Debate '{debate_id}' not found. "
+                    "Start it via the streaming endpoint."
+                )
+            },
         )
     return data
 
@@ -41,5 +46,5 @@ async def stream_debate(debate_id: str):
     """
     return StreamingResponse(
         stream_debate_events(debate_id),
-        media_type="text/event-stream"
+        media_type="text/event-stream",
     )

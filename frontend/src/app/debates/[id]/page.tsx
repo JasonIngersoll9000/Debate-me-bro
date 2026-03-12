@@ -53,9 +53,9 @@ function ResearchDocModal({ side, onClose }: { side: "pro" | "con"; onClose: () 
       .split("\n")
       .map((line) => {
         // Headings
-        if (line.startsWith("### ")) return `<h3 class="text-base font-bold text-gray-200 mt-6 mb-2">${line.slice(4)}</h3>`;
-        if (line.startsWith("## ")) return `<h2 class="text-lg font-black text-white mt-10 mb-3 pb-2 border-b border-white/10">${line.slice(3)}</h2>`;
-        if (line.startsWith("# ")) return `<h1 class="text-2xl font-black text-white mt-8 mb-4">${line.slice(2)}</h1>`;
+        if (line.startsWith("### ")) return `<h3 class="text-base font-bold text-gray-200 mt-6 mb-2">${escapeHtml(line.slice(4))}</h3>`;
+        if (line.startsWith("## ")) return `<h2 class="text-lg font-black text-white mt-10 mb-3 pb-2 border-b border-white/10">${escapeHtml(line.slice(3))}</h2>`;
+        if (line.startsWith("# ")) return `<h1 class="text-2xl font-black text-white mt-8 mb-4">${escapeHtml(line.slice(2))}</h1>`;
         if (line.startsWith("---")) return `<hr class="border-white/10 my-8" />`;
         if (line.trim() === "") return `<div class="h-3"></div>`;
 
@@ -74,15 +74,30 @@ function ResearchDocModal({ side, onClose }: { side: "pro" | "con"; onClose: () 
       .join("\n");
   };
 
-  // Inline formatting (bold, links)
+  // Escape HTML special characters to prevent XSS
+  function escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // Inline formatting (bold, links) — text must be escaped before calling
   function inlineFormat(text: string): string {
-    // Links: [text](url)
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 decoration-emerald-500/40 hover:decoration-emerald-400 transition-colors">$1</a>'
+    // Escape raw text first, then apply markdown patterns
+    const escaped = escapeHtml(text);
+    // Links: [text](url) — only allow safe URL schemes
+    const withLinks = escaped.replace(
+      /\[([^\]]+)\]\(([^)]+)\)/g,
+      (_match, linkText: string, url: string) => {
+        const safeUrl = /^(https?:|mailto:)/i.test(url) ? url : "#";
+        return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 decoration-emerald-500/40 hover:decoration-emerald-400 transition-colors">${linkText}</a>`;
+      }
     );
     // Bold: **text**
-    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-gray-200 font-bold">$1</strong>');
-    return text;
+    return withLinks.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-gray-200 font-bold">$1</strong>');
   }
 
   return (
@@ -223,6 +238,7 @@ export default function DebatePage() {
   const [researchStepIdx, setResearchStepIdx] = useState(0);
   const [researchReady, setResearchReady] = useState(false);
   const [docModal, setDocModal] = useState<"pro" | "con" | null>(null);
+  const [judgingResults, setJudgingResults] = useState<Record<string, Record<string, number>> | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const mockAbortRef = useRef(false);
 
@@ -372,15 +388,39 @@ export default function DebatePage() {
     eventSourceRef.current = es;
     es.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === "phase_transition") { setActivePhase(mapPhase(data.phase)); setPhaseTransitionMsg(data.message); setStreaming(true); }
-      else if (data.type === "content") {
+      if (data.type === "evidence_loaded") {
+        setResearchReady(true);
+        markPhaseComplete("research");
+      } else if (data.type === "personas") {
+        const pro = data.pro || {};
+        const con = data.con || {};
+        setPersonas(
+          { name: pro.name || "Proponent Agent", role: pro.identity || "AI Debater" },
+          { name: con.name || "Opponent Agent", role: con.identity || "AI Debater" }
+        );
+      } else if (data.type === "phase_transition") {
+        setActivePhase(mapPhase(data.phase));
+        setPhaseTransitionMsg(data.message);
+        setStreaming(true);
+      } else if (data.type === "content") {
         setStreaming(true); setPhaseTransitionMsg(null);
         const mp = mapPhase(data.phase); const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
         if (data.phase_type === "internal") { setActivePhase(mp); appendInternalAnalysis(mp, side, data.chunk || ""); }
         else { setActivePhase(mp); appendStreamToken(side, mp, data.chunk || ""); }
+      } else if (data.type === "judging_results") {
+        const scores = data.results?.scores as Record<string, Record<string, number>> | undefined;
+        if (scores) setJudgingResults(scores);
+        markPhaseComplete("judging");
+      } else if (data.type === "complete") {
+        setStreaming(false);
+        setActivePhase("judging");
+        setPhaseTransitionMsg(null);
+        // Mark the last public phase complete if not already done
+        markPhaseComplete("closing");
+        es.close();
+      } else if (data.type === "error") {
+        es.close(); setStreaming(false); setConnectionError(data.message || "Backend error.");
       }
-      else if (data.type === "complete") { setStreaming(false); setActivePhase("judging"); setPhaseTransitionMsg(null); es.close(); }
-      else if (data.type === "error") { es.close(); setStreaming(false); setConnectionError(data.message || "Backend error."); }
     };
     es.onerror = () => { es.close(); setStreaming(false); setConnectionError("Could not connect. Make sure FastAPI is running on " + API_BASE_URL.replace("/api", "") + "."); };
   }, [id]);
@@ -395,8 +435,13 @@ export default function DebatePage() {
 
   const proSideTurns = debateTurns.filter((t) => t.side === "pro" && t.phase === activePhase);
   const conSideTurns = debateTurns.filter((t) => t.side === "con" && t.phase === activePhase);
-  const proTotal = MOCK_SCORES.pro.logic * .3 + MOCK_SCORES.pro.evidence * .25 + MOCK_SCORES.pro.refutation * .25 + MOCK_SCORES.pro.steelman * .2;
-  const conTotal = MOCK_SCORES.con.logic * .3 + MOCK_SCORES.con.evidence * .25 + MOCK_SCORES.con.refutation * .25 + MOCK_SCORES.con.steelman * .2;
+
+  // Use live judging results in live mode, fall back to mock scores in demo mode
+  const liveScores = !isDemoMode && judgingResults ? judgingResults : null;
+  const proScores = liveScores?.pro ?? MOCK_SCORES.pro;
+  const conScores = liveScores?.con ?? MOCK_SCORES.con;
+  const proTotal = (proScores.logic ?? 0) * .3 + (proScores.evidence ?? 0) * .25 + (proScores.refutation ?? 0) * .25 + (proScores.steelman ?? 0) * .2;
+  const conTotal = (conScores.logic ?? 0) * .3 + (conScores.evidence ?? 0) * .25 + (conScores.refutation ?? 0) * .25 + (conScores.steelman ?? 0) * .2;
 
   return (
     <div className="min-h-screen bg-slate-950 text-gray-100 flex flex-col relative overflow-hidden">
@@ -580,10 +625,10 @@ export default function DebatePage() {
                     <span className="text-cyan-400 font-black uppercase tracking-widest">← Pro ({proPersona?.name})</span>
                     <span className="text-fuchsia-400 font-black uppercase tracking-widest">Con ({conPersona?.name}) →</span>
                   </div>
-                  <ScoreBar label="Logical Validity" weight="30%" proScore={MOCK_SCORES.pro.logic} conScore={MOCK_SCORES.con.logic} />
-                  <ScoreBar label="Evidence Quality" weight="25%" proScore={MOCK_SCORES.pro.evidence} conScore={MOCK_SCORES.con.evidence} />
-                  <ScoreBar label="Refutation Strength" weight="25%" proScore={MOCK_SCORES.pro.refutation} conScore={MOCK_SCORES.con.refutation} />
-                  <ScoreBar label="Steelmanning Quality" weight="20%" proScore={MOCK_SCORES.pro.steelman} conScore={MOCK_SCORES.con.steelman} />
+                  <ScoreBar label="Logical Validity" weight="30%" proScore={proScores.logic ?? 0} conScore={conScores.logic ?? 0} />
+                  <ScoreBar label="Evidence Quality" weight="25%" proScore={proScores.evidence ?? 0} conScore={conScores.evidence ?? 0} />
+                  <ScoreBar label="Refutation Strength" weight="25%" proScore={proScores.refutation ?? 0} conScore={conScores.refutation ?? 0} />
+                  <ScoreBar label="Steelmanning Quality" weight="20%" proScore={proScores.steelman ?? 0} conScore={conScores.steelman ?? 0} />
                   <div className="mt-6 pt-6 border-t border-white/10">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-400 font-bold uppercase tracking-widest text-xs">Weighted Total</span>
