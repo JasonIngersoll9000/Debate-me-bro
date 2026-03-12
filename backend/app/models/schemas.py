@@ -1,7 +1,16 @@
 from pydantic import BaseModel, EmailStr, ConfigDict, Field
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any, TypedDict
 from uuid import UUID
 from datetime import datetime
+
+class DebateState(TypedDict):
+    debate_id: str
+    topic: str
+    status: str
+    current_phase: str
+    debate_turns: List[Dict[str, Any]]
+    evidence_bundle: Optional[Dict[str, Any]]
+    personas: Dict[str, str]
 
 class UserBase(BaseModel):
     email: EmailStr
