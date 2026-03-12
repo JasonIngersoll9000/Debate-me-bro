@@ -12,3 +12,5 @@ langchain-anthropic
 redis
 pgvector
 psycopg2-binary
+pytest
+email-validator
