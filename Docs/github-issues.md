@@ -1,5 +1,7 @@
 # GitHub Issues for DebateMeBro
 
+# PAT token: REMOVED_TOKEN_FOR_SECURITY
+
 ## Setup Checklist
 1. Create GitHub Project (Board layout): **Backlog | Sprint Todo | In Progress | In Review | Done**
 2. Create Milestone: **Sprint 1** (due: Week 9)
