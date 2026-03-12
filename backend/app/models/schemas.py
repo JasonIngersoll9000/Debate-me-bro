@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr, ConfigDict
-from typing import List, Optional
+from pydantic import BaseModel, EmailStr, ConfigDict, Field
+from typing import List, Optional, Dict
 from uuid import UUID
 from datetime import datetime
 
@@ -47,3 +47,19 @@ class TurnResponse(BaseModel):
 class JWTTokenResponse(BaseModel):
     access_token: str
     token_type: str
+
+class CitationDetail(BaseModel):
+    title: str
+    url: str
+    source_context: str = ""
+
+class EvidenceBundle(BaseModel):
+    raw_content: str
+    citations: Dict[str, CitationDetail]
+
+class PresetTopicResponse(BaseModel):
+    id: str
+    title: str
+    description: str
+    pro_position: str
+    con_position: str
