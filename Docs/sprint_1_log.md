@@ -119,3 +119,30 @@
 
 **Action Items for Next Issues:**
 - We are ready to consume this endpoint. The backend pipeline logic is formally completed for the core debate loop. Issue #8 will shift into Next.js and Tailwind to construct the User Interface for displaying it.
+
+---
+
+### Issue 8: Frontend — Landing page with preset topics
+**Completed:** Yes
+**Branch:** `feature/8-frontend-landing-page`
+**Associated Files:**
+- `frontend/src/app/layout.tsx`
+- `frontend/src/app/page.tsx`
+- `frontend/src/lib/api.ts`
+- `frontend/src/lib/store.ts`
+- `frontend/tests/components/Home.test.tsx`
+
+**Implementation Details:**
+- Discovered and utilized the existing `create-next-app` instantiation completed in Issue 1.
+- Validated compatibility with Next 15 and Tailwind CSS v4 without requiring a legacy `tailwind.config.ts`.
+- Structured the `Zustand` global store in `store.ts` to manage the Topic title and Phase transitions.
+- Assembled the `Home` page component utilizing the CSS structures and layout derived identically from the mockup UI prototype.
+- Sourced real API connections to the backend `GET /api/topics/presets` using React Client component architecture.
+- Wrote RTL + JS DOM unit tests verifying the routing to `/debates/[id]` and API mocking.
+
+**Challenges & Insights:**
+- Tapping into Tailwind V4 logic removes the historic configuration dependencies allowing extremely fluid direct DOM generation.
+- Next.js 15 Client components required shifting from standard `jest` configuration to explicitly building a `jest.config.ts` mapping block.
+
+**Action Items for Next Issues:**
+- The Landing Page is built and routing flawlessly. We will now move into Sprint 2 considerations and Issue 9 (Live Debate Streaming View).

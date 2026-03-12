@@ -191,12 +191,12 @@ Server-Sent Events endpoint that streams debate content to the frontend as the d
 Landing page with topic input, preset topic cards, "How it works" flow, and navigation to debate view.
 
 #### Acceptance Criteria
-- [ ] Displays app title, tagline, topic input field (dark theme, gradient title per mockup)
-- [ ] 3+ preset topic cards fetched from `GET /topics/presets`
-- [ ] Clicking a preset navigates to `/debates/[id]` and launches debate
-- [ ] "How it works" shows 7-phase flow: Research → Opening → Eval → Rebuttal → Eval → Closing → Judging
-- [ ] Styled with TailwindCSS matching v3 mockup
-- [ ] Component test verifies preset topics render and are clickable
+- [x] Displays app title, tagline, topic input field (dark theme, gradient title per mockup)
+- [x] 3+ preset topic cards fetched from `GET /topics/presets`
+- [x] Clicking a preset navigates to `/debates/[id]` and launches debate
+- [x] "How it works" shows 7-phase flow: Research → Opening → Eval → Rebuttal → Eval → Closing → Judging
+- [x] Styled with TailwindCSS matching v3 mockup
+- [x] Component test verifies preset topics render and are clickable
 
 ---
 
