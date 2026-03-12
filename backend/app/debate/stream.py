@@ -270,11 +270,15 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
     streamed_phases: Dict[str, str] = {}  # phase -> accumulated text
 
     try:
-        async for event in graph.astream_events(initial_state, version="v2"):
+        async for event in graph.astream_events(
+            initial_state, version="v2"
+        ):
             kind = event["event"]
 
             if kind == "on_chain_start":
-                node_name = event.get("metadata", {}).get("langgraph_node")
+                node_name = (
+                    event.get("metadata", {}).get("langgraph_node")
+                )
                 if node_name:
                     current_node = node_name
                     if current_node in INTERNAL_PHASES:
@@ -305,7 +309,9 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
                         yield f"data: {json.dumps(payload)}\n\n"
 
             elif kind == "on_chain_end":
-                node_name = event.get("metadata", {}).get("langgraph_node")
+                node_name = (
+                    event.get("metadata", {}).get("langgraph_node")
+                )
                 phase_name = node_name or current_node
 
                 if phase_name == "judging":
