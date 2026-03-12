@@ -23,7 +23,7 @@ from app.debate import store as debate_store
 
 @pytest.fixture(autouse=True)
 def temp_data_dir(monkeypatch):
-    """Redirect the debate store to a temporary directory for test isolation."""
+    """Redirect the debate store to a temporary directory for isolation."""
     tmpdir = tempfile.mkdtemp()
     data_dir = os.path.join(tmpdir, "debates")
     os.makedirs(data_dir, exist_ok=True)
@@ -43,19 +43,48 @@ SAMPLE_DEBATE = {
         "con": {"name": "Dr. Con", "identity": "Health economics expert"},
     },
     "turns": [
-        {"phase": "opening_pro", "side": "pro", "text": "Pro opening argument.", "is_internal": False},
-        {"phase": "opening_con", "side": "con", "text": "Con opening argument.", "is_internal": False},
-        {"phase": "eval_openings", "side": "pro", "text": "Internal analysis.", "is_internal": True},
-        {"phase": "rebuttal_pro", "side": "pro", "text": "Pro rebuttal.", "is_internal": False},
-        {"phase": "rebuttal_con", "side": "con", "text": "Con rebuttal.", "is_internal": False},
-        {"phase": "closing_pro", "side": "pro", "text": "Pro closing.", "is_internal": False},
-        {"phase": "closing_con", "side": "con", "text": "Con closing.", "is_internal": False},
+        {
+            "phase": "opening_pro", "side": "pro",
+            "text": "Pro opening argument.", "is_internal": False,
+        },
+        {
+            "phase": "opening_con", "side": "con",
+            "text": "Con opening argument.", "is_internal": False,
+        },
+        {
+            "phase": "eval_openings", "side": "pro",
+            "text": "Internal analysis.", "is_internal": True,
+        },
+        {
+            "phase": "rebuttal_pro", "side": "pro",
+            "text": "Pro rebuttal.", "is_internal": False,
+        },
+        {
+            "phase": "rebuttal_con", "side": "con",
+            "text": "Con rebuttal.", "is_internal": False,
+        },
+        {
+            "phase": "closing_pro", "side": "pro",
+            "text": "Pro closing.", "is_internal": False,
+        },
+        {
+            "phase": "closing_con", "side": "con",
+            "text": "Con closing.", "is_internal": False,
+        },
     ],
     "judging_results": {
         "winner": "pro",
         "scores": {
-            "pro": {"logic": 4, "evidence": 5, "refutation": 4, "steelman": 4, "weighted_total": 4.3},
-            "con": {"logic": 4, "evidence": 4, "refutation": 4, "steelman": 3, "weighted_total": 3.85},
+            "pro": {
+                "logic": 4, "evidence": 5,
+                "refutation": 4, "steelman": 4,
+                "weighted_total": 4.3,
+            },
+            "con": {
+                "logic": 4, "evidence": 4,
+                "refutation": 4, "steelman": 3,
+                "weighted_total": 3.85,
+            },
         },
     },
     "evidence": {"citations": {}, "pro_arguments": [], "con_arguments": []},
@@ -192,7 +221,9 @@ async def test_sse_replays_from_cache():
             assert len(content_events) > 0
 
             # Should have judging results
-            judging_events = [e for e in events if e["type"] == "judging_results"]
+            judging_events = [
+                e for e in events if e["type"] == "judging_results"
+            ]
             assert len(judging_events) == 1
             assert judging_events[0]["results"]["winner"] == "pro"
 

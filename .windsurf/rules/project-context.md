@@ -8,7 +8,7 @@ This file gives AI assistants the **minimum shared context** they must load into
 
 - `Docs/debatemebro-prd.md`
 - `Docs/file_tree.md`
-- `Docs/Github_Issues.md`
+- `Docs/github-issues.md`
 
 ### 1. Tech Stack and Versions
 
@@ -64,7 +64,7 @@ High-level layout (details in `Docs/file_tree.md`):
 
 - **Docs (`Docs/` or `docs/`)**
   - `Docs/debatemebro-prd.md` (or `docs/PRD.md`): Product Requirements Document v2.
-  - `Docs/Github_Issues.md`: Canonical issue descriptions + acceptance criteria.
+  - `Docs/github-issues.md`: Canonical issue descriptions + acceptance criteria.
   - `Docs/file_tree.md`: Target project structure (this file mirrors its intent).
   - `Docs/debatemebro-mockup.tsx` and/or `docs/mockup-screenshots/`: Design prototypes.
 
@@ -125,5 +125,5 @@ The PRD sets an explicit **test coverage goal of ≥ 80%** across unit, integrat
 - **General testing rules**
   - New features that change behavior must come with **at least one** test at an appropriate level.
   - When modifying existing code, **update or add tests** to cover the new behavior and maintain the 80%+ coverage target.
-  - Prefer **small, focused tests** tied to acceptance criteria from `Docs/Github_Issues.md` and user stories from the PRD.
+  - Prefer **small, focused tests** tied to acceptance criteria from `Docs/github-issues.md` and user stories from the PRD.
 
