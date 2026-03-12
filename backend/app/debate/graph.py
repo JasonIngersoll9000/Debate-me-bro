@@ -4,18 +4,21 @@ This module defines the debate's structural phases and the StateGraph
 that routes agents through Opening, Rebuttal, Closing, and Judging.
 """
 
-from typing import List, Dict, Any, Optional
-from uuid import UUID
+import asyncio
+from typing import Dict, Any
 from langgraph.graph import StateGraph, END
+from langgraph.graph.state import CompiledStateGraph
 from app.debate.agents import call_agent
 from app.models.schemas import DebateState
 
 # --- Graph Nodes ---
 
 async def research_consultation(state: DebateState) -> Dict[str, Any]:
-    # Internal phase: Agents review the evidence bundle
-    pro_eval = await call_agent(state, "research_consultation", "pro")
-    con_eval = await call_agent(state, "research_consultation", "con")
+    # Internal phase: Agents review the evidence bundle concurrently
+    pro_eval, con_eval = await asyncio.gather(
+        call_agent(state, "research_consultation", "pro"),
+        call_agent(state, "research_consultation", "con")
+    )
     
     # We store internal evaluations as turns but they won't be streamed to the UI
     turns = state.get("debate_turns", []) + [
@@ -35,8 +38,10 @@ async def opening_con(state: DebateState) -> Dict[str, Any]:
     return {"current_phase": "opening_con", "debate_turns": state.get("debate_turns", []) + [turn]}
 
 async def eval_openings(state: DebateState) -> Dict[str, Any]:
-    pro_eval = await call_agent(state, "eval_openings", "pro")
-    con_eval = await call_agent(state, "eval_openings", "con")
+    pro_eval, con_eval = await asyncio.gather(
+        call_agent(state, "eval_openings", "pro"),
+        call_agent(state, "eval_openings", "con")
+    )
     turns = state.get("debate_turns", []) + [
         {"phase": "eval_openings", "side": "pro", "text": pro_eval, "is_internal": True},
         {"phase": "eval_openings", "side": "con", "text": con_eval, "is_internal": True}
@@ -54,8 +59,10 @@ async def rebuttal_con(state: DebateState) -> Dict[str, Any]:
     return {"current_phase": "rebuttal_con", "debate_turns": state.get("debate_turns", []) + [turn]}
 
 async def eval_full_debate(state: DebateState) -> Dict[str, Any]:
-    pro_eval = await call_agent(state, "eval_full_debate", "pro")
-    con_eval = await call_agent(state, "eval_full_debate", "con")
+    pro_eval, con_eval = await asyncio.gather(
+        call_agent(state, "eval_full_debate", "pro"),
+        call_agent(state, "eval_full_debate", "con")
+    )
     turns = state.get("debate_turns", []) + [
         {"phase": "eval_full_debate", "side": "pro", "text": pro_eval, "is_internal": True},
         {"phase": "eval_full_debate", "side": "con", "text": con_eval, "is_internal": True}
@@ -78,7 +85,7 @@ async def judging_phase(state: DebateState) -> Dict[str, Any]:
 
 # --- Graph Construction ---
 
-def create_debate_graph() -> StateGraph:
+def create_debate_graph() -> CompiledStateGraph:
     """Builds and compiles the synchronous workflow graph."""
     workflow = StateGraph(DebateState)
 

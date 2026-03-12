@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 from app.debate.graph import create_debate_graph
 
 @pytest.mark.asyncio

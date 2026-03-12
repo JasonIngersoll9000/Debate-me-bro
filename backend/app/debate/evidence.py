@@ -1,5 +1,6 @@
 import re
 import os
+import anyio
 from typing import Dict, Tuple
 from app.models.schemas import EvidenceBundle, CitationDetail
 
@@ -40,27 +41,25 @@ class EvidenceLoader:
         combines them into a single EvidenceBundle.
         """
         topic_path = os.path.join(self.evidence_dir, topic_id)
-        pro_path = os.path.join(topic_path, "pro_research.md")
-        con_path = os.path.join(topic_path, "con_research.md")
+        pro_path = anyio.Path(os.path.join(topic_path, "pro_research.md"))
+        con_path = anyio.Path(os.path.join(topic_path, "con_research.md"))
         
         combined_content = ""
         all_citations: Dict[str, CitationDetail] = {}
         
         # Read and parse Pro
-        if os.path.exists(pro_path):
-            with open(pro_path, 'r', encoding='utf-8') as f:
-                pro_text = f.read()
-                combined_content += "### PRO RESEARCH\n\n" + pro_text + "\n\n"
-                _, pro_cites = self.parse_markdown(pro_text)
-                all_citations.update(pro_cites)
+        if await pro_path.exists():
+            pro_text = await pro_path.read_text(encoding='utf-8')
+            combined_content += "### PRO RESEARCH\n\n" + pro_text + "\n\n"
+            _, pro_cites = self.parse_markdown(pro_text)
+            all_citations.update(pro_cites)
                 
         # Read and parse Con 
-        if os.path.exists(con_path):
-            with open(con_path, 'r', encoding='utf-8') as f:
-                con_text = f.read()
-                combined_content += "### CON RESEARCH\n\n" + con_text + "\n\n"
-                _, con_cites = self.parse_markdown(con_text)
-                all_citations.update(con_cites)
+        if await con_path.exists():
+            con_text = await con_path.read_text(encoding='utf-8')
+            combined_content += "### CON RESEARCH\n\n" + con_text + "\n\n"
+            _, con_cites = self.parse_markdown(con_text)
+            all_citations.update(con_cites)
                 
         if not combined_content:
             raise FileNotFoundError(f"No research found for topic {topic_id}")

@@ -1,7 +1,5 @@
-import json
-from typing import Dict, Any, List
+from typing import Dict, Any
 from langchain_anthropic import ChatAnthropic
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from app.models.schemas import DebateState
@@ -37,11 +35,17 @@ Outline a strategy for your upcoming rebuttal. Identify the weaknesses in their 
 Opponent's Statement:
 {opponent_turn}
 
+Evidence:
+{evidence}
+
 Output a short strategic assessment. Do not draft your rebuttal yet.
 """
 
 EVAL_FULL_DEBATE_PROMPT = """Review the entire debate transcript so far.
 Identify the core crux of the disagreement. Plan your closing statement to synthesize the debate and leave the strongest impact.
+
+Debate History:
+{debate_history}
 
 Output a short strategic assessment. Do not draft your closing statement yet.
 """
@@ -82,12 +86,18 @@ def format_evidence(evidence_bundle: Dict[str, Any]) -> str:
 
 def get_last_opponent_turn(state: DebateState, opponent_side: str) -> str:
     turns = state.get("debate_turns", [])
-    opponent_turns = [t["text"] for t in turns if t["side"] == opponent_side]
+    opponent_turns = [
+        t["text"] 
+        for t in turns 
+        if t["side"] == opponent_side and not t.get("is_internal")
+    ]
     return opponent_turns[-1] if opponent_turns else "None"
 
 def format_history(state: DebateState) -> str:
     history = []
     for turn in state.get("debate_turns", []):
+        if turn.get("is_internal"):
+            continue
         history.append(f"{turn['side'].upper()} ({turn['phase']}):\n{turn['text']}\n")
     return "\n".join(history)
 
@@ -117,7 +127,10 @@ async def call_agent(state: DebateState, phase: str, role: str) -> str:
     elif phase.startswith("opening"):
         human_msg_content = OPENING_PROMPT.format(position=role.upper(), evidence=evidence_text)
     elif phase == "eval_openings":
-        human_msg_content = EVAL_OPENINGS_PROMPT.format(opponent_turn=get_last_opponent_turn(state, opponent_side))
+        human_msg_content = EVAL_OPENINGS_PROMPT.format(
+            opponent_turn=get_last_opponent_turn(state, opponent_side),
+            evidence=evidence_text
+        )
     elif phase.startswith("rebuttal"):
         human_msg_content = REBUTTAL_PROMPT.format(
             position=role.upper(), 
@@ -125,7 +138,9 @@ async def call_agent(state: DebateState, phase: str, role: str) -> str:
             opponent_turn=get_last_opponent_turn(state, opponent_side)
         )
     elif phase == "eval_full_debate":
-        human_msg_content = EVAL_FULL_DEBATE_PROMPT
+        human_msg_content = EVAL_FULL_DEBATE_PROMPT.format(
+            debate_history=format_history(state)
+        )
     elif phase.startswith("closing"):
         human_msg_content = CLOSING_PROMPT.format(
             position=role.upper(), 
