@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { fetchPresetTopics, PresetTopic } from "@/lib/api";
 import { useDebateStore } from "@/lib/store";
@@ -11,6 +12,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const topicInputRef = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
   const setStoreTopic = useDebateStore((state) => state.setTopic);
@@ -80,9 +82,9 @@ export default function Home() {
         <div className="flex items-center gap-5">
           {isLoggedIn ? (
             <>
-              <a href="/dashboard" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
+              <Link href="/dashboard" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">
                 My Debates
-              </a>
+              </Link>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-xs font-black text-white uppercase">
                   {userEmail?.[0] || "U"}
@@ -93,9 +95,9 @@ export default function Home() {
               </div>
             </>
           ) : (
-            <a href="/auth" className="text-sm font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 px-6 py-2.5 rounded-full transition-all hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:scale-105">
+            <Link href="/auth" className="text-sm font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 px-6 py-2.5 rounded-full transition-all hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:scale-105">
               Sign In
-            </a>
+            </Link>
           )}
         </div>
       </header>
@@ -129,6 +131,7 @@ export default function Home() {
               <div className="relative flex items-center w-full bg-slate-950/60 rounded-3xl overflow-hidden shadow-inner">
                 <span className="pl-6 text-2xl drop-shadow-lg">💡</span>
                 <input
+                  ref={topicInputRef}
                   type="text"
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
@@ -149,7 +152,7 @@ export default function Home() {
 
             {!isLoggedIn && (
               <p className="text-xs text-gray-500 mt-3 text-center">
-                <a href="/auth" className="text-cyan-500 hover:text-cyan-400 font-bold transition-colors">Sign in</a> to start debating
+                <Link href="/auth" className="text-cyan-500 hover:text-cyan-400 font-bold transition-colors">Sign in</Link> to start debating
               </p>
             )}
 
@@ -260,17 +263,17 @@ export default function Home() {
           </div>
 
           <div className="space-y-4">
-            {([
-              { phase: "1", label: "Research", icon: "🔍", desc: "Both agents receive the complete evidence bundle — Pro and Con research. They analyze strengths, vulnerabilities, and build strategy.", iconClass: "bg-cyan-500/10 border-cyan-500/20", internal: false },
-              { phase: "2", label: "Opening Arguments", icon: "📖", desc: "Each agent delivers a compelling opening statement — grounded in evidence, connected to values, streamed to you live.", iconClass: "bg-blue-500/10 border-blue-500/20", internal: false },
-              { phase: "3", label: "Strategic Evaluation", icon: "🧠", desc: "Agents privately analyze the opponent's opening, identify weaknesses, and plan their rebuttal. Viewable via toggle.", iconClass: "bg-purple-500/10 border-purple-500/20", internal: true },
-              { phase: "4", label: "Rebuttals", icon: "⚔️", desc: "Steelman the opponent's best point, then dismantle their weakest. Introduce new evidence. Challenge their sources.", iconClass: "bg-fuchsia-500/10 border-fuchsia-500/20", internal: false },
-              { phase: "5", label: "Full Debate Evaluation", icon: "🧠", desc: "Agents step back and assess the entire debate. What narrowed? What's unresolved? How to close with maximum impact.", iconClass: "bg-pink-500/10 border-pink-500/20", internal: true },
-              { phase: "6", label: "Closing Statements", icon: "🏁", desc: "Synthesize, don't repeat. Acknowledge the opponent. Address the hardest question. Close with impact.", iconClass: "bg-rose-500/10 border-rose-500/20", internal: false },
-              { phase: "7", label: "Judging", icon: "📊", desc: "Three specialized judges (Logic, Evidence, Engagement) score independently. Position-swapped for bias detection.", iconClass: "bg-amber-500/10 border-amber-500/20", internal: false },
-            ] as const).map((step) => (
+            {[
+              { phase: "1", label: "Research", icon: "🔍", desc: "Both agents receive the complete evidence bundle — Pro and Con research. They analyze strengths, vulnerabilities, and build strategy.", bgClass: "bg-cyan-500/10", borderClass: "border-cyan-500/20", internal: false },
+              { phase: "2", label: "Opening Arguments", icon: "📖", desc: "Each agent delivers a compelling opening statement — grounded in evidence, connected to values, streamed to you live.", bgClass: "bg-blue-500/10", borderClass: "border-blue-500/20", internal: false },
+              { phase: "3", label: "Strategic Evaluation", icon: "🧠", desc: "Agents privately analyze the opponent's opening, identify weaknesses, and plan their rebuttal. Viewable via toggle.", bgClass: "bg-purple-500/10", borderClass: "border-purple-500/20", internal: true },
+              { phase: "4", label: "Rebuttals", icon: "⚔️", desc: "Steelman the opponent's best point, then dismantle their weakest. Introduce new evidence. Challenge their sources.", bgClass: "bg-fuchsia-500/10", borderClass: "border-fuchsia-500/20", internal: false },
+              { phase: "5", label: "Full Debate Evaluation", icon: "🧠", desc: "Agents step back and assess the entire debate. What narrowed? What's unresolved? How to close with maximum impact.", bgClass: "bg-pink-500/10", borderClass: "border-pink-500/20", internal: true },
+              { phase: "6", label: "Closing Statements", icon: "🏁", desc: "Synthesize, don't repeat. Acknowledge the opponent. Address the hardest question. Close with impact.", bgClass: "bg-rose-500/10", borderClass: "border-rose-500/20", internal: false },
+              { phase: "7", label: "Judging", icon: "📊", desc: "Three specialized judges (Logic, Evidence, Engagement) score independently. Position-swapped for bias detection.", bgClass: "bg-amber-500/10", borderClass: "border-amber-500/20", internal: false },
+            ].map((step) => (
               <div key={step.phase} className={`flex items-start gap-5 p-6 rounded-2xl transition-all hover:bg-white/[0.03] group ${step.internal ? "opacity-60 hover:opacity-100" : ""}`}>
-                <div className={`w-12 h-12 rounded-2xl ${step.iconClass} border flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform`}>
+                <div className={`w-12 h-12 rounded-2xl ${step.bgClass} border ${step.borderClass} flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform`}>
                   {step.icon}
                 </div>
                 <div className="flex-1">
@@ -298,18 +301,18 @@ export default function Home() {
             </p>
             {isLoggedIn ? (
               <button
-                onClick={() => document.querySelector<HTMLInputElement>("input")?.focus()}
+                onClick={() => topicInputRef.current?.focus()}
                 className="px-10 py-5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-400 hover:to-blue-500 rounded-2xl font-black text-lg uppercase tracking-wider transition-all shadow-[0_4px_30px_rgba(6,182,212,0.4)] hover:shadow-[0_8px_40px_rgba(6,182,212,0.6)] hover:-translate-y-1"
               >
                 Start a Debate →
               </button>
             ) : (
-              <a
+              <Link
                 href="/auth"
                 className="inline-block px-10 py-5 bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white hover:from-fuchsia-500 hover:to-purple-500 rounded-2xl font-black text-lg uppercase tracking-wider transition-all shadow-[0_4px_30px_rgba(217,70,239,0.3)] hover:shadow-[0_8px_40px_rgba(217,70,239,0.5)] hover:-translate-y-1"
               >
                 Create Free Account →
-              </a>
+              </Link>
             )}
           </div>
         </section>

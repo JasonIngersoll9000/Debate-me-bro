@@ -8,9 +8,8 @@ from app.main import app
 
 
 @pytest.mark.asyncio
-@patch("app.debate.graph.run_judging_panel")
 @patch("app.debate.graph.call_agent")
-async def test_sse_streaming_endpoint(mock_call_agent, mock_judging):
+async def test_sse_streaming_endpoint(mock_call_agent):
     """
     Tests the /api/debates/{id}/stream endpoint for correct SSE format
     and phase transition events.
@@ -54,11 +53,8 @@ async def test_sse_streaming_endpoint(mock_call_agent, mock_judging):
 
 
 @pytest.mark.asyncio
-@patch("app.debate.graph.run_judging_panel")
 @patch("app.debate.graph.call_agent")
-async def test_sse_on_chain_end_dict_output_public_only(
-    mock_call_agent, mock_judging
-):
+async def test_sse_on_chain_end_dict_output_public_only(mock_call_agent):
     """
     Verifies that on_chain_end dict output extracts only public-phase turn
     text and never leaks internal-phase text.
@@ -70,10 +66,6 @@ async def test_sse_on_chain_end_dict_output_public_only(
     """
     internal_text = "INTERNAL SECRET SHOULD NOT LEAK"
     public_text = "PUBLIC DEBATE CONTENT"
-    mock_judging.return_value = {
-        "scores": {"pro": {}, "con": {}},
-        "winner": "pro",
-    }
 
     internal_phase_names = {
         "research_consultation",
@@ -92,7 +84,7 @@ async def test_sse_on_chain_end_dict_output_public_only(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         async with client.stream(
-            "GET", "/api/debates/test-id-456/stream"
+            "GET", "/api/debates/test-id-123/stream"
         ) as response:
             assert response.status_code == 200
 

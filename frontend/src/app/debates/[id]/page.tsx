@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useDebateStore } from "@/lib/store";
+import { useShallow } from "zustand/shallow";
 import {
   MOCK_TURNS, MOCK_PERSONAS, MOCK_STRATEGIC_ANALYSIS, MOCK_PHASE_SEQUENCE,
   MOCK_SCORES, MOCK_POSITIONS, MOCK_RESEARCH_STEPS, MOCK_JUDGE_VERDICT,
@@ -249,7 +250,23 @@ export default function DebatePage() {
     proPersona, conPersona,
     setStreaming, setActivePhase, appendStreamToken, appendInternalAnalysis,
     setPersonas, markPhaseComplete,
-  } = useDebateStore();
+  } = useDebateStore(
+    useShallow((state) => ({
+      activePhase: state.activePhase,
+      debateTurns: state.debateTurns,
+      internalAnalysis: state.internalAnalysis,
+      isStreaming: state.isStreaming,
+      completedPhases: state.completedPhases,
+      proPersona: state.proPersona,
+      conPersona: state.conPersona,
+      setStreaming: state.setStreaming,
+      setActivePhase: state.setActivePhase,
+      appendStreamToken: state.appendStreamToken,
+      appendInternalAnalysis: state.appendInternalAnalysis,
+      setPersonas: state.setPersonas,
+      markPhaseComplete: state.markPhaseComplete,
+    }))
+  );
 
   const [phaseTransitionMsg, setPhaseTransitionMsg] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -258,7 +275,6 @@ export default function DebatePage() {
   const [researchStepIdx, setResearchStepIdx] = useState(0);
   const [researchReady, setResearchReady] = useState(false);
   const [docModal, setDocModal] = useState<"pro" | "con" | null>(null);
-  const [judgingResults, setJudgingResults] = useState<Record<string, Record<string, number>> | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const mockAbortRef = useRef(false);
 
@@ -419,17 +435,7 @@ export default function DebatePage() {
     eventSourceRef.current = es;
     es.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === "evidence_loaded") {
-        setResearchReady(true);
-        markPhaseComplete("research");
-      } else if (data.type === "personas") {
-        const pro = data.pro || {};
-        const con = data.con || {};
-        setPersonas(
-          { name: pro.name || "Proponent Agent", role: pro.identity || "AI Debater" },
-          { name: con.name || "Opponent Agent", role: con.identity || "AI Debater" }
-        );
-      } else if (data.type === "phase_transition") {
+      if (data.type === "phase_transition") {
         setActivePhase(mapPhase(data.phase));
         setPhaseTransitionMsg(data.message);
         setStreaming(true);
@@ -438,23 +444,15 @@ export default function DebatePage() {
         setPhaseTransitionMsg(null);
         const mp = mapPhase(data.phase);
         const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
-        if (data.phase_type === "internal") {
-          setActivePhase(mp);
-          appendInternalAnalysis(mp, side, data.chunk || "");
-        } else {
-          setActivePhase(mp);
-          appendStreamToken(side, mp, data.chunk || "");
-        }
-      } else if (data.type === "judging_results") {
-        const scores = data.results?.scores as Record<string, Record<string, number>> | undefined;
-        if (scores) setJudgingResults(scores);
-        markPhaseComplete("judging");
+        // In live mode, the backend streams only debate content chunks (phase_type is "streamed"),
+        // and does not emit separate internal-analysis chunks. Treat all streamed content here
+        // as debate turns and append via appendStreamToken.
+        setActivePhase(mp);
+        appendStreamToken(side, mp, data.chunk || "");
       } else if (data.type === "complete") {
         setStreaming(false);
         setActivePhase("judging");
         setPhaseTransitionMsg(null);
-        // Mark the last public phase complete if not already done
-        markPhaseComplete("closing");
         es.close();
       } else if (data.type === "error") {
         es.close();
@@ -481,13 +479,8 @@ export default function DebatePage() {
 
   const proSideTurns = debateTurns.filter((t) => t.side === "pro" && t.phase === activePhase);
   const conSideTurns = debateTurns.filter((t) => t.side === "con" && t.phase === activePhase);
-
-  // Use live judging results in live mode, fall back to mock scores in demo mode
-  const liveScores = !isDemoMode && judgingResults ? judgingResults : null;
-  const proScores = liveScores?.pro ?? MOCK_SCORES.pro;
-  const conScores = liveScores?.con ?? MOCK_SCORES.con;
-  const proTotal = (proScores.logic ?? 0) * .3 + (proScores.evidence ?? 0) * .25 + (proScores.refutation ?? 0) * .25 + (proScores.steelman ?? 0) * .2;
-  const conTotal = (conScores.logic ?? 0) * .3 + (conScores.evidence ?? 0) * .25 + (conScores.refutation ?? 0) * .25 + (conScores.steelman ?? 0) * .2;
+  const proTotal = MOCK_SCORES.pro.logic * .3 + MOCK_SCORES.pro.evidence * .25 + MOCK_SCORES.pro.refutation * .25 + MOCK_SCORES.pro.steelman * .2;
+  const conTotal = MOCK_SCORES.con.logic * .3 + MOCK_SCORES.con.evidence * .25 + MOCK_SCORES.con.refutation * .25 + MOCK_SCORES.con.steelman * .2;
 
   return (
     <div className="min-h-screen bg-slate-950 text-gray-100 flex flex-col relative overflow-hidden">
@@ -671,10 +664,10 @@ export default function DebatePage() {
                     <span className="text-cyan-400 font-black uppercase tracking-widest">← Pro ({proPersona?.name})</span>
                     <span className="text-fuchsia-400 font-black uppercase tracking-widest">Con ({conPersona?.name}) →</span>
                   </div>
-                  <ScoreBar label="Logical Validity" weight="30%" proScore={proScores.logic ?? 0} conScore={conScores.logic ?? 0} />
-                  <ScoreBar label="Evidence Quality" weight="25%" proScore={proScores.evidence ?? 0} conScore={conScores.evidence ?? 0} />
-                  <ScoreBar label="Refutation Strength" weight="25%" proScore={proScores.refutation ?? 0} conScore={conScores.refutation ?? 0} />
-                  <ScoreBar label="Steelmanning Quality" weight="20%" proScore={proScores.steelman ?? 0} conScore={conScores.steelman ?? 0} />
+                  <ScoreBar label="Logical Validity" weight="30%" proScore={MOCK_SCORES.pro.logic} conScore={MOCK_SCORES.con.logic} />
+                  <ScoreBar label="Evidence Quality" weight="25%" proScore={MOCK_SCORES.pro.evidence} conScore={MOCK_SCORES.con.evidence} />
+                  <ScoreBar label="Refutation Strength" weight="25%" proScore={MOCK_SCORES.pro.refutation} conScore={MOCK_SCORES.con.refutation} />
+                  <ScoreBar label="Steelmanning Quality" weight="20%" proScore={MOCK_SCORES.pro.steelman} conScore={MOCK_SCORES.con.steelman} />
                   <div className="mt-6 pt-6 border-t border-white/10">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-400 font-bold uppercase tracking-widest text-xs">Weighted Total</span>

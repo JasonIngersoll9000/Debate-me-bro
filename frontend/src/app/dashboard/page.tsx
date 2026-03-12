@@ -4,25 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-interface DebateSummary {
-  id: string;
-  topic: string;
-  resolution: string;
-  status: string;
-  created_at: string;
-  winner: string;
-  pro_score: number;
-  con_score: number;
-  turn_count: number;
-}
-
 export default function DashboardPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [debates, setDebates] = useState<DebateSummary[]>([]);
-  const [loadingDebates, setLoadingDebates] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -34,15 +18,6 @@ export default function DashboardPage() {
     }
     setIsLoggedIn(true);
     setUserEmail(email);
-
-    // Fetch real debate history
-    fetch(`${API_BASE_URL}/api/debates/`)
-      .then((r) => r.json())
-      .then((data) => {
-        setDebates(Array.isArray(data) ? data : []);
-        setLoadingDebates(false);
-      })
-      .catch(() => setLoadingDebates(false));
   }, [router]);
 
   const handleLogout = () => {
@@ -51,16 +26,10 @@ export default function DashboardPage() {
     router.push("/");
   };
 
-  const formatDate = (iso: string) => {
-    if (!iso) return "Unknown";
-    try {
-      return new Date(iso).toLocaleDateString("en-US", {
-        month: "short", day: "numeric", year: "numeric",
-      });
-    } catch {
-      return iso;
-    }
-  };
+  // Placeholder debate history — will be populated from API later
+  const pastDebates = [
+    { id: "healthcare", topic: "Should the US adopt universal healthcare?", date: "2025-03-12", proScore: 4.3, conScore: 3.8, yourVote: "pro" as const },
+  ];
 
   if (!isLoggedIn) return null;
 
@@ -99,44 +68,32 @@ export default function DashboardPage() {
       <main className="relative z-10 flex-1 px-6 py-12 max-w-5xl mx-auto w-full">
         <div className="mb-12">
           <h1 className="text-3xl md:text-4xl font-black text-white mb-2">My Debates</h1>
-          <p className="text-gray-500">Browse all completed debates or start a new one</p>
+          <p className="text-gray-500">Your debate history and voting record</p>
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
           <Link href="/" className="group p-6 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/20 hover:border-cyan-500/40 transition-all hover:-translate-y-1">
             <div className="text-2xl mb-3">💡</div>
-            <div className="text-sm font-black text-white mb-1">Preset Debate</div>
-            <div className="text-xs text-gray-500">Pick a preset topic</div>
-          </Link>
-          <Link href="/debates/new" className="group p-6 rounded-2xl bg-gradient-to-br from-fuchsia-500/10 to-purple-600/10 border border-fuchsia-500/20 hover:border-fuchsia-500/40 transition-all hover:-translate-y-1">
-            <div className="text-2xl mb-3">✨</div>
-            <div className="text-sm font-black text-white mb-1">Custom Topic</div>
-            <div className="text-xs text-gray-500">Bring your own research</div>
+            <div className="text-sm font-black text-white mb-1">New Debate</div>
+            <div className="text-xs text-gray-500">Pick a topic and start</div>
           </Link>
           <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
             <div className="text-2xl mb-3">📊</div>
-            <div className="text-sm font-black text-white mb-1">{debates.length}</div>
-            <div className="text-xs text-gray-500">Total Debates</div>
+            <div className="text-sm font-black text-white mb-1">{pastDebates.length}</div>
+            <div className="text-xs text-gray-500">Debates Watched</div>
           </div>
           <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
-            <div className="text-2xl mb-3">✅</div>
-            <div className="text-sm font-black text-white mb-1">{debates.filter(d => d.status === "completed").length}</div>
-            <div className="text-xs text-gray-500">Completed</div>
+            <div className="text-2xl mb-3">🗳️</div>
+            <div className="text-sm font-black text-white mb-1">{pastDebates.filter(d => d.yourVote).length}</div>
+            <div className="text-xs text-gray-500">Votes Cast</div>
           </div>
         </div>
 
         {/* Debate History */}
         <div>
-          <h2 className="text-lg font-black text-white mb-6 uppercase tracking-widest">All Debates</h2>
-          {loadingDebates ? (
-            <div className="flex items-center justify-center py-20">
-              <div className="flex items-center gap-3 text-sm font-medium text-cyan-400">
-                <span className="w-5 h-5 border-2 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin" />
-                Loading debates...
-              </div>
-            </div>
-          ) : debates.length === 0 ? (
+          <h2 className="text-lg font-black text-white mb-6 uppercase tracking-widest">Recent Debates</h2>
+          {pastDebates.length === 0 ? (
             <div className="text-center py-20">
               <div className="text-5xl mb-4 opacity-30">🎯</div>
               <p className="text-gray-500 text-lg mb-6">No debates yet. Start your first one!</p>
@@ -146,10 +103,10 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {debates.map((debate) => (
+              {pastDebates.map((debate) => (
                 <Link
                   key={debate.id}
-                  href={`/debates/${debate.id}`}
+                  href={`/debates/${debate.id}?demo=true`}
                   className="block group p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] hover:border-white/20 transition-all"
                 >
                   <div className="flex items-start justify-between gap-4">
@@ -157,36 +114,24 @@ export default function DashboardPage() {
                       <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors mb-2">
                         {debate.topic}
                       </h3>
-                      {debate.resolution && (
-                        <p className="text-sm text-gray-500 mb-2 line-clamp-1">{debate.resolution}</p>
-                      )}
                       <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span>{formatDate(debate.created_at)}</span>
-                        {debate.pro_score > 0 && (
-                          <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                            Pro: {debate.pro_score}
-                          </span>
-                        )}
-                        {debate.con_score > 0 && (
-                          <span className="flex items-center gap-1">
-                            <span className="w-2 h-2 rounded-full bg-fuchsia-400" />
-                            Con: {debate.con_score}
-                          </span>
-                        )}
-                        {debate.winner && (
+                        <span>{debate.date}</span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-cyan-400" />
+                          Pro: {debate.proScore}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 rounded-full bg-fuchsia-400" />
+                          Con: {debate.conScore}
+                        </span>
+                        {debate.yourVote && (
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            debate.winner === "pro"
+                            debate.yourVote === "pro"
                               ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                              : debate.winner === "con"
-                              ? "bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30"
-                              : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
+                              : "bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30"
                           }`}>
-                            {debate.winner === "tie" ? "Tie" : `${debate.winner} wins`}
+                            Voted {debate.yourVote}
                           </span>
-                        )}
-                        {debate.turn_count > 0 && (
-                          <span>{debate.turn_count} turns</span>
                         )}
                       </div>
                     </div>
