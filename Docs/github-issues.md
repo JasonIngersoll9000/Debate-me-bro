@@ -170,7 +170,7 @@ Build the prompt construction system: dynamic persona generation (tailored to to
 Server-Sent Events endpoint that streams debate content to the frontend as the debate progresses, including phase transitions and internal phase notifications.
 
 #### Acceptance Criteria
-- [x] `GET /debates/{id}/stream` returns SSE stream (content-type: text/event-stream)
+- [x] `GET /api/debates/{id}/stream` returns SSE stream (content-type: text/event-stream)
 - [x] Streamed phases: argument content sent token-by-token as SSE events
 - [x] Internal phases: transition event sent (type: "phase_transition", message: "Agents evaluating...")
 - [x] Internal phase strategic analysis available via separate endpoint (hidden by default, viewable on request)
