@@ -282,9 +282,28 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
                 if node_name:
                     current_node = node_name
                     if current_node in INTERNAL_PHASES:
-                        yield f"data: {json.dumps({'type': 'phase_transition', 'phase': current_node, 'phase_type': 'internal', 'speaker': get_speaker(current_node), 'message': f'Agents evaluating ({current_node})...'})}\n\n"
+                        payload = {
+                            "type": "phase_transition",
+                            "phase": current_node,
+                            "phase_type": "internal",
+                            "speaker": get_speaker(current_node),
+                            "message": (
+                                f"Agents evaluating ({current_node})..."
+                            ),
+                        }
+                        yield f"data: {json.dumps(payload)}\n\n"
                     elif current_node == "judging":
-                        yield f"data: {json.dumps({'type': 'phase_transition', 'phase': 'judging', 'phase_type': 'judging', 'speaker': 'system', 'message': 'The judging panel is now evaluating the debate...'})}\n\n"
+                        payload = {
+                            "type": "phase_transition",
+                            "phase": "judging",
+                            "phase_type": "judging",
+                            "speaker": "system",
+                            "message": (
+                                "The judging panel is now evaluating"
+                                " the debate..."
+                            ),
+                        }
+                        yield f"data: {json.dumps(payload)}\n\n"
 
             elif kind == "on_chat_model_stream":
                 if (
@@ -317,37 +336,121 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
                 if phase_name == "judging":
                     data = event.get("data", {}) or {}
                     output = data.get("output", {})
-                    if isinstance(output, dict) and output.get("judging_results"):
+                    if isinstance(output, dict) and output.get(
+                        "judging_results"
+                    ):
                         judging_results = output["judging_results"]
-                        yield f"data: {json.dumps({'type': 'judging_results', 'results': judging_results})}\n\n"
+                        payload = {
+                            "type": "judging_results",
+                            "results": judging_results,
+                        }
+                        yield (
+                            f"data: {json.dumps(payload)}\n\n"
+                        )
 
                 elif phase_name and phase_name in INTERNAL_PHASES:
-                    # Collect only the *new* internal turns added by this phase.
-                    # output["debate_turns"] is the full LangGraph state history,
-                    # so we skip past any turns we've already seen to avoid
-                    # duplicates. We track counts for internal turns separately
-                    # from public (streamed) turns, since the LangGraph state
-                    # only contains internal turns while collected_turns may
-                    # also hold public turns constructed from streamed text.
+                    # Collect only the *new* internal turns added
+                    # by this phase.  output["debate_turns"] is
+                    # the full LangGraph state history, so we skip
+                    # past any turns we've already seen to avoid
+                    # duplicates.
                     data = event.get("data", {}) or {}
                     output = data.get("output", {})
                     if isinstance(output, dict):
                         all_internal = [
-                            t for t in output.get("debate_turns", [])
-                            if isinstance(t, dict) and t.get("is_internal")
+                            t
+                            for t in output.get(
+                                "debate_turns", []
+                            )
+                            if isinstance(t, dict)
+                            and t.get("is_internal")
                         ]
-                        for turn in all_internal[seen_internal_turn_count:]:
+                        for turn in all_internal[
+                            seen_internal_turn_count:
+                        ]:
                             collected_turns.append(turn)
-                        seen_internal_turn_count = len(all_internal)
+                        seen_internal_turn_count = len(
+                            all_internal
+                        )
 
                 elif phase_name and phase_name in streamed_phases:
                     # Save the accumulated streamed text as a turn
-                    collected_turns.append({
-                        "phase": phase_name,
-                        "side": get_speaker(phase_name),
-                        "text": streamed_phases[phase_name],
-                        "is_internal": False,
-                    })
+                    collected_turns.append(
+                        {
+                            "phase": phase_name,
+                            "side": get_speaker(phase_name),
+                            "text": streamed_phases[phase_name],
+                            "is_internal": False,
+                        }
+                    )
+
+                elif (
+                    phase_name
+                    and phase_name not in INTERNAL_PHASES
+                    and phase_name != "judging"
+                    and phase_name not in streamed_phases
+                ):
+                    # Fallback for non-streaming LLM responses:
+                    # extract the most recent public turn text
+                    # from the chain output and emit it as
+                    # content events.
+                    data = event.get("data", {}) or {}
+                    output = data.get("output", "")
+                    text = None
+
+                    if isinstance(output, dict):
+                        turns = output.get("debate_turns", [])
+                        for turn in reversed(turns):
+                            if not isinstance(turn, dict):
+                                continue
+                            if (
+                                turn.get("phase") == phase_name
+                                and not turn.get(
+                                    "is_internal", False
+                                )
+                            ):
+                                text = turn.get("text", "")
+                                break
+                    else:
+                        try:
+                            text = (
+                                getattr(output, "content", None)
+                                or str(output)
+                            )
+                        except Exception:
+                            text = str(output)
+
+                    if text and text not in ("None", "{}"):
+                        chunk_size = 200
+                        for i in range(
+                            0, len(text), chunk_size
+                        ):
+                            chunk = text[i: i + chunk_size]
+                            payload = {
+                                "type": "content",
+                                "phase": phase_name,
+                                "phase_type": "streamed",
+                                "speaker": get_speaker(
+                                    phase_name
+                                ),
+                                "chunk": chunk,
+                            }
+                            yield (
+                                f"data:"
+                                f" {json.dumps(payload)}\n\n"
+                            )
+
+                        # Also persist for replay
+                        collected_turns.append(
+                            {
+                                "phase": phase_name,
+                                "side": get_speaker(
+                                    phase_name
+                                ),
+                                "text": text,
+                                "is_internal": False,
+                            }
+                        )
 
         # ── Save completed debate ──
         debate_data = {
