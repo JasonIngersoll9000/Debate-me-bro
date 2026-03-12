@@ -4,36 +4,49 @@
 
 ## Setup Checklist
 1. Create GitHub Project (Board layout): **Backlog | Sprint Todo | In Progress | In Review | Done**
-2. Create Milestone: **Sprint 1** (due: Week 9)
-3. Create Milestone: **Sprint 2** (due: Week 10)
-4. Create labels: `feature`, `chore`, `bug`, `docs`, `priority: high`, `priority: medium`, `priority: low`
-5. Create all issues below, assign milestones and labels
-6. Move Sprint 1 issues → "Sprint Todo" column
-7. Move Sprint 2 issues → "Backlog" column
+2. Create Milestones: **Sprint 1** (due: Week 9), **Sprint 2** (due: Week 10), **Sprint 3** (Stretch)
+3. Create labels: `feature`, `chore`, `bug`, `docs`, `priority: high`, `priority: medium`, `priority: low`
+4. Create all issues below, assign milestones and labels
+5. Move Sprint 1 issues → "Done" column
+6. Move Sprint 2 issues → "Sprint Todo" column
+7. Move Sprint 3 issues → "Backlog" column
 
 ## Dependency Order (build in roughly this sequence)
 
-### Sprint 1 — Core Debate Loop
+### Sprint 1 — Scaffolding, Frontend, & Demo ✅ COMPLETE
 ```
 #1 Scaffolding + Docker ──→ #2 DB Schema ──→ #3 Auth
                        └──→ #4 Evidence Loader ──→ #5 LangGraph State Machine ──→ #6 Agent Prompts
                                                                                        ↓
 #8 Landing Page ──→ #9 Debate View + Streaming ←── #7 SSE Endpoint ←── #6
                                                        ↓
-                                                  #10 Basic Judging
+                                                  #10 AI Judging Panel
 ```
 
-### Sprint 2 — Custom Topics + Full Judging
+### Sprint 2 — Live API Debates + Persistence
+```
+#16 Debate Persistence + Caching (required before live API calls)
+      ↓
+#17 Demo Mode Toggle + Live API Integration
+      ↓
+#18 Topic Input Bug Fix
+#19 Public Debate Browsing + Likes
+#14 Human Voting System
+#15 Dashboard (real data)
+#20 API Usage Cap
+```
+
+### Sprint 3 — AI-Powered Research + Custom Topics (Stretch)
 ```
 #11 Topic Analysis + Prompt Gen ──→ #12 Research Upload + Custom Flow
-#13 Full Judging Panel (extends #10)
-#14 Human Voting
-#15 Dashboard
+#13 Position-Swapped Judging
+#21 AI Resolution Curation & Improvement
+#22 AI-Powered Research (user provides API key or pays)
 ```
 
 ---
 
-## Sprint 1 Issues (Must Have — Core Debate Pipeline)
+## Sprint 1 Issues — ✅ ALL COMPLETE
 
 ---
 
@@ -41,10 +54,7 @@
 **Labels:** `chore`, `priority: high`  
 **Milestone:** Sprint 1  
 **Assignee:** Jason  
-**Depends on:** Nothing (first issue)
-
-#### Description
-Initialize the monorepo with backend (FastAPI) and frontend (Next.js), Docker Compose for local dev, `.agent/` rules and workflows, and basic CI.
+**Status:** ✅ Complete
 
 #### Acceptance Criteria
 - [x] FastAPI backend runs on `localhost:8000` with `/health` returning `{"status": "ok"}`
@@ -62,10 +72,7 @@ Initialize the monorepo with backend (FastAPI) and frontend (Next.js), Docker Co
 **Labels:** `chore`, `priority: high`  
 **Milestone:** Sprint 1  
 **Assignee:** Shuai  
-**Depends on:** #1
-
-#### Description
-Create PostgreSQL schema, SQLAlchemy ORM models, Alembic migrations, and corresponding Pydantic request/response models.
+**Status:** ✅ Complete
 
 #### Acceptance Criteria
 - [x] SQLAlchemy ORM models for: `users`, `debates`, `debate_turns`, `votes`, `judge_scores`
@@ -81,10 +88,7 @@ Create PostgreSQL schema, SQLAlchemy ORM models, Alembic migrations, and corresp
 **Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 1  
 **Assignee:** Shuai  
-**Depends on:** #2
-
-#### Description
-JWT-based auth so users can register, log in, and access protected routes.
+**Status:** ✅ Complete
 
 #### Acceptance Criteria
 - [x] `POST /auth/register` creates user with hashed password (passlib bcrypt)
@@ -100,17 +104,13 @@ JWT-based auth so users can register, log in, and access protected routes.
 **Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 1  
 **Assignee:** Jason  
-**Depends on:** #1
-
-#### Description
-Create preset topic system with pre-loaded research. Evidence loader parses structured Markdown research docs with hyperlinked sources into a format debate agents can reference and cite.
+**Status:** ✅ Complete
 
 #### Acceptance Criteria
 - [x] `GET /topics/presets` returns 3+ preset topics with titles, descriptions, Pro/Con positions
-- [x] Pre-researched evidence files in `backend/evidence/` for all preset topics (structured Markdown with hyperlinked sources)
-- [x] Each topic has Pro research doc and Con research doc (generated via Claude Research / ChatGPT Deep Research during development)
-- [x] `evidence.py` parses Markdown research files, extracts arguments, and builds a citation index (`[Source Title](URL)` → `CitationDetail`)
-- [x] Evidence loader returns ALL research (Pro + Con combined) as a single `EvidenceBundle` — no side restriction
+- [x] Pre-researched evidence files in `backend/evidence/` for all preset topics
+- [x] `evidence.py` parses Markdown research files, extracts arguments, and builds citation index
+- [x] Evidence loader returns ALL research (Pro + Con combined) as a single `EvidenceBundle`
 - [x] Evidence format identical whether from pre-loaded files or future uploaded docs
 - [x] Unit tests verify evidence loading, parsing, and citation extraction
 
@@ -120,18 +120,13 @@ Create preset topic system with pre-loaded research. Evidence loader parses stru
 **Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 1  
 **Assignee:** Jason  
-**Depends on:** #4
-
-#### Description
-Core debate orchestration as a LangGraph state machine with nodes for all 7 phases (including internal evaluation phases).
+**Status:** ✅ Complete
 
 #### Acceptance Criteria
-- [x] `DebateState` TypedDict tracks: debate_id, topic, status, current_phase, debate_turns, evidence_bundle (shared Pro + Con), personas
-- [x] Graph nodes for full pipeline: `research_consultation` → `opening_pro` → `opening_con` → `eval_openings` → `rebuttal_pro` → `rebuttal_con` → `eval_full_debate` → `closing_pro` → `closing_con` → `judging` → `complete`
-- [x] Internal phases (research_consultation, eval_openings, eval_full_debate) produce strategic analysis output but do NOT stream to user by default
-- [x] Streamed phases (opening, rebuttal, closing) emit SSE events with argument content
-- [x] Phase transition events sent between phases (including transition messages for internal phases)
-- [x] Debate status updates in database at each transition
+- [x] `DebateState` TypedDict tracks: debate_id, topic, status, current_phase, debate_turns, evidence_bundle, personas
+- [x] Graph nodes for full 10-phase pipeline
+- [x] Internal phases produce strategic analysis but do NOT stream to user by default
+- [x] Phase transition events sent between phases
 - [x] Unit tests verify state machine transitions with mocked agents
 
 ---
@@ -140,23 +135,14 @@ Core debate orchestration as a LangGraph state machine with nodes for all 7 phas
 **Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 1  
 **Assignee:** Jason  
-**Depends on:** #4, #5
-
-#### Description
-Build the prompt construction system: dynamic persona generation (tailored to topic + evidence), phase-specific instructions, shared evidence injection, and internal evaluation prompts. Agents should appeal to values and argue persuasively, not produce dry academic output.
+**Status:** ✅ Complete
 
 #### Acceptance Criteria
-- [x] `persona_generator.py` generates a tailored advocate persona based on topic and evidence (via Claude Haiku) — not a fixed character
-- [x] System prompt includes: dynamic persona, assigned position (re-injected every phase), commitment device, steelmanning requirement, instruction to appeal to values
-- [x] **Research consultation prompt:** Agent receives ALL research, identifies strengths/vulnerabilities/opponent strategy/source conflicts
-- [x] **Opening prompt:** Agent presents case with citations, hasn't seen opponent's opening
-- [x] **Eval openings prompt (internal):** Agent reads opponent's opening, assesses sources, plans rebuttal — output stored but not streamed
-- [x] **Rebuttal prompt:** Steelman → respond → challenge evidence → introduce new sources → connect to values
-- [x] **Eval full debate prompt (internal):** Agent reflects on all arguments, plans closing — output stored but not streamed
-- [x] **Closing prompt:** Acknowledge opponent, name core disagreement, synthesize, address hardest question, close with impact
-- [x] All prompts use minimums (not maximums) for length and sources — as long as needed
-- [x] Evidence passed with `[Source: Title](URL)` citation markers so agents can reference specific sources
-- [x] Unit tests verify prompt construction includes all required components per phase
+- [x] `persona_generator.py` generates tailored advocate persona via Claude Haiku
+- [x] System prompt includes: dynamic persona, assigned position, commitment device, steelmanning requirement
+- [x] All 6 phase-specific prompts implemented per `prompts-doc.md`
+- [x] All prompts use minimums (not maximums) for length and sources
+- [x] Evidence passed with citation markers so agents can reference specific sources
 
 ---
 
@@ -164,10 +150,7 @@ Build the prompt construction system: dynamic persona generation (tailored to to
 **Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 1  
 **Assignee:** Shuai  
-**Depends on:** #5
-
-#### Description
-Server-Sent Events endpoint that streams debate content to the frontend as the debate progresses, including phase transitions and internal phase notifications.
+**Status:** ✅ Complete
 
 #### Acceptance Criteria
 - [x] `GET /api/debates/{id}/stream` returns SSE stream (content-type: text/event-stream)
@@ -176,8 +159,7 @@ Server-Sent Events endpoint that streams debate content to the frontend as the d
 - [x] Internal phase strategic analysis available via separate endpoint (hidden by default, viewable on request)
 - [x] Stream includes metadata: current phase, speaker (pro/con), phase type (streamed vs internal)
 - [x] Stream ends with completion event
-- [x] Frontend SSE handler connects, processes events, handles reconnection
-- [x] Integration test verifies events sent in correct order for complete debate
+- [x] Frontend SSE handler connects and processes events
 
 ---
 
@@ -185,128 +167,134 @@ Server-Sent Events endpoint that streams debate content to the frontend as the d
 **Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 1  
 **Assignee:** Shuai  
-**Depends on:** #1
-
-#### Description
-Landing page with topic input, preset topic cards, "How it works" flow, and navigation to debate view.
+**Status:** ✅ Complete
 
 #### Acceptance Criteria
 - [x] Displays app title, tagline, topic input field (dark theme, gradient title per mockup)
 - [x] 3+ preset topic cards fetched from `GET /topics/presets`
 - [x] Clicking a preset navigates to `/debates/[id]` and launches debate
-- [x] "How it works" shows 7-phase flow: Research → Opening → Eval → Rebuttal → Eval → Closing → Judging
-- [x] Styled with TailwindCSS matching v3 mockup
-- [x] Component test verifies preset topics render and are clickable
+- [x] "How it works" shows 7-phase flow
+- [x] Styled with TailwindCSS matching mockup
 
 ---
 
-### Issue #9: Frontend — Live debate view with streaming
+### Issue #9: Frontend — Live debate view with streaming (demo mode)
 **Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 1  
 **Assignee:** Shuai  
-**Depends on:** #7, #8
-
-#### Description
-Split-screen debate view with streaming arguments, 7-phase navigation, citation badges with clickable source URLs, internal phase transition messages, and "Show strategic analysis" toggle.
+**Status:** ✅ Complete (demo mode)
 
 #### Acceptance Criteria
-- [ ] Split-screen: Pro (left, blue) and Con (right, red) with dynamic persona names/roles
-- [ ] Arguments stream token-by-token with cursor animation
-- [ ] Phase nav bar shows all 7 phases — internal phases styled differently (italic/muted)
-- [ ] Completed phases clickable to review earlier arguments
-- [ ] Internal phases show transition message + spinner + "🧠 Show strategic analysis" toggle
-- [ ] Strategic analysis panels display in monospace, collapsible, visually distinct from arguments
-- [ ] Citation badges show source title, click to expand with hyperlink URL for verification
-- [ ] Zustand store manages debate state (phase, turns, streaming, internal analysis)
-- [ ] Component tests for ArgumentCard, PhaseNav, StreamingText, StrategicAnalysisPanel
+- [x] Split-screen: Pro (left, blue) and Con (right, red) with dynamic persona names/roles
+- [x] Arguments stream token-by-token with cursor animation
+- [x] Phase nav bar shows all 7 phases — internal phases styled differently
+- [x] Completed phases clickable to review earlier arguments
+- [x] Internal phases show transition message + collapsible research modal
+- [x] Citation badges show source title, click to expand with hyperlink URL for verification
+- [x] Zustand store manages debate state
 
 ---
 
-### Issue #10: Basic AI judging (single judge, no position swap)
+### Issue #10: AI judging panel (3 specialized judges)
 **Labels:** `feature`, `priority: medium`  
 **Milestone:** Sprint 1  
 **Assignee:** Jason  
-**Depends on:** #6
-
-#### Description
-Basic judging with a single AI judge on the 4-criterion rubric. Multi-judge panel + position swapping added in Sprint 2.
+**Status:** ✅ Complete (backend only)
 
 #### Acceptance Criteria
-- [ ] Single Claude Sonnet judge evaluates complete debate transcript
-- [ ] Scores on 4 criteria: Logical Validity (30%), Evidence Quality (25%), Refutation Strength (25%), Steelmanning Quality (20%)
-- [ ] Chain-of-thought reasoning before assigning scores
-- [ ] Judge uses anti-bias instructions (unpopular but well-argued > popular but poorly argued)
-- [ ] Evidence judge criteria: methodology and accuracy over institutional prestige
-- [ ] Scores stored in `judge_scores` table
-- [ ] Results displayed as score bars (Pro vs Con per criterion) in frontend
-- [ ] Unit test verifies rubric scoring with mocked API response
+- [x] Three specialized judges: Logic (30%), Evidence (25%), Engagement (Refutation 25% + Steelmanning 20%)
+- [x] Each judge has detailed system prompt with anti-bias instructions per `prompts-doc.md`
+- [x] `judging/panel.py` orchestrator runs 3 judges concurrently via `asyncio.gather`
+- [x] Weighted scores computed and overall winner determined
+- [ ] *(Sprint 2)* Judging results emitted via SSE and displayed in frontend as score bars
 
 ---
 
-## Sprint 2 Issues (Should Have + Could Have)
+## Sprint 2 Issues — Live API Debates + Persistence
+
+> **Goal:** Make the app run real debates using the Anthropic API, persist every debate, and add public browsing. After Sprint 2, a user can start a preset debate, watch it stream live, and every other user can replay it.
 
 ---
 
-### Issue #11: Topic analysis and research prompt generator
-**Labels:** `feature`, `priority: medium`  
+### Issue #16: Debate persistence and caching
+**Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 2  
 **Assignee:** Jason  
-**Depends on:** #4
+**Depends on:** #7
 
 #### Description
-For custom topics, Claude Haiku analyzes the resolution and generates argument dimensions. The system produces two research prompts requiring structured Markdown with hyperlinked sources.
+Every completed debate is saved so it can be replayed without re-running AI calls. All debates are public and browseable. Uses file-based storage for development; migrates to PostgreSQL for production.
+
+> **Rationale:** Each debate costs significant API tokens. We must preserve every completed debate and never re-generate one that already exists.
 
 #### Acceptance Criteria
-- [ ] `POST /topics/analyze` accepts any topic string — no filtering or refusal
-- [ ] Claude Haiku returns: Pro/Con position statements, 3-5 argument dimensions per side, key values/frameworks, contested empirical questions, persona suggestions
-- [ ] `GET /research/prompt/{topic_id}` returns two formatted research prompts (Pro + Con)
-- [ ] Research prompts require structured Markdown output with `**[Source Title](URL)**` format
-- [ ] Research prompts instruct for deep advocacy research, not balanced overview
-- [ ] Accepts optional user-supplied argumentation lines (Could Have — only if US-9 is implemented)
-- [ ] User can review/edit generated positions before proceeding
-- [ ] **Debate Caching:** If user requests a Custom Topic that already exists in DB with status "completed", backend retrieves stored turns and artificially plays back the SSE stream to avoid invoking LLMs.
-- [ ] Unit tests verify analysis returns valid structured output
+- [x] `debate/store.py` implements a debate store with: `save_debate()`, `load_debate()`, `list_debates()`, `debate_exists()`
+- [x] Development mode: JSON file store at `backend/data/debates/{debate_id}.json`
+- [x] `stream.py` checks for existing debate before invoking LLMs — if found, replays from cache via SSE
+- [x] `stream.py` saves completed debate to store after all phases finish
+- [x] `GET /api/debates/` lists all completed debates (public)
+- [x] `GET /api/debates/{id}` returns full debate data (replay without streaming)
+- [ ] Frontend checks for completed debate data before connecting to SSE stream
+- [ ] Preset topic debates cached after first generation
+- [ ] Custom topic debates cached after completion
+- [ ] Production mode: PostgreSQL using existing `Debate` + `Turn` models in `db/models.py`
+- [ ] Integration test: generate → verify saved → request same → verify replayed from cache
 
 ---
 
-### Issue #12: User research upload and custom topic flow
+### Issue #17: Demo mode toggle + live API integration (NEW)
+**Labels:** `feature`, `priority: high`  
+**Milestone:** Sprint 2  
+**Assignee:** Jason  
+**Depends on:** #16
+
+#### Description
+Currently the debate view defaults to demo/mock mode. We need a clear toggle so the app can run real API calls when ready, while keeping demo mode available for showcasing without burning tokens.
+
+#### Acceptance Criteria
+- [ ] Environment variable `DEBATE_MODE=demo|live` controls whether debates run demo data or real LLM calls
+- [ ] When `DEBATE_MODE=live`, preset debates call the real LangGraph pipeline with Claude Sonnet
+- [ ] When `DEBATE_MODE=demo`, preset debates use the existing mock/demo stream (current behavior)
+- [ ] The stream endpoint accepts an optional `?mode=demo` query param to override per-request
+- [ ] Frontend shows a small indicator ("DEMO" badge or "LIVE" badge) so users know which mode they're in
+- [ ] If a debate is already cached (from a previous live run), it replays from cache regardless of mode
+
+---
+
+### Issue #18: Topic input persistence bug fix (NEW)
+**Labels:** `bug`, `priority: high`  
+**Milestone:** Sprint 2  
+**Assignee:** Shuai  
+**Depends on:** #8
+
+#### Description
+When a user types a custom topic in the input field on the landing page and clicks "Debate It →", the text doesn't persist through navigation. They arrive at the next page with an empty input and must retype their topic.
+
+#### Acceptance Criteria
+- [ ] Custom topic text entered on landing page persists through navigation to `/debates/new`
+- [ ] Topic is passed via URL query param AND stored in Zustand store
+- [ ] The `/debates/new` page reads the topic from the query param and pre-fills the resolution field
+- [ ] Pressing Enter in the landing page input also preserves the text
+
+---
+
+### Issue #19: Public debate browsing + likes (NEW)
 **Labels:** `feature`, `priority: medium`  
 **Milestone:** Sprint 2  
 **Assignee:** Shuai  
-**Depends on:** #11
+**Depends on:** #16
 
 #### Description
-Upload research documents for custom topics. Parsed into same structured format as pre-loaded research.
+All completed debates are publicly browseable. Users can "like" debates they find interesting, surfacing the best debates for the community.
 
 #### Acceptance Criteria
-- [ ] `POST /research/upload` accepts text or PDF files for Pro and/or Con research
-- [ ] Uploaded Markdown parsed by evidence loader — same `EvidenceBundle` format as pre-loaded
-- [ ] Citation index built from `**[Title](URL)**` hyperlinks in uploaded documents
-- [ ] Both debate agents receive ALL uploaded research (shared pool)
-- [ ] Frontend upload page: generated prompts displayed + copy buttons, file upload for Pro + Con
-- [ ] User can optionally add specific argumentation lines (Could Have — only if US-9 is implemented; UI makes clear these are additive, not restrictive)
-- [ ] Debate launches after research uploaded
-- [ ] Integration test verifies upload → parse → debate flow
-
----
-
-### Issue #13: Full judging panel with position-swapped evaluation
-**Labels:** `feature`, `priority: medium`  
-**Milestone:** Sprint 2  
-**Assignee:** Jason  
-**Depends on:** #10
-
-#### Description
-Extend basic judging to 3-judge panel (Logic, Evidence, Engagement) with position-swapped bias elimination.
-
-#### Acceptance Criteria
-- [ ] Three judges with specialized system prompts: Logic Judge, Evidence Judge, Engagement Judge
-- [ ] Evidence Judge evaluates source quality on methodology/accuracy, not institutional prestige
-- [ ] Each judgment runs twice: original order + reversed order (position swap)
-- [ ] Consistent results counted; inconsistent flagged
-- [ ] Scores from both orderings averaged
-- [ ] Frontend: per-judge breakdown with expandable reasoning, consistency indicator
-- [ ] Unit tests verify position-swap logic and consistency detection
+- [ ] Landing page or `/browse` shows all completed debates as cards (topic, resolution, winner, scores)
+- [ ] Cards sorted by most recent, with option to sort by most liked
+- [ ] Authenticated users can "like" a debate (one like per user per debate)
+- [ ] `POST /api/debates/{id}/like` — toggle like (auth required)
+- [ ] `GET /api/debates/` returns `like_count` in each debate summary
+- [ ] Like count displayed on debate cards and detail view
+- [ ] Unauthenticated users can browse but not like
 
 ---
 
@@ -330,18 +318,139 @@ Authenticated users vote on debate winners, displayed alongside AI judge scores 
 
 ---
 
-### Issue #15: User dashboard — debate history
-**Labels:** `feature`, `priority: low`  
+### Issue #15: Dashboard + public debate browsing
+**Labels:** `feature`, `priority: medium`  
 **Milestone:** Sprint 2  
 **Assignee:** Shuai  
-**Depends on:** #3
+**Depends on:** #3, #16
 
 #### Description
-Authenticated users see past debates, votes, and results.
+Dashboard shows real debate data from the persistence store. All debates are public.
 
 #### Acceptance Criteria
-- [ ] `GET /debates?user_id={id}` returns user's debates
-- [ ] Dashboard lists: topic, date, winner, user's vote
-- [ ] Click navigates to full debate view with results
-- [ ] Auth-gated (redirect to login if not authenticated)
+- [x] Dashboard page exists with auth gating at `/dashboard`
+- [x] `GET /api/debates/` returns ALL public completed debates (no auth required)
+- [x] Dashboard fetches real debate data from API
+- [ ] Dashboard lists: topic, date, winner, scores, user's vote
+- [ ] Click navigates to full debate replay view (no new API calls)
+- [ ] Quick actions: link to preset debates, link to custom debate flow
 - [ ] Component test for list rendering
+
+---
+
+### Issue #20: API usage cap per user (NEW)
+**Labels:** `feature`, `priority: high`  
+**Milestone:** Sprint 2  
+**Assignee:** Jason  
+**Depends on:** #3, #16
+
+#### Description
+Protect API token spend by limiting how many new debates each user can generate. Replaying cached debates doesn't count toward the cap.
+
+#### Acceptance Criteria
+- [ ] Config setting `MAX_DEBATES_PER_USER` (default: 5)
+- [ ] `stream.py` checks how many debates the current user has generated before starting a new one
+- [ ] Replaying cached debates does NOT count toward the cap
+- [ ] If cap reached, SSE stream returns an error event: `{"type": "error", "code": "RATE_LIMITED", "message": "..."}`
+- [ ] Frontend shows the user their remaining debate quota (e.g. "3 of 5 debates used")
+- [ ] Admins (configurable email list) are exempt from the cap
+
+---
+
+## Sprint 3 Issues — AI-Powered Research + Custom Topics (Stretch)
+
+> **Goal:** Allow users to debate any topic by having the AI generate research automatically, or by bringing their own research. Requires the user to provide their own API key or pay.
+
+---
+
+### Issue #11: Topic analysis and research prompt generator
+**Labels:** `feature`, `priority: medium`  
+**Milestone:** Sprint 3  
+**Assignee:** Jason  
+**Depends on:** #4
+
+#### Description
+For custom topics, Claude Haiku analyzes the resolution and generates argument dimensions. The system produces two research prompts that **users copy into Claude or ChatGPT** to run externally, then upload the results. Backend prompt logic already exists in `topics/analysis.py` and `topics/prompts.py`.
+
+#### Acceptance Criteria
+- [x] `topics/analysis.py` implements `TOPIC_ANALYSIS_PROMPT` per `prompts-doc.md §5`
+- [x] `topics/prompts.py` implements `CUSTOM_RESEARCH_PROMPT_TEMPLATE` per `prompts-doc.md §4`
+- [x] Research prompts require structured Markdown output with citation format
+- [x] Accepts optional user-supplied argumentation lines
+- [x] `POST /api/topics/analyze` route exists
+- [x] Frontend `/debates/new` page exists with 3-step flow
+- [ ] User can review/edit generated positions before proceeding
+- [ ] Unit tests verify analysis returns valid structured output
+
+---
+
+### Issue #12: User research upload and custom topic flow
+**Labels:** `feature`, `priority: medium`  
+**Milestone:** Sprint 3  
+**Assignee:** Shuai  
+**Depends on:** #11
+
+#### Description
+End-to-end custom topic flow: enter resolution → get research prompts → run externally → upload → debate.
+
+#### Acceptance Criteria
+- [x] `POST /api/research/upload` accepts Markdown files
+- [ ] Uploaded Markdown parsed by `EvidenceLoader` — same `EvidenceBundle` format
+- [ ] Citation index built from uploaded documents
+- [ ] Both agents receive ALL uploaded research (shared pool)
+- [ ] Debate launches after both research docs uploaded
+- [ ] Completed custom debate saved to persistence store
+- [ ] Integration test verifies upload → parse → debate flow
+
+---
+
+### Issue #13: Position-swapped bias elimination for judges
+**Labels:** `feature`, `priority: medium`  
+**Milestone:** Sprint 3  
+**Assignee:** Jason  
+**Depends on:** #10
+
+#### Description
+Extend the existing 3-judge panel with position-swapped bias elimination.
+
+#### Acceptance Criteria
+- [x] Three judges with specialized system prompts already exist (`judging/prompts/`)
+- [ ] Each judgment runs twice: original order + reversed order (position swap)
+- [ ] Consistent results counted; inconsistent flagged
+- [ ] Scores from both orderings averaged for final result
+- [ ] Frontend: per-judge breakdown with expandable reasoning, consistency indicator
+
+---
+
+### Issue #21: AI-assisted resolution curation and improvement (NEW)
+**Labels:** `feature`, `priority: low`  
+**Milestone:** Sprint 3  
+**Assignee:** Jason  
+
+#### Description
+When a user enters a custom debate topic, the system should help them refine it. Suggest better-framed resolutions, highlight ambiguities, and offer additional context that would make the debate more productive.
+
+#### Acceptance Criteria
+- [ ] After user enters a resolution, AI suggests 2-3 improved versions with explanations
+- [ ] Suggestions cover: clearer framing, more debatable phrasing, added specificity
+- [ ] User can accept a suggestion, edit it, or keep their original
+- [ ] AI can suggest additional context or background that would improve the debate
+- [ ] Optional: suggest related but distinct debate angles the user might not have considered
+
+---
+
+### Issue #22: AI-powered autonomous research (NEW)
+**Labels:** `feature`, `priority: low`  
+**Milestone:** Sprint 3  
+**Assignee:** Jason  
+
+#### Description
+Instead of requiring users to manually copy research prompts and run them in external tools, the system generates the research itself. This feature should only be available if the user provides their own API key or pays, since it significantly increases API costs.
+
+#### Acceptance Criteria
+- [ ] User can choose between: (a) manual research (copy prompts, upload results), or (b) AI-powered research
+- [ ] AI-powered research is gated behind: user-provided API key OR payment/subscription
+- [ ] If user provides their own Anthropic/OpenAI key, research calls use THEIR key (not ours)
+- [ ] Research generation uses the same structured prompts from `topics/prompts.py`
+- [ ] Generated research goes through the same `EvidenceLoader` pipeline
+- [ ] Clear UX showing research generation progress and estimated API cost

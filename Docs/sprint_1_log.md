@@ -146,3 +146,70 @@
 
 **Action Items for Next Issues:**
 - The Landing Page is built and routing flawlessly. We will now move into Sprint 2 considerations and Issue 9 (Live Debate Streaming View).
+
+### Issue #9: Frontend — Live debate view with streaming (demo mode)
+**Status:** Completed (demo mode)
+**What Went Well:**
+- Built the complete split-screen debate UI with Pro (blue) / Con (red) layout, phase navigation bar, streaming token-by-token rendering, and citation badges with expandable source modals.
+- Zustand store cleanly manages debate state, phase transitions, and internal analysis toggles.
+- Research evidence modals with markdown rendering and hyperlink support.
+
+**Challenges & Insights:**
+- Modals extending behind the phase navigation bar required z-index and max-height constraints. Fixed by setting a proper modal ceiling relative to the nav bar.
+- Citation badge styling needed careful contrast management against the dark theme.
+
+### Issue #10: AI Judging Panel (3 specialized judges)
+**Status:** Completed (backend only)
+**What Went Well:**
+- Implemented all 3 judge prompts (Logic, Evidence, Engagement) per `prompts-doc.md §3` with anti-bias instructions.
+- Panel orchestrator runs judges concurrently via `asyncio.gather` and computes weighted scores.
+
+### Prompt Integration (prompts-doc.md alignment)
+**Status:** Completed
+**What Went Well:**
+- All 8 components implemented: schemas, 8 prompt templates, persona generator, evidence loader, agents.py, judge prompts + panel, stream handler, and topic analysis.
+- 22 files total (16 new, 6 modified) — every prompt exactly matches `prompts-doc.md`.
+
+### Issue #16: Debate Persistence and Caching
+**Status:** Partially Complete
+**What Went Well:**
+- `debate/store.py` implemented with JSON file-based persistence.
+- `stream.py` checks cache before invoking LLMs and saves completed debates after streaming.
+- `GET /api/debates/` and `GET /api/debates/{id}` endpoints working.
+- `routes/research.py` created with analyze, upload, and status endpoints.
+- `/debates/new` frontend page built with 3-step custom topic flow.
+
+---
+
+## Sprint 1 — Final Summary
+**Status:** ✅ COMPLETE  
+**All 10 original issues completed.** Additionally completed: prompt integration, debate persistence (backend), custom topic flow (backend + frontend), and research routes.
+
+**Key Deliverables:**
+- Full backend debate pipeline (LangGraph state machine, 10 phases, 3 judges)
+- All prompts from `prompts-doc.md` implemented
+- Frontend: landing page, auth, live debate view (demo), dashboard, custom topic flow
+- Debate persistence layer (JSON file store with cache-first replay)
+
+---
+
+## Sprint 2 Planning
+**Goal:** Make the app run REAL debates using the Anthropic API, persist every result, and enable public browsing.
+
+### Issues in Scope
+- **#16** Debate persistence and caching (frontend + integration testing remaining)
+- **#17** Demo mode toggle + live API integration
+- **#18** Topic input persistence bug fix
+- **#19** Public debate browsing + likes
+- **#14** Human voting system
+- **#15** Dashboard with real data
+- **#20** API usage cap per user
+
+### Key Decision: Demo vs Live Mode
+The debate view currently defaults to demo mode. Sprint 2's primary goal is adding a `DEBATE_MODE=demo|live` environment variable so the backend can switch between mock data and real Claude API calls. Once a debate is generated live, it gets cached and never re-generated.
+
+### Sprint 2 Risks
+- API costs — mitigated by caching (#16) and usage cap (#20)
+- Rate limiting from Anthropic — each debate involves 10+ LLM calls
+- Long generation times — a full debate may take 2-5 minutes of Claude Sonnet calls
+

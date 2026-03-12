@@ -15,6 +15,10 @@ async def test_sse_streaming_endpoint(mock_call_agent):
     and phase transition events.
     """
     mock_call_agent.return_value = "Mocked Response"
+    mock_judging.return_value = {
+        "scores": {"pro": {}, "con": {}},
+        "winner": "pro",
+    }
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"

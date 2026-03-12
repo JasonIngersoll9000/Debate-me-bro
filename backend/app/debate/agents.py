@@ -1,99 +1,60 @@
+"""
+Debate agent orchestration — prompts-doc.md §1-2.
+
+This module connects LangGraph nodes to Claude, using the structured prompts
+from debate/prompts/ and the dynamic Persona system. All inline prompt stubs
+have been replaced with imports from the prompt template modules.
+"""
 from typing import Dict, Any
+
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from app.models.schemas import DebateState
+from app.models.schemas import DebateState, Persona
+from app.debate.prompts.system_prompt import build_agent_system_prompt
+from app.debate.prompts.research_consultation import RESEARCH_CONSULTATION_PROMPT
+from app.debate.prompts.opening import OPENING_PROMPT
+from app.debate.prompts.eval_openings import EVAL_OPENINGS_PROMPT
+from app.debate.prompts.rebuttal import REBUTTAL_PROMPT
+from app.debate.prompts.eval_full_debate import EVAL_FULL_DEBATE_PROMPT
+from app.debate.prompts.closing import CLOSING_PROMPT
 
-# Core identity and debate constraints injected into every call
-SYSTEM_PROMPT_TEMPLATE = """You are participating in a formal, highly structured debate.
-Topic: {topic}
-Your Position: {position}
 
-Your Assigned Persona: 
-{persona}
+# ─── Helper Functions ───────────────────────────────────────────────────────
 
-CRITICAL RULES:
-1. Embody your persona fully. Speak persuasively, assertively, and intelligently.
-2. Appeal to core values and structural logics. DO NOT produce dry academic output.
-3. You must steelman your opponent's arguments before attacking them (if applicable).
-4. Evidence Integration: You must cite the evidence provided referencing its title.
-"""
+def format_evidence(state: DebateState) -> str:
+    """Build the complete evidence text that both agents see."""
+    bundle = state.get("evidence_bundle") or {}
+    # Prefer the combined raw_content (includes both pro + con research)
+    raw = bundle.get("raw_content", "")
+    if raw:
+        return raw
+    # Fallback: concatenate pro + con if available
+    pro = bundle.get("pro_research", "")
+    con = bundle.get("con_research", "")
+    if pro or con:
+        result = ""
+        if pro:
+            result += "### PRO RESEARCH\n\n" + pro + "\n\n"
+        if con:
+            result += "### CON RESEARCH\n\n" + con + "\n\n"
+        return result
+    return "No evidence provided."
 
-RESEARCH_EVAL_PROMPT = """Review the provided Evidence Bundle containing both Pro and Con research.
-Identify the strongest arguments for your side, the vulnerabilities of your side, and the likely strategy of your opponent.
-Note any conflicting sources or methodologies.
-
-Evidence Bundle:
-{evidence}
-
-Output a short strategic assessment. Do not draft your opening statement yet.
-"""
-
-EVAL_OPENINGS_PROMPT = """Review the opponent's opening statement along with the debate evidence.
-Outline a strategy for your upcoming rebuttal. Identify the weaknesses in their argument or sources.
-
-Opponent's Statement:
-{opponent_turn}
-
-Evidence:
-{evidence}
-
-Output a short strategic assessment. Do not draft your rebuttal yet.
-"""
-
-EVAL_FULL_DEBATE_PROMPT = """Review the entire debate transcript so far.
-Identify the core crux of the disagreement. Plan your closing statement to synthesize the debate and leave the strongest impact.
-
-Debate History:
-{debate_history}
-
-Output a short strategic assessment. Do not draft your closing statement yet.
-"""
-
-OPENING_PROMPT = """Draft your opening statement for the {position} side.
-Present your affirmative case. You have not seen the opponent's opening yet.
-Mandatory: Use exactly the title names of the provided evidence like [Source Title] when citing facts.
-
-Evidence:
-{evidence}
-"""
-
-REBUTTAL_PROMPT = """Draft your rebuttal for the {position} side.
-Mandatory Checklist:
-1. Steelman the opponent's best point from their opening/rebuttal.
-2. Respond to their claims by challenging their evidence or interpretation.
-3. Introduce new citations from your evidence bundle to support your counter-attack.
-
-Opponent's Previous Turn:
-{opponent_turn}
-
-Evidence:
-{evidence}
-"""
-
-CLOSING_PROMPT = """Draft your closing statement for the {position} side.
-Acknowledge the opponent, clearly name the core disagreement between the two sides, synthesize your strongest points, and close with an appeal to values.
-
-Debate History (Your previous turns + Opponent's previous turns):
-{debate_history}
-"""
-
-def format_evidence(evidence_bundle: Dict[str, Any]) -> str:
-    """Extract citations from the evidence bundle ensuring agents see the titles."""
-    if not evidence_bundle or "raw_content" not in evidence_bundle:
-        return "No evidence provided."
-    return evidence_bundle["raw_content"]
 
 def get_last_opponent_turn(state: DebateState, opponent_side: str) -> str:
+    """Retrieve the last visible (non-internal) turn from the opponent."""
     turns = state.get("debate_turns", [])
     opponent_turns = [
-        t["text"] 
-        for t in turns 
+        t["text"]
+        for t in turns
         if t["side"] == opponent_side and not t.get("is_internal")
     ]
     return opponent_turns[-1] if opponent_turns else "None"
 
+
 def format_history(state: DebateState) -> str:
+    """Format the full debate transcript (public turns only)."""
     history = []
     for turn in state.get("debate_turns", []):
         if turn.get("is_internal"):
@@ -101,58 +62,95 @@ def format_history(state: DebateState) -> str:
         history.append(f"{turn['side'].upper()} ({turn['phase']}):\n{turn['text']}\n")
     return "\n".join(history)
 
+
+def get_persona(state: DebateState, role: str) -> Persona:
+    """Extract the Persona for a given side from debate state."""
+    personas = state.get("personas", {})
+    persona_data = personas.get(role.lower())
+    if persona_data and isinstance(persona_data, dict):
+        return Persona(**persona_data)
+    # Fallback persona
+    return Persona(
+        name=f"{'Dr. A. Proctor' if role == 'pro' else 'Dr. R. Counter'}",
+        identity=f"An expert debater arguing the {role.upper()} position.",
+        expertise_areas=[],
+        core_values=[],
+        rhetorical_approach="Data-driven argumentation grounded in evidence.",
+    )
+
+
+# ─── Main Agent Invocation ──────────────────────────────────────────────────
+
 async def call_agent(state: DebateState, phase: str, role: str) -> str:
     """
-    Main invocation entrypoint connecting nodes to Claude 3.5 Sonnet.
-    role: "pro" or "con"
+    Main entrypoint connecting LangGraph nodes to Claude 3.5 Sonnet.
+
+    Uses the structured system prompt from prompts-doc.md §1 and
+    the phase-specific prompts from prompts-doc.md §2.
+
+    Args:
+        state: Current debate state from LangGraph
+        phase: Current phase name (e.g. "opening_pro", "rebuttal_con")
+        role: "pro" or "con"
     """
-    llm = ChatAnthropic(model_name="claude-3-5-sonnet-20241022", temperature=0.7)
-    
-    topic = state.get("topic", "Unknown Topic")
-    persona = state.get("personas", {}).get(role, "An assertive and persuasive debater.")
-    evidence_text = format_evidence(state.get("evidence_bundle", {}))
-    opponent_side = "con" if role == "pro" else "pro"
-    
-    # 1. Format the System Message
-    sys_msg = SYSTEM_PROMPT_TEMPLATE.format(
-        topic=topic,
-        position=role.upper(),
-        persona=persona
+    llm = ChatAnthropic(model_name="claude-sonnet-4-20250514", temperature=0.7)
+
+    # Build system prompt from structured Persona
+    persona = get_persona(state, role)
+    resolution = state.get("resolution", state.get("topic", "Unknown Topic"))
+    position = state.get(
+        "pro_position" if role == "pro" else "con_position",
+        f"Arguing the {role.upper()} position"
     )
-    
-    # 2. Select the correct Phase Prompt
+    sys_msg = build_agent_system_prompt(persona, role, resolution, position)
+
+    # Get context data
+    evidence_text = format_evidence(state)
+    opponent_side = "con" if role == "pro" else "pro"
+
+    # Select the correct phase prompt
     human_msg_content = ""
     if phase == "research_consultation":
-        human_msg_content = RESEARCH_EVAL_PROMPT.format(evidence=evidence_text)
+        human_msg_content = (
+            RESEARCH_CONSULTATION_PROMPT
+            + "\n\n## Evidence Bundle\n\n" + evidence_text
+        )
     elif phase.startswith("opening"):
-        human_msg_content = OPENING_PROMPT.format(position=role.upper(), evidence=evidence_text)
+        human_msg_content = (
+            OPENING_PROMPT
+            + "\n\n## Evidence Available\n\n" + evidence_text
+        )
     elif phase == "eval_openings":
-        human_msg_content = EVAL_OPENINGS_PROMPT.format(
-            opponent_turn=get_last_opponent_turn(state, opponent_side),
-            evidence=evidence_text
+        opponent_opening = get_last_opponent_turn(state, opponent_side)
+        human_msg_content = (
+            EVAL_OPENINGS_PROMPT
+            + "\n\n## Opponent's Opening Statement\n\n" + opponent_opening
+            + "\n\n## Full Evidence Bundle\n\n" + evidence_text
         )
     elif phase.startswith("rebuttal"):
-        human_msg_content = REBUTTAL_PROMPT.format(
-            position=role.upper(), 
-            evidence=evidence_text,
-            opponent_turn=get_last_opponent_turn(state, opponent_side)
+        opponent_turn = get_last_opponent_turn(state, opponent_side)
+        human_msg_content = (
+            REBUTTAL_PROMPT
+            + "\n\n## Opponent's Previous Turn\n\n" + opponent_turn
+            + "\n\n## Evidence Available\n\n" + evidence_text
         )
     elif phase == "eval_full_debate":
-        human_msg_content = EVAL_FULL_DEBATE_PROMPT.format(
-            debate_history=format_history(state)
+        human_msg_content = (
+            EVAL_FULL_DEBATE_PROMPT
+            + "\n\n## Full Debate Transcript\n\n" + format_history(state)
         )
     elif phase.startswith("closing"):
-        human_msg_content = CLOSING_PROMPT.format(
-            position=role.upper(), 
-            debate_history=format_history(state)
+        human_msg_content = (
+            CLOSING_PROMPT
+            + "\n\n## Full Debate Transcript\n\n" + format_history(state)
         )
     else:
         human_msg_content = "Please provide your input for this phase."
 
     messages = [
         SystemMessage(content=sys_msg),
-        HumanMessage(content=human_msg_content)
+        HumanMessage(content=human_msg_content),
     ]
-    
+
     response = await llm.ainvoke(messages)
     return response.content
