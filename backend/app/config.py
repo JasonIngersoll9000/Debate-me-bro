@@ -5,6 +5,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/debatemebro"
     redis_url: str = "redis://localhost:6379/0"
     jwt_secret: str = "insecure_default_secret_please_change"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
     
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 

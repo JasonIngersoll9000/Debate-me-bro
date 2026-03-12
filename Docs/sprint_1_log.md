@@ -55,3 +55,17 @@
 **Action Items for Next Issues:**
 - Continue running `alembic` commands relative to the `backend` Docker runtime, but manually verify that created script destinations map to expected physical paths in the repository.
 - Continue to manually inspect all Auto-Generated Alembic Scripts.
+
+### User authentication (register + login + JWT)
+**Status:** Completed
+**What Went Well:**
+- Implemented `/api/auth/register` and `/api/auth/login` cleanly leveraging FastAPI's `OAuth2PasswordBearer` and PyJWT.
+- Successfully built end-to-end integration tests using `httpx.AsyncClient` alongside `pytest-asyncio`.
+
+**Challenges & Insights:**
+- **Passlib/Bcrypt Version Conflict**: Modern `bcrypt` (version 4.0+) enforces a strict 72-byte maximum length and raises a `ValueError` for longer strings. Passlib attempts to hash a 255-byte string internally to detect an old BSD wraparound bug upon initialization, which immediately crashes the application. We resolved this by explicitly pinning `bcrypt==3.2.2` in `requirements.txt`.
+- **SQLAlchemy Scalar Evaluation**: Implicitly checking truth values of SQLAlchemy result objects (`if result.scalars().first():`) can throw an ambiguous context `ValueError`, especially within environments running custom binary extensions like pgvector. We fixed this by assigning the object and explicitly checking `user is not None`.
+
+**Action Items for Next Issues:**
+- Always ensure legacy security dependencies (like passlib) are pinned against known stable sub-tier versions (like bcrypt 3.2.2).
+- Always use explicit `is None` or `is not None` context evaluations on objects extracted from SQLAlchemy queries.
