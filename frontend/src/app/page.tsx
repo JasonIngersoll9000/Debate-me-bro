@@ -260,17 +260,17 @@ export default function Home() {
           </div>
 
           <div className="space-y-4">
-            {[
-              { phase: "1", label: "Research", icon: "🔍", desc: "Both agents receive the complete evidence bundle — Pro and Con research. They analyze strengths, vulnerabilities, and build strategy.", color: "cyan", internal: false },
-              { phase: "2", label: "Opening Arguments", icon: "📖", desc: "Each agent delivers a compelling opening statement — grounded in evidence, connected to values, streamed to you live.", color: "blue", internal: false },
-              { phase: "3", label: "Strategic Evaluation", icon: "🧠", desc: "Agents privately analyze the opponent's opening, identify weaknesses, and plan their rebuttal. Viewable via toggle.", color: "purple", internal: true },
-              { phase: "4", label: "Rebuttals", icon: "⚔️", desc: "Steelman the opponent's best point, then dismantle their weakest. Introduce new evidence. Challenge their sources.", color: "fuchsia", internal: false },
-              { phase: "5", label: "Full Debate Evaluation", icon: "🧠", desc: "Agents step back and assess the entire debate. What narrowed? What's unresolved? How to close with maximum impact.", color: "pink", internal: true },
-              { phase: "6", label: "Closing Statements", icon: "🏁", desc: "Synthesize, don't repeat. Acknowledge the opponent. Address the hardest question. Close with impact.", color: "rose", internal: false },
-              { phase: "7", label: "Judging", icon: "📊", desc: "Three specialized judges (Logic, Evidence, Engagement) score independently. Position-swapped for bias detection.", color: "amber", internal: false },
-            ].map((step) => (
+            {([
+              { phase: "1", label: "Research", icon: "🔍", desc: "Both agents receive the complete evidence bundle — Pro and Con research. They analyze strengths, vulnerabilities, and build strategy.", iconClass: "bg-cyan-500/10 border-cyan-500/20", internal: false },
+              { phase: "2", label: "Opening Arguments", icon: "📖", desc: "Each agent delivers a compelling opening statement — grounded in evidence, connected to values, streamed to you live.", iconClass: "bg-blue-500/10 border-blue-500/20", internal: false },
+              { phase: "3", label: "Strategic Evaluation", icon: "🧠", desc: "Agents privately analyze the opponent's opening, identify weaknesses, and plan their rebuttal. Viewable via toggle.", iconClass: "bg-purple-500/10 border-purple-500/20", internal: true },
+              { phase: "4", label: "Rebuttals", icon: "⚔️", desc: "Steelman the opponent's best point, then dismantle their weakest. Introduce new evidence. Challenge their sources.", iconClass: "bg-fuchsia-500/10 border-fuchsia-500/20", internal: false },
+              { phase: "5", label: "Full Debate Evaluation", icon: "🧠", desc: "Agents step back and assess the entire debate. What narrowed? What's unresolved? How to close with maximum impact.", iconClass: "bg-pink-500/10 border-pink-500/20", internal: true },
+              { phase: "6", label: "Closing Statements", icon: "🏁", desc: "Synthesize, don't repeat. Acknowledge the opponent. Address the hardest question. Close with impact.", iconClass: "bg-rose-500/10 border-rose-500/20", internal: false },
+              { phase: "7", label: "Judging", icon: "📊", desc: "Three specialized judges (Logic, Evidence, Engagement) score independently. Position-swapped for bias detection.", iconClass: "bg-amber-500/10 border-amber-500/20", internal: false },
+            ] as const).map((step) => (
               <div key={step.phase} className={`flex items-start gap-5 p-6 rounded-2xl transition-all hover:bg-white/[0.03] group ${step.internal ? "opacity-60 hover:opacity-100" : ""}`}>
-                <div className={`w-12 h-12 rounded-2xl bg-${step.color}-500/10 border border-${step.color}-500/20 flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform`}>
+                <div className={`w-12 h-12 rounded-2xl ${step.iconClass} border flex items-center justify-center text-xl shrink-0 group-hover:scale-110 transition-transform`}>
                   {step.icon}
                 </div>
                 <div className="flex-1">

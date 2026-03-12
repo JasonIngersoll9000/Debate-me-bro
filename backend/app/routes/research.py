@@ -3,6 +3,7 @@ Research routes — Issues #11 and #12.
 Handles topic analysis (generate research prompts) and research upload.
 """
 import os
+import re
 import uuid
 import json
 from datetime import datetime, timezone
@@ -15,6 +16,13 @@ from app.topics.analysis import analyze_topic
 from app.topics.prompts import generate_research_prompts
 
 router = APIRouter(prefix="/api/research", tags=["research"])
+
+# topic_id must look like "custom-<hex8>" or any safe preset name
+_VALID_TOPIC_ID_RE = re.compile(r"^[a-z0-9_-]+$")
+
+EVIDENCE_BASE = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "evidence"
+)
 
 
 class TopicAnalyzeRequest(BaseModel):
@@ -31,6 +39,29 @@ class TopicAnalyzeResponse(BaseModel):
     con_dimensions: list
     pro_prompt: str
     con_prompt: str
+
+
+def _validate_topic_id(topic_id: str) -> None:
+    """Raise HTTPException(400) if topic_id is not a safe identifier."""
+    if not _VALID_TOPIC_ID_RE.match(topic_id):
+        raise HTTPException(
+            status_code=400, detail="Invalid topic_id format."
+        )
+
+
+def _safe_evidence_dir(topic_id: str) -> str:
+    """
+    Return the evidence directory for topic_id and verify it stays within
+    EVIDENCE_BASE to prevent path traversal.
+    """
+    _validate_topic_id(topic_id)
+    candidate = os.path.realpath(os.path.join(EVIDENCE_BASE, topic_id))
+    real_base = os.path.realpath(EVIDENCE_BASE)
+    if not candidate.startswith(real_base + os.sep):
+        raise HTTPException(
+            status_code=400, detail="Invalid topic_id format."
+        )
+    return candidate
 
 
 @router.post("/analyze", response_model=TopicAnalyzeResponse)
@@ -78,10 +109,16 @@ async def upload_research(
         raise HTTPException(status_code=400, detail="Side must be 'pro' or 'con'")
 
     content = await file.read()
-    text = content.decode("utf-8")
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(
+            status_code=400,
+            detail="File must be valid UTF-8 encoded text.",
+        )
 
     # Save to evidence directory for this custom topic
-    evidence_dir = os.path.join("evidence", topic_id)
+    evidence_dir = _safe_evidence_dir(topic_id)
     os.makedirs(evidence_dir, exist_ok=True)
 
     filepath = os.path.join(evidence_dir, f"{side}_research.md")
@@ -105,7 +142,7 @@ async def upload_research(
 @router.get("/status/{topic_id}")
 async def research_status(topic_id: str):
     """Check what research has been uploaded for a topic."""
-    evidence_dir = os.path.join("evidence", topic_id)
+    evidence_dir = _safe_evidence_dir(topic_id)
     pro_exists = os.path.isfile(os.path.join(evidence_dir, "pro_research.md"))
     con_exists = os.path.isfile(os.path.join(evidence_dir, "con_research.md"))
 
@@ -140,6 +177,8 @@ def _save_topic_analysis(topic_id: str, analysis: dict, prompts: dict) -> None:
 
 
 def _load_topic_analysis(topic_id: str) -> Optional[dict]:
+    if not _VALID_TOPIC_ID_RE.match(topic_id):
+        return None
     filepath = os.path.join(TOPICS_DIR, f"{topic_id}.json")
     if os.path.isfile(filepath):
         with open(filepath, "r", encoding="utf-8") as f:

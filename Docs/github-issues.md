@@ -153,10 +153,11 @@
 **Status:** ✅ Complete
 
 #### Acceptance Criteria
-- [x] `GET /debates/{id}/stream` returns SSE stream
-- [x] Streamed phases: argument content sent token-by-token
-- [x] Internal phases: transition event sent
-- [x] Stream includes metadata: current phase, speaker, phase type
+- [x] `GET /api/debates/{id}/stream` returns SSE stream (content-type: text/event-stream)
+- [x] Streamed phases: argument content sent token-by-token as SSE events
+- [x] Internal phases: transition event sent (type: "phase_transition", message: "Agents evaluating...")
+- [x] Internal phase strategic analysis available via separate endpoint (hidden by default, viewable on request)
+- [x] Stream includes metadata: current phase, speaker (pro/con), phase type (streamed vs internal)
 - [x] Stream ends with completion event
 - [x] Frontend SSE handler connects and processes events
 

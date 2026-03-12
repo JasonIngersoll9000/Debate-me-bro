@@ -6,6 +6,7 @@ Flow:
 2. If not cached: look up topic → load evidence → generate personas → run LangGraph → save result
 """
 import json
+import os
 import asyncio
 import logging
 from datetime import datetime, timezone
@@ -19,26 +20,61 @@ from app.models.schemas import DebateState
 
 logger = logging.getLogger(__name__)
 
-INTERNAL_PHASES = {"research_consultation", "eval_openings", "eval_full_debate"}
+# The phase names we consider internal
+INTERNAL_PHASES = {
+    "research_consultation",
+    "eval_openings",
+    "eval_full_debate",
+}
 
 PRESET_TOPICS: Dict[str, Dict[str, str]] = {
     "healthcare": {
         "title": "Universal Healthcare",
-        "resolution": "Should the United States adopt a single-payer universal healthcare system?",
-        "pro_position": "Adopt a Medicare-for-All style single-payer system to ensure universal coverage, eliminate administrative waste, and decouple healthcare from employment.",
-        "con_position": "Maintain a multi-payer system combining private insurance and public safety nets to preserve innovation, choice, and avoid excessive tax burdens.",
+        "resolution": (
+            "Should the United States adopt a single-payer universal healthcare system?"
+        ),
+        "pro_position": (
+            "Adopt a Medicare-for-All style single-payer system to ensure universal "
+            "coverage, eliminate administrative waste, and decouple healthcare from "
+            "employment."
+        ),
+        "con_position": (
+            "Maintain a multi-payer system combining private insurance and public "
+            "safety nets to preserve innovation, choice, and avoid excessive tax "
+            "burdens."
+        ),
     },
     "ubi": {
         "title": "Universal Basic Income",
-        "resolution": "Should the federal government implement a Universal Basic Income for all adult citizens?",
-        "pro_position": "Provide a no-strings-attached monthly stipend to eliminate absolute poverty, buffer against AI job displacement, and empower workers.",
-        "con_position": "Rely on targeted welfare programs; UBI creates disincentives to work, triggers inflation, and is fiscally unsustainable.",
+        "resolution": (
+            "Should the federal government implement a Universal Basic Income "
+            "for all adult citizens?"
+        ),
+        "pro_position": (
+            "Provide a no-strings-attached monthly stipend to eliminate absolute "
+            "poverty, buffer against AI job displacement, and empower workers."
+        ),
+        "con_position": (
+            "Rely on targeted welfare programs; UBI creates disincentives to work, "
+            "triggers inflation, and is fiscally unsustainable."
+        ),
     },
     "nuclear": {
         "title": "Nuclear Energy Expansion",
-        "resolution": "Should nuclear energy be massively expanded as the primary baseload power for the clean energy transition?",
-        "pro_position": "Nuclear is the only reliable, scalable, carbon-free baseload power source capable of replacing fossil fuels without massive battery storage infrastructure.",
-        "con_position": "Nuclear is too expensive, takes too long to build, and carries unacceptable risks regarding waste storage and potential catastrophic accidents.",
+        "resolution": (
+            "Should nuclear energy be massively expanded as the primary baseload "
+            "power for the clean energy transition?"
+        ),
+        "pro_position": (
+            "Nuclear is the only reliable, scalable, carbon-free baseload power "
+            "source capable of replacing fossil fuels without massive battery "
+            "storage infrastructure."
+        ),
+        "con_position": (
+            "Nuclear is too expensive, takes too long to build, and carries "
+            "unacceptable risks regarding waste storage and potential catastrophic "
+            "accidents."
+        ),
     },
 }
 
@@ -51,6 +87,35 @@ def get_speaker(phase: str) -> str:
     if phase.endswith("_con"):
         return "con"
     return "system"
+
+
+def _load_custom_topic(debate_id: str) -> Dict[str, str]:
+    """
+    Load topic info from the saved analysis file for custom-* IDs.
+    Returns a dict with title/resolution/pro_position/con_position keys,
+    or an empty dict if the file is missing or malformed.
+    """
+    topics_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        "data",
+        "topics",
+    )
+    filepath = os.path.join(topics_dir, f"{debate_id}.json")
+    if not os.path.isfile(filepath):
+        return {}
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        analysis = data.get("analysis", {})
+        return {
+            "title": analysis.get("resolution", debate_id.replace("-", " ").title()),
+            "resolution": analysis.get("resolution", ""),
+            "pro_position": analysis.get("pro_position", ""),
+            "con_position": analysis.get("con_position", ""),
+        }
+    except (json.JSONDecodeError, IOError) as exc:
+        logger.warning("Could not load custom topic '%s': %s", debate_id, exc)
+        return {}
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -123,8 +188,13 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
             yield event
         return
 
-    # ── Not cached — run live debate ──
-    topic_info = PRESET_TOPICS.get(debate_id, {})
+    # ── Not cached — resolve topic info ──
+    # For custom topics, load the saved analysis; fall back to presets or defaults.
+    if debate_id.startswith("custom-"):
+        topic_info = _load_custom_topic(debate_id)
+    else:
+        topic_info = PRESET_TOPICS.get(debate_id, {})
+
     topic_title = topic_info.get("title", debate_id.replace("_", " ").title())
     resolution = topic_info.get("resolution", f"Should we support {topic_title}?")
     pro_position = topic_info.get("pro_position", f"Arguing in favor of {topic_title}")
@@ -190,6 +260,9 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
     # ── Collector for saving ──
     collected_turns: List[Dict[str, Any]] = []
     judging_results: Dict[str, Any] = {}
+    # Track how many internal turns we've already collected per phase,
+    # keyed on the full LangGraph debate_turns index seen so far.
+    seen_internal_turn_count = 0
 
     # ── Stream via LangGraph ──
     graph = create_debate_graph()
@@ -210,7 +283,11 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
                         yield f"data: {json.dumps({'type': 'phase_transition', 'phase': 'judging', 'phase_type': 'judging', 'speaker': 'system', 'message': 'The judging panel is now evaluating the debate...'})}\n\n"
 
             elif kind == "on_chat_model_stream":
-                if current_node and current_node not in INTERNAL_PHASES and current_node != "judging":
+                if (
+                    current_node
+                    and current_node not in INTERNAL_PHASES
+                    and current_node != "judging"
+                ):
                     chunk = event["data"]["chunk"].content
                     if chunk:
                         # Accumulate text for saving
@@ -239,13 +316,23 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
                         yield f"data: {json.dumps({'type': 'judging_results', 'results': judging_results})}\n\n"
 
                 elif phase_name and phase_name in INTERNAL_PHASES:
-                    # Collect internal phase turns
+                    # Collect only the *new* internal turns added by this phase.
+                    # output["debate_turns"] is the full LangGraph state history,
+                    # so we skip past any turns we've already seen to avoid
+                    # duplicates. We track counts for internal turns separately
+                    # from public (streamed) turns, since the LangGraph state
+                    # only contains internal turns while collected_turns may
+                    # also hold public turns constructed from streamed text.
                     data = event.get("data", {}) or {}
                     output = data.get("output", {})
                     if isinstance(output, dict):
-                        for turn in output.get("debate_turns", []):
-                            if turn.get("is_internal"):
-                                collected_turns.append(turn)
+                        all_internal = [
+                            t for t in output.get("debate_turns", [])
+                            if isinstance(t, dict) and t.get("is_internal")
+                        ]
+                        for turn in all_internal[seen_internal_turn_count:]:
+                            collected_turns.append(turn)
+                        seen_internal_turn_count = len(all_internal)
 
                 elif phase_name and phase_name in streamed_phases:
                     # Save the accumulated streamed text as a turn
@@ -278,6 +365,6 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
 
         yield f"data: {json.dumps({'type': 'complete', 'cached': False})}\n\n"
 
-    except Exception as e:
+    except Exception:
         logger.exception("Error streaming debate %s", debate_id)
         yield f"data: {json.dumps({'type': 'error', 'code': 'INTERNAL_ERROR', 'message': 'An unexpected error occurred while streaming the debate.'})}\n\n"
