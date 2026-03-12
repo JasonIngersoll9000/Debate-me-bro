@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useDebateStore } from "@/lib/store";
+import { useShallow } from "zustand/shallow";
 import {
   MOCK_TURNS, MOCK_PERSONAS, MOCK_STRATEGIC_ANALYSIS, MOCK_PHASE_SEQUENCE,
   MOCK_SCORES, MOCK_POSITIONS, MOCK_RESEARCH_STEPS, MOCK_JUDGE_VERDICT,
@@ -13,6 +14,16 @@ import { ArgumentCard } from "@/components/debate/ArgumentCard";
 import { StrategicAnalysisPanel } from "@/components/debate/StrategicAnalysisPanel";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+
+/* ─── SSE Message types ─── */
+type SSEMessage = {
+  type: "phase_transition" | "content" | "complete" | "error";
+  phase?: string;
+  message?: string;
+  speaker?: string;
+  phase_type?: string;
+  chunk?: string;
+};
 
 /* ─── Score Bar ─── */
 function ScoreBar({ label, weight, proScore, conScore }: { label: string; weight: string; proScore: number; conScore: number }) {
@@ -47,23 +58,58 @@ function ResearchDocModal({ side, onClose }: { side: "pro" | "con"; onClose: () 
       .catch(() => { setContent("Failed to load document."); setLoading(false); });
   }, [side]);
 
+  // Escape HTML special characters to prevent XSS
+  const escapeHtml = (str: string): string =>
+    str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+
+  // Only allow http/https URLs; fall back to "#" for anything else
+  const sanitizeUrl = (url: string): string =>
+    /^https?:\/\//i.test(url) ? url : "#";
+
+  // Inline formatting (bold, links) — escapes plain text, sanitizes link URLs
+  function inlineFormat(text: string): string {
+    const parts: string[] = [];
+    const pattern = /(\[([^\]]*)\]\(([^)]*)\))|(\*\*([^*]*)\*\*)/g;
+    let lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(text)) !== null) {
+      parts.push(escapeHtml(text.slice(lastIndex, match.index)));
+      if (match[1]) {
+        // Link: [text](url)
+        const linkText = escapeHtml(match[2]);
+        const url = escapeHtml(sanitizeUrl(match[3]));
+        parts.push(`<a href="${url}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 decoration-emerald-500/40 hover:decoration-emerald-400 transition-colors">${linkText}</a>`);
+      } else if (match[4]) {
+        // Bold: **text**
+        parts.push(`<strong class="text-gray-200 font-bold">${escapeHtml(match[5])}</strong>`);
+      }
+      lastIndex = match.index + match[0].length;
+    }
+    parts.push(escapeHtml(text.slice(lastIndex)));
+    return parts.join("");
+  }
+
   // Simple markdown → HTML converter
   const renderMarkdown = (md: string) => {
     return md
       .split("\n")
       .map((line) => {
         // Headings
-        if (line.startsWith("### ")) return `<h3 class="text-base font-bold text-gray-200 mt-6 mb-2">${line.slice(4)}</h3>`;
-        if (line.startsWith("## ")) return `<h2 class="text-lg font-black text-white mt-10 mb-3 pb-2 border-b border-white/10">${line.slice(3)}</h2>`;
-        if (line.startsWith("# ")) return `<h1 class="text-2xl font-black text-white mt-8 mb-4">${line.slice(2)}</h1>`;
+        if (line.startsWith("### ")) return `<h3 class="text-base font-bold text-gray-200 mt-6 mb-2">${escapeHtml(line.slice(4))}</h3>`;
+        if (line.startsWith("## ")) return `<h2 class="text-lg font-black text-white mt-10 mb-3 pb-2 border-b border-white/10">${escapeHtml(line.slice(3))}</h2>`;
+        if (line.startsWith("# ")) return `<h1 class="text-2xl font-black text-white mt-8 mb-4">${escapeHtml(line.slice(2))}</h1>`;
         if (line.startsWith("---")) return `<hr class="border-white/10 my-8" />`;
         if (line.trim() === "") return `<div class="h-3"></div>`;
 
         // List items
         let processed = line;
         if (processed.startsWith("- ")) {
-          processed = processed.slice(2);
-          processed = inlineFormat(processed);
+          processed = inlineFormat(processed.slice(2));
           return `<div class="flex items-start gap-2 mb-2 ml-1"><span class="text-emerald-500 mt-1 shrink-0">•</span><span class="text-sm text-gray-400 leading-relaxed">${processed}</span></div>`;
         }
 
@@ -73,17 +119,6 @@ function ResearchDocModal({ side, onClose }: { side: "pro" | "con"; onClose: () 
       })
       .join("\n");
   };
-
-  // Inline formatting (bold, links)
-  function inlineFormat(text: string): string {
-    // Links: [text](url)
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 decoration-emerald-500/40 hover:decoration-emerald-400 transition-colors">$1</a>'
-    );
-    // Bold: **text**
-    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-gray-200 font-bold">$1</strong>');
-    return text;
-  }
 
   return (
     <div className="fixed inset-0 z-[200] flex items-start justify-center pt-8 pb-8 px-4 overflow-hidden">
@@ -214,7 +249,23 @@ export default function DebatePage() {
     proPersona, conPersona,
     setStreaming, setActivePhase, appendStreamToken, appendInternalAnalysis,
     setPersonas, markPhaseComplete,
-  } = useDebateStore();
+  } = useDebateStore(
+    useShallow((state) => ({
+      activePhase: state.activePhase,
+      debateTurns: state.debateTurns,
+      internalAnalysis: state.internalAnalysis,
+      isStreaming: state.isStreaming,
+      completedPhases: state.completedPhases,
+      proPersona: state.proPersona,
+      conPersona: state.conPersona,
+      setStreaming: state.setStreaming,
+      setActivePhase: state.setActivePhase,
+      appendStreamToken: state.appendStreamToken,
+      appendInternalAnalysis: state.appendInternalAnalysis,
+      setPersonas: state.setPersonas,
+      markPhaseComplete: state.markPhaseComplete,
+    }))
+  );
 
   const [phaseTransitionMsg, setPhaseTransitionMsg] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -371,16 +422,22 @@ export default function DebatePage() {
     const es = new EventSource(`${API_BASE_URL}/debates/${id}/stream`);
     eventSourceRef.current = es;
     es.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === "phase_transition") { setActivePhase(mapPhase(data.phase)); setPhaseTransitionMsg(data.message); setStreaming(true); }
+      let data: SSEMessage;
+      try {
+        data = JSON.parse(event.data) as SSEMessage;
+      } catch {
+        // Ignore non-JSON messages (keepalive pings, partial frames, etc.)
+        return;
+      }
+      if (data.type === "phase_transition") { setActivePhase(mapPhase(data.phase ?? "")); setPhaseTransitionMsg(data.message ?? null); setStreaming(true); }
       else if (data.type === "content") {
         setStreaming(true); setPhaseTransitionMsg(null);
-        const mp = mapPhase(data.phase); const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
-        if (data.phase_type === "internal") { setActivePhase(mp); appendInternalAnalysis(mp, side, data.chunk || ""); }
-        else { setActivePhase(mp); appendStreamToken(side, mp, data.chunk || ""); }
+        const mp = mapPhase(data.phase ?? ""); const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
+        if (data.phase_type === "internal") { setActivePhase(mp); appendInternalAnalysis(mp, side, data.chunk ?? ""); }
+        else { setActivePhase(mp); appendStreamToken(side, mp, data.chunk ?? ""); }
       }
       else if (data.type === "complete") { setStreaming(false); setActivePhase("judging"); setPhaseTransitionMsg(null); es.close(); }
-      else if (data.type === "error") { es.close(); setStreaming(false); setConnectionError(data.message || "Backend error."); }
+      else if (data.type === "error") { es.close(); setStreaming(false); setConnectionError(data.message ?? "Backend error."); }
     };
     es.onerror = () => { es.close(); setStreaming(false); setConnectionError("Could not connect. Make sure FastAPI is running on " + API_BASE_URL.replace("/api", "") + "."); };
   }, [id]);
