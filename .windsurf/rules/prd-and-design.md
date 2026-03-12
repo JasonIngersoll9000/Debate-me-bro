@@ -22,7 +22,7 @@ This rule file tells AI assistants **which product and design documents to consu
     - Checking **tech stack** and **architecture overview** before proposing new patterns.
 
 - **GitHub Issues Spec**
-  - Path: `Docs/Github_Issues.md`.
+  - Path: `Docs/github-issues.md`.
   - Use cases:
     - Mapping work to specific issues and acceptance criteria (e.g. Issue #8 for landing page).
     - Understanding sprint priorities (Sprint 1 vs Sprint 2).
@@ -44,7 +44,7 @@ When working on the frontend, assistants should treat the mockup as the **source
 - **Landing Page (`frontend/app/page.tsx`)**
   - Reference:
     - PRD: US-1 "Preset Topic Debate", US-2 "Live Debate Streaming".
-    - Issue: `Docs/Github_Issues.md` → Issue #8.
+    - Issue: `Docs/github-issues.md` → Issue #8.
     - Mockup: `Docs/debatemebro-mockup.tsx` → `screen === "home"` branch.
   - Key expectations:
     - Title and tagline match the mockup ("See Both Sides. For Real." etc.).
@@ -105,7 +105,7 @@ Assistants must preserve these high-level flows when implementing or refactoring
 When implementing any non-trivial feature:
 
 1. **Locate the relevant user story** in `Docs/debatemebro-prd.md` and copy its acceptance criteria into your working notes.
-2. **Locate the matching GitHub Issue** in `Docs/Github_Issues.md` and respect its acceptance criteria and testing requirements.
+2. **Locate the matching GitHub Issue** in `Docs/github-issues.md` and respect its acceptance criteria and testing requirements.
 3. **Inspect the mockup / prototype** (`Docs/debatemebro-mockup.tsx` and/or screenshots) and mirror:
    - Layout structure and information hierarchy.
    - Visual style (dark theme, gradients, chip styles, typography).

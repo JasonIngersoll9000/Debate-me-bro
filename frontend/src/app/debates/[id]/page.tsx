@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useDebateStore, JudgingResults } from "@/lib/store";
+import { useDebateStore } from "@/lib/store";
 import { useShallow } from "zustand/shallow";
 import { fetchDebate, DebateData } from "@/lib/api";
 import {
@@ -239,6 +239,35 @@ function ResearchCard({ side, sections }: { side: "pro" | "con"; sections: typeo
   );
 }
 
+/* ─── Utilities ─── */
+function mapPhase(bp: string): string {
+  if (!bp) return "research";
+  if (bp.startsWith("opening")) return "opening";
+  if (bp.startsWith("rebuttal")) return "rebuttal";
+  if (bp.startsWith("closing")) return "closing";
+  if (bp === "research_consultation") return "research";
+  return bp;
+}
+
+function normalizeScores(raw: Record<string, Record<string, number>> | undefined) {
+  return {
+    pro: {
+      logic: raw?.pro?.logic ?? 0,
+      evidence: raw?.pro?.evidence ?? 0,
+      refutation: raw?.pro?.refutation ?? 0,
+      steelman: raw?.pro?.steelman ?? 0,
+      weighted_total: raw?.pro?.weighted_total,
+    },
+    con: {
+      logic: raw?.con?.logic ?? 0,
+      evidence: raw?.con?.evidence ?? 0,
+      refutation: raw?.con?.refutation ?? 0,
+      steelman: raw?.con?.steelman ?? 0,
+      weighted_total: raw?.con?.weighted_total,
+    },
+  };
+}
+
 /* ─── Main Page ─── */
 export default function DebatePage() {
   const params = useParams();
@@ -251,7 +280,7 @@ export default function DebatePage() {
     proPersona, conPersona, judgingResults, topicMeta, isFromCache,
     setStreaming, setActivePhase, appendStreamToken, appendInternalAnalysis,
     setPersonas, markPhaseComplete, setJudgingResults, setTopicMeta, setIsFromCache,
-    setTopic, addTurn,
+    setTopic,
   } = useDebateStore(
     useShallow((state) => ({
       activePhase: state.activePhase,
@@ -274,7 +303,6 @@ export default function DebatePage() {
       setTopicMeta: state.setTopicMeta,
       setIsFromCache: state.setIsFromCache,
       setTopic: state.setTopic,
-      addTurn: state.addTurn,
     }))
   );
 
@@ -301,15 +329,6 @@ export default function DebatePage() {
     setWaitingForUser(false);
     waitResolveRef.current?.();
     waitResolveRef.current = null;
-  };
-
-  const mapPhase = (bp: string) => {
-    if (!bp) return "research";
-    if (bp.startsWith("opening")) return "opening";
-    if (bp.startsWith("rebuttal")) return "rebuttal";
-    if (bp.startsWith("closing")) return "closing";
-    if (bp === "research_consultation") return "research";
-    return bp;
   };
 
   // ── Mock engine ──
@@ -436,6 +455,11 @@ export default function DebatePage() {
 
   // ── Load cached debate directly (no SSE needed) ──
   const loadCachedDebate = useCallback(async (cached: DebateData) => {
+    const {
+      setIsFromCache, setTopic, setTopicMeta, setPersonas, addTurn,
+      markPhaseComplete, setJudgingResults, setActivePhase, setStreaming,
+    } = useDebateStore.getState();
+
     setIsFromCache(true);
     setTopic(cached.id, cached.topic);
     setTopicMeta({
@@ -474,7 +498,7 @@ export default function DebatePage() {
       const jr = cached.judging_results;
       setJudgingResults({
         winner: jr.winner,
-        scores: jr.scores,
+        scores: normalizeScores(jr.scores),
         judges: jr.judges,
         summary: jr.summary,
       });
@@ -488,7 +512,7 @@ export default function DebatePage() {
     setResearchReady(true);
     setResearchStepIdx(MOCK_RESEARCH_STEPS.length);
     setStreaming(false);
-  }, []);
+  }, [setResearchReady, setResearchStepIdx]);
 
   // ── Real SSE ──
   const connectSSE = useCallback(() => {
@@ -501,8 +525,9 @@ export default function DebatePage() {
     const es = new EventSource(`${API_BASE_URL}/debates/${id}/stream`);
     eventSourceRef.current = es;
 
-    // Track which phases have had their transition emitted
+    // Track current and previous phase transitions for completion marking
     let lastPhaseTransition = "";
+    let prevPhaseTransition = "";
 
     es.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -527,11 +552,16 @@ export default function DebatePage() {
         );
       } else if (data.type === "phase_transition") {
         const mp = mapPhase(data.phase);
+        // Mark the previous phase complete when a new phase starts
+        if (lastPhaseTransition) {
+          markPhaseComplete(mapPhase(lastPhaseTransition));
+        }
+        prevPhaseTransition = lastPhaseTransition;
         lastPhaseTransition = data.phase;
         setActivePhase(mp);
         setPhaseTransitionMsg(data.message);
         setStreaming(true);
-        // Mark internal phases complete when they transition
+        // Mark internal phases complete immediately when they transition
         if (data.phase_type === "internal") {
           markPhaseComplete(mp);
         }
@@ -542,15 +572,16 @@ export default function DebatePage() {
         const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
         setActivePhase(mp);
         appendStreamToken(side, mp, data.chunk || "");
-        // If this is the first content after a phase transition, mark the previous streamed phase complete
-        if (lastPhaseTransition && mapPhase(lastPhaseTransition) !== mp) {
-          markPhaseComplete(mapPhase(lastPhaseTransition));
+        // Mark the previous phase complete if we've moved on to a different phase
+        if (prevPhaseTransition && mapPhase(prevPhaseTransition) !== mp) {
+          markPhaseComplete(mapPhase(prevPhaseTransition));
+          prevPhaseTransition = "";
         }
       } else if (data.type === "judging_results") {
         const results = data.results || {};
         setJudgingResults({
           winner: results.winner || "",
-          scores: results.scores || { pro: {}, con: {} },
+          scores: normalizeScores(results.scores),
           judges: results.judges,
           summary: results.summary,
         });
@@ -621,7 +652,8 @@ export default function DebatePage() {
   const judgeVerdict = judgingResults?.summary
     ? { summary: judgingResults.summary, reasoning: judgingResults.judges?.map(j => j.reasoning).join("\n\n") || "" }
     : MOCK_JUDGE_VERDICT;
-  const debateWinner = judgingResults?.winner || (proTotal > conTotal ? "Pro" : conTotal > proTotal ? "Con" : "Tie");
+  const rawWinner = judgingResults?.winner || (proTotal > conTotal ? "pro" : conTotal > proTotal ? "con" : "tie");
+  const debateWinner = rawWinner === "pro" ? "Pro" : rawWinner === "con" ? "Con" : "Tie";
 
   return (
     <div className="min-h-screen bg-slate-950 text-gray-100 flex flex-col relative overflow-hidden">
@@ -639,6 +671,7 @@ export default function DebatePage() {
           </a>
           <div className="flex items-center gap-3">
             {isDemoMode && <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-900/30 px-2.5 py-1 rounded-full border border-amber-500/30">Demo</span>}
+            {isFromCache && <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest bg-violet-900/30 px-2.5 py-1 rounded-full border border-violet-500/30">Cached</span>}
             {isStreaming ? (
               <span className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-900/30 px-2.5 py-1 rounded-full border border-emerald-500/30 shadow-[0_0_10px_rgba(52,211,153,0.2)]">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]" /> Live
@@ -805,10 +838,10 @@ export default function DebatePage() {
                     <span className="text-cyan-400 font-black uppercase tracking-widest">← Pro ({proPersona?.name})</span>
                     <span className="text-fuchsia-400 font-black uppercase tracking-widest">Con ({conPersona?.name}) →</span>
                   </div>
-                  <ScoreBar label="Logical Validity" weight="30%" proScore={proScores.logic} conScore={conScores.logic} />
-                  <ScoreBar label="Evidence Quality" weight="25%" proScore={proScores.evidence} conScore={conScores.evidence} />
-                  <ScoreBar label="Refutation Strength" weight="25%" proScore={proScores.refutation} conScore={conScores.refutation} />
-                  <ScoreBar label="Steelmanning Quality" weight="20%" proScore={proScores.steelman} conScore={conScores.steelman} />
+                  <ScoreBar label="Logical Validity" weight="30%" proScore={proScores.logic ?? 0} conScore={conScores.logic ?? 0} />
+                  <ScoreBar label="Evidence Quality" weight="25%" proScore={proScores.evidence ?? 0} conScore={conScores.evidence ?? 0} />
+                  <ScoreBar label="Refutation Strength" weight="25%" proScore={proScores.refutation ?? 0} conScore={conScores.refutation ?? 0} />
+                  <ScoreBar label="Steelmanning Quality" weight="20%" proScore={proScores.steelman ?? 0} conScore={conScores.steelman ?? 0} />
                   <div className="mt-6 pt-6 border-t border-white/10">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-400 font-bold uppercase tracking-widest text-xs">Weighted Total</span>

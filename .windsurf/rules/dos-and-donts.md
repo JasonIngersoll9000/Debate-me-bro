@@ -10,7 +10,7 @@ This file encodes **hard constraints and strong preferences** for how DebateMeBr
 
 **DO**
 
-- DO **read the PRD** (`Docs/debatemebro-prd.md`) and the relevant GitHub Issue(s) (`Docs/Github_Issues.md`) before making substantial changes.
+- DO **read the PRD** (`Docs/debatemebro-prd.md`) and the relevant GitHub Issue(s) (`Docs/github-issues.md`) before making substantial changes.
 - DO keep the system aligned with the three-layer architecture:
   - Presentation (Next.js) → Orchestration (FastAPI + LangGraph) → Intelligence (Claude).
 - DO keep functions, components, and modules **small and well-focused**.
@@ -107,7 +107,7 @@ This file encodes **hard constraints and strong preferences** for how DebateMeBr
 - DO treat tests as part of the feature, not an optional extra:
   - For backend work, add/extend pytest unit or integration tests under `backend/tests/**`.
   - For frontend work, add/extend component tests and e2e tests under `frontend/tests/**`.
-- DO use acceptance criteria from `Docs/Github_Issues.md` to derive test cases.
+- DO use acceptance criteria from `Docs/github-issues.md` to derive test cases.
 
 **DON'T**
 

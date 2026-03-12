@@ -10,7 +10,7 @@ This file defines **how work should flow** from GitHub Issues → branches → c
 ### 1. Source of Truth for Work Items
 
 - **Issues Spec**
-  - Path: `Docs/Github_Issues.md`.
+  - Path: `Docs/github-issues.md`.
   - Each issue has:
     - Title, labels, milestone (Sprint 1 or Sprint 2).
     - Owner (Jason / Shuai).
@@ -41,7 +41,7 @@ Branches should encode **type**, **issue number**, and a short, kebab-case descr
 Guidelines for assistants:
 
 - **One main issue per branch**:
-  - Try to keep each branch focused on a single primary issue from `Docs/Github_Issues.md`.
+  - Try to keep each branch focused on a single primary issue from `Docs/github-issues.md`.
 - If a change touches multiple issues, choose the **dominant** one for the branch name and reference additional issues in the PR body.
 
 ### 3. Commit Message Format
@@ -117,7 +117,7 @@ Assistants should **not** perform git operations themselves in this environment,
 For every significant change, assistants should:
 
 1. Identify the relevant **user story** in `Docs/debatemebro-prd.md` (e.g., US-1, US-2, US-6).
-2. Identify the corresponding **issue** in `Docs/Github_Issues.md` (e.g., #8, #9, #10).
+2. Identify the corresponding **issue** in `Docs/github-issues.md` (e.g., #8, #9, #10).
 3. Use the issue’s **Acceptance Criteria** as the checklist for:
    - What code paths to implement or update.
    - What tests to add.
