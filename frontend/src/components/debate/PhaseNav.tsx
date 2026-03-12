@@ -1,8 +1,15 @@
 "use client";
+import { useShallow } from "zustand/shallow";
 import { useDebateStore, DEBATE_PHASES } from "@/lib/store";
 
 export function PhaseNav() {
-  const { activePhase, completedPhases, setActivePhase } = useDebateStore();
+  const { activePhase, completedPhases, setActivePhase } = useDebateStore(
+    useShallow((state) => ({
+      activePhase: state.activePhase,
+      completedPhases: state.completedPhases,
+      setActivePhase: state.setActivePhase,
+    }))
+  );
 
   return (
     <div className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-slate-950/80 via-slate-900/60 to-slate-950/80 backdrop-blur-3xl border-b border-white/[0.06] overflow-x-auto w-full z-20">
