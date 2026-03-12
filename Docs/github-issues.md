@@ -234,11 +234,11 @@ Every completed debate is saved so it can be replayed without re-running AI call
 - [x] `stream.py` saves completed debate to store after all phases finish
 - [x] `GET /api/debates/` lists all completed debates (public)
 - [x] `GET /api/debates/{id}` returns full debate data (replay without streaming)
-- [ ] Frontend checks for completed debate data before connecting to SSE stream
-- [ ] Preset topic debates cached after first generation
-- [ ] Custom topic debates cached after completion
+- [x] Frontend checks for completed debate data before connecting to SSE stream
+- [x] Preset topic debates cached after first generation
+- [x] Custom topic debates cached after completion
 - [ ] Production mode: PostgreSQL using existing `Debate` + `Turn` models in `db/models.py`
-- [ ] Integration test: generate → verify saved → request same → verify replayed from cache
+- [x] Integration test: generate → verify saved → request same → verify replayed from cache
 
 ---
 

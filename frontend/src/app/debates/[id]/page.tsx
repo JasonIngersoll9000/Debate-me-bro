@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useDebateStore } from "@/lib/store";
 import { useShallow } from "zustand/shallow";
+import { fetchDebate, DebateData } from "@/lib/api";
 import {
   MOCK_TURNS, MOCK_PERSONAS, MOCK_STRATEGIC_ANALYSIS, MOCK_PHASE_SEQUENCE,
   MOCK_SCORES, MOCK_POSITIONS, MOCK_RESEARCH_STEPS, MOCK_JUDGE_VERDICT,
@@ -238,6 +239,35 @@ function ResearchCard({ side, sections }: { side: "pro" | "con"; sections: typeo
   );
 }
 
+/* ─── Utilities ─── */
+function mapPhase(bp: string): string {
+  if (!bp) return "research";
+  if (bp.startsWith("opening")) return "opening";
+  if (bp.startsWith("rebuttal")) return "rebuttal";
+  if (bp.startsWith("closing")) return "closing";
+  if (bp === "research_consultation") return "research";
+  return bp;
+}
+
+function normalizeScores(raw: Record<string, Record<string, number>> | undefined) {
+  return {
+    pro: {
+      logic: raw?.pro?.logic ?? 0,
+      evidence: raw?.pro?.evidence ?? 0,
+      refutation: raw?.pro?.refutation ?? 0,
+      steelman: raw?.pro?.steelman ?? 0,
+      weighted_total: raw?.pro?.weighted_total,
+    },
+    con: {
+      logic: raw?.con?.logic ?? 0,
+      evidence: raw?.con?.evidence ?? 0,
+      refutation: raw?.con?.refutation ?? 0,
+      steelman: raw?.con?.steelman ?? 0,
+      weighted_total: raw?.con?.weighted_total,
+    },
+  };
+}
+
 /* ─── Main Page ─── */
 export default function DebatePage() {
   const params = useParams();
@@ -247,9 +277,10 @@ export default function DebatePage() {
 
   const {
     activePhase, debateTurns, internalAnalysis, isStreaming, completedPhases,
-    proPersona, conPersona,
+    proPersona, conPersona, judgingResults, topicMeta, isFromCache,
     setStreaming, setActivePhase, appendStreamToken, appendInternalAnalysis,
-    setPersonas, markPhaseComplete,
+    setPersonas, markPhaseComplete, setJudgingResults, setTopicMeta, setIsFromCache,
+    setTopic,
   } = useDebateStore(
     useShallow((state) => ({
       activePhase: state.activePhase,
@@ -259,12 +290,19 @@ export default function DebatePage() {
       completedPhases: state.completedPhases,
       proPersona: state.proPersona,
       conPersona: state.conPersona,
+      judgingResults: state.judgingResults,
+      topicMeta: state.topicMeta,
+      isFromCache: state.isFromCache,
       setStreaming: state.setStreaming,
       setActivePhase: state.setActivePhase,
       appendStreamToken: state.appendStreamToken,
       appendInternalAnalysis: state.appendInternalAnalysis,
       setPersonas: state.setPersonas,
       markPhaseComplete: state.markPhaseComplete,
+      setJudgingResults: state.setJudgingResults,
+      setTopicMeta: state.setTopicMeta,
+      setIsFromCache: state.setIsFromCache,
+      setTopic: state.setTopic,
     }))
   );
 
@@ -291,15 +329,6 @@ export default function DebatePage() {
     setWaitingForUser(false);
     waitResolveRef.current?.();
     waitResolveRef.current = null;
-  };
-
-  const mapPhase = (bp: string) => {
-    if (!bp) return "research";
-    if (bp.startsWith("opening")) return "opening";
-    if (bp.startsWith("rebuttal")) return "rebuttal";
-    if (bp.startsWith("closing")) return "closing";
-    if (bp === "research_consultation") return "research";
-    return bp;
   };
 
   // ── Mock engine ──
@@ -424,6 +453,67 @@ export default function DebatePage() {
     setStreaming(false);
   }, []);
 
+  // ── Load cached debate directly (no SSE needed) ──
+  const loadCachedDebate = useCallback(async (cached: DebateData) => {
+    const {
+      setIsFromCache, setTopic, setTopicMeta, setPersonas, addTurn,
+      markPhaseComplete, setJudgingResults, setActivePhase, setStreaming,
+    } = useDebateStore.getState();
+
+    setIsFromCache(true);
+    setTopic(cached.id, cached.topic);
+    setTopicMeta({
+      resolution: cached.resolution,
+      proPosition: cached.pro_position,
+      conPosition: cached.con_position,
+    });
+
+    // Set personas
+    const proP = cached.personas?.pro;
+    const conP = cached.personas?.con;
+    setPersonas(
+      { name: proP?.name || "Pro Agent", role: proP?.identity || "AI Debater" },
+      { name: conP?.name || "Con Agent", role: conP?.identity || "AI Debater" },
+    );
+
+    // Load all turns into the store
+    const phaseMap: Record<string, string> = {};
+    for (const turn of cached.turns || []) {
+      const mp = mapPhase(turn.phase);
+      if (!turn.is_internal) {
+        const side = turn.side as "pro" | "con";
+        addTurn({ side, phase: mp, text: turn.text, citations: [] });
+      }
+      phaseMap[mp] = mp;
+    }
+
+    // Mark all phases complete
+    for (const phase of Object.keys(phaseMap)) {
+      markPhaseComplete(phase);
+    }
+    markPhaseComplete("research");
+
+    // Load judging results
+    if (cached.judging_results) {
+      const jr = cached.judging_results;
+      setJudgingResults({
+        winner: jr.winner,
+        scores: normalizeScores(jr.scores),
+        judges: jr.judges,
+        summary: jr.summary,
+      });
+      markPhaseComplete("judging");
+      setActivePhase("judging");
+    } else {
+      // Default to the last argument phase
+      setActivePhase("closing");
+    }
+
+    setResearchReady(true);
+    setResearchStepIdx(MOCK_RESEARCH_STEPS.length);
+    setStreaming(false);
+  }, [setResearchReady, setResearchStepIdx]);
+
   // ── Real SSE ──
   const connectSSE = useCallback(() => {
     // Close any existing connection before opening a new one to avoid duplicate events
@@ -431,28 +521,80 @@ export default function DebatePage() {
     eventSourceRef.current = null;
     setConnectionError(null);
     setPersonas({ name: "Proponent Agent", role: "AI Debater" }, { name: "Opponent Agent", role: "AI Debater" });
+    setStreaming(true);
     const es = new EventSource(`${API_BASE_URL}/debates/${id}/stream`);
     eventSourceRef.current = es;
+
+    // Track current and previous phase transitions for completion marking
+    let lastPhaseTransition = "";
+    let prevPhaseTransition = "";
+
     es.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === "phase_transition") {
-        setActivePhase(mapPhase(data.phase));
+
+      if (data.type === "evidence_loaded") {
+        setTopic(id, data.topic || id);
+        setTopicMeta({
+          resolution: data.resolution || "",
+          proPosition: data.pro_position || "",
+          conPosition: data.con_position || "",
+        });
+        setActivePhase("research");
+        setResearchReady(true);
+        setResearchStepIdx(MOCK_RESEARCH_STEPS.length);
+        markPhaseComplete("research");
+      } else if (data.type === "personas") {
+        const proP = data.pro || {};
+        const conP = data.con || {};
+        setPersonas(
+          { name: proP.name || "Pro Agent", role: proP.identity || "AI Debater" },
+          { name: conP.name || "Con Agent", role: conP.identity || "AI Debater" },
+        );
+      } else if (data.type === "phase_transition") {
+        const mp = mapPhase(data.phase);
+        // Mark the previous phase complete when a new phase starts
+        if (lastPhaseTransition) {
+          markPhaseComplete(mapPhase(lastPhaseTransition));
+        }
+        prevPhaseTransition = lastPhaseTransition;
+        lastPhaseTransition = data.phase;
+        setActivePhase(mp);
         setPhaseTransitionMsg(data.message);
         setStreaming(true);
+        // Mark internal phases complete immediately when they transition
+        if (data.phase_type === "internal") {
+          markPhaseComplete(mp);
+        }
       } else if (data.type === "content") {
         setStreaming(true);
         setPhaseTransitionMsg(null);
         const mp = mapPhase(data.phase);
         const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
-        // In live mode, the backend streams only debate content chunks (phase_type is "streamed"),
-        // and does not emit separate internal-analysis chunks. Treat all streamed content here
-        // as debate turns and append via appendStreamToken.
         setActivePhase(mp);
         appendStreamToken(side, mp, data.chunk || "");
+        // Mark the previous phase complete if we've moved on to a different phase
+        if (prevPhaseTransition && mapPhase(prevPhaseTransition) !== mp) {
+          markPhaseComplete(mapPhase(prevPhaseTransition));
+          prevPhaseTransition = "";
+        }
+      } else if (data.type === "judging_results") {
+        const results = data.results || {};
+        setJudgingResults({
+          winner: results.winner || "",
+          scores: normalizeScores(results.scores),
+          judges: results.judges,
+          summary: results.summary,
+        });
+        markPhaseComplete("judging");
       } else if (data.type === "complete") {
+        // Mark all debate phases complete
+        for (const p of ["research", "opening", "eval_openings", "rebuttal", "eval_full_debate", "closing"]) {
+          markPhaseComplete(p);
+        }
         setStreaming(false);
         setActivePhase("judging");
         setPhaseTransitionMsg(null);
+        setIsFromCache(data.cached === true);
         es.close();
       } else if (data.type === "error") {
         es.close();
@@ -469,18 +611,49 @@ export default function DebatePage() {
     };
   }, [id]);
 
+  // ── Init: check cache first, then SSE or demo ──
   useEffect(() => {
     if (!id) return;
-    if (isDemoMode) { runMockDebate(); } else { connectSSE(); }
-    return () => { mockAbortRef.current = true; eventSourceRef.current?.close(); useDebateStore.getState().reset(); };
+    let cancelled = false;
+
+    if (isDemoMode) {
+      runMockDebate();
+    } else {
+      // Check if debate is already cached before opening SSE
+      fetchDebate(id).then((cached) => {
+        if (cancelled) return;
+        if (cached && cached.status === "completed") {
+          loadCachedDebate(cached);
+        } else {
+          connectSSE();
+        }
+      });
+    }
+
+    return () => {
+      cancelled = true;
+      mockAbortRef.current = true;
+      eventSourceRef.current?.close();
+      useDebateStore.getState().reset();
+    };
   }, [id, isDemoMode]);
 
   const startDemoMode = () => { eventSourceRef.current?.close(); useDebateStore.getState().reset(); setConnectionError(null); setIsDemoMode(true); };
 
   const proSideTurns = debateTurns.filter((t) => t.side === "pro" && t.phase === activePhase);
   const conSideTurns = debateTurns.filter((t) => t.side === "con" && t.phase === activePhase);
-  const proTotal = MOCK_SCORES.pro.logic * .3 + MOCK_SCORES.pro.evidence * .25 + MOCK_SCORES.pro.refutation * .25 + MOCK_SCORES.pro.steelman * .2;
-  const conTotal = MOCK_SCORES.con.logic * .3 + MOCK_SCORES.con.evidence * .25 + MOCK_SCORES.con.refutation * .25 + MOCK_SCORES.con.steelman * .2;
+
+  // Use real judging data if available, otherwise fall back to mock
+  const scores = judgingResults?.scores ?? MOCK_SCORES;
+  const proScores = scores.pro || MOCK_SCORES.pro;
+  const conScores = scores.con || MOCK_SCORES.con;
+  const proTotal = (proScores.logic || 0) * .3 + (proScores.evidence || 0) * .25 + (proScores.refutation || 0) * .25 + (proScores.steelman || 0) * .2;
+  const conTotal = (conScores.logic || 0) * .3 + (conScores.evidence || 0) * .25 + (conScores.refutation || 0) * .25 + (conScores.steelman || 0) * .2;
+  const judgeVerdict = judgingResults?.summary
+    ? { summary: judgingResults.summary, reasoning: judgingResults.judges?.map(j => j.reasoning).join("\n\n") || "" }
+    : MOCK_JUDGE_VERDICT;
+  const rawWinner = judgingResults?.winner || (proTotal > conTotal ? "pro" : conTotal > proTotal ? "con" : "tie");
+  const debateWinner = rawWinner === "pro" ? "Pro" : rawWinner === "con" ? "Con" : "Tie";
 
   return (
     <div className="min-h-screen bg-slate-950 text-gray-100 flex flex-col relative overflow-hidden">
@@ -498,6 +671,7 @@ export default function DebatePage() {
           </a>
           <div className="flex items-center gap-3">
             {isDemoMode && <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-900/30 px-2.5 py-1 rounded-full border border-amber-500/30">Demo</span>}
+            {isFromCache && <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest bg-violet-900/30 px-2.5 py-1 rounded-full border border-violet-500/30">Cached</span>}
             {isStreaming ? (
               <span className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-900/30 px-2.5 py-1 rounded-full border border-emerald-500/30 shadow-[0_0_10px_rgba(52,211,153,0.2)]">
                 <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]" /> Live
@@ -513,7 +687,7 @@ export default function DebatePage() {
         {/* Topic title */}
         <div className="px-6 py-4 text-center bg-black/30 backdrop-blur-xl">
           <h1 className="text-lg lg:text-xl font-black text-white tracking-tight">
-            {isDemoMode ? "Should the US adopt universal healthcare?" : `Debate: ${id}`}
+            {topicMeta?.resolution || (isDemoMode ? "Should the US adopt universal healthcare?" : `Debate: ${id}`)}
           </h1>
         </div>
 
@@ -527,7 +701,7 @@ export default function DebatePage() {
                 <div className="text-xs font-black uppercase tracking-widest text-cyan-400 mb-0.5">Pro</div>
                 <div className="font-bold text-white text-sm truncate">{proPersona.name}</div>
                 <div className="text-xs text-gray-500 truncate">{proPersona.role}</div>
-                {isDemoMode && <p className="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed hidden lg:block">{MOCK_POSITIONS.pro}</p>}
+                <p className="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed hidden lg:block">{topicMeta?.proPosition || (isDemoMode ? MOCK_POSITIONS.pro : "")}</p>
               </div>
             </div>
 
@@ -539,7 +713,7 @@ export default function DebatePage() {
                 <div className="text-xs font-black uppercase tracking-widest text-fuchsia-400 mb-0.5">Con</div>
                 <div className="font-bold text-white text-sm truncate">{conPersona.name}</div>
                 <div className="text-xs text-gray-500 truncate">{conPersona.role}</div>
-                {isDemoMode && <p className="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed hidden lg:block">{MOCK_POSITIONS.con}</p>}
+                <p className="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed hidden lg:block">{topicMeta?.conPosition || (isDemoMode ? MOCK_POSITIONS.con : "")}</p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-purple-600 flex items-center justify-center text-lg font-black text-white shadow-[0_0_20px_rgba(217,70,239,0.3)] shrink-0">C</div>
             </div>
@@ -664,10 +838,10 @@ export default function DebatePage() {
                     <span className="text-cyan-400 font-black uppercase tracking-widest">← Pro ({proPersona?.name})</span>
                     <span className="text-fuchsia-400 font-black uppercase tracking-widest">Con ({conPersona?.name}) →</span>
                   </div>
-                  <ScoreBar label="Logical Validity" weight="30%" proScore={MOCK_SCORES.pro.logic} conScore={MOCK_SCORES.con.logic} />
-                  <ScoreBar label="Evidence Quality" weight="25%" proScore={MOCK_SCORES.pro.evidence} conScore={MOCK_SCORES.con.evidence} />
-                  <ScoreBar label="Refutation Strength" weight="25%" proScore={MOCK_SCORES.pro.refutation} conScore={MOCK_SCORES.con.refutation} />
-                  <ScoreBar label="Steelmanning Quality" weight="20%" proScore={MOCK_SCORES.pro.steelman} conScore={MOCK_SCORES.con.steelman} />
+                  <ScoreBar label="Logical Validity" weight="30%" proScore={proScores.logic ?? 0} conScore={conScores.logic ?? 0} />
+                  <ScoreBar label="Evidence Quality" weight="25%" proScore={proScores.evidence ?? 0} conScore={conScores.evidence ?? 0} />
+                  <ScoreBar label="Refutation Strength" weight="25%" proScore={proScores.refutation ?? 0} conScore={conScores.refutation ?? 0} />
+                  <ScoreBar label="Steelmanning Quality" weight="20%" proScore={proScores.steelman ?? 0} conScore={conScores.steelman ?? 0} />
                   <div className="mt-6 pt-6 border-t border-white/10">
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-400 font-bold uppercase tracking-widest text-xs">Weighted Total</span>
@@ -696,11 +870,11 @@ export default function DebatePage() {
                   </div>
                   <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg">
                     <div className="text-xs text-gray-500 mb-3 uppercase tracking-widest font-black">AI Judges Verdict</div>
-                    <p className="text-sm text-gray-300 leading-relaxed"><strong className="text-yellow-400">Extremely close.</strong> {MOCK_JUDGE_VERDICT.summary}</p>
+                    <p className="text-sm text-gray-300 leading-relaxed"><strong className="text-yellow-400">{debateWinner} wins.</strong> {judgeVerdict.summary}</p>
                   </div>
                   <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg">
                     <div className="text-xs text-gray-500 mb-3 uppercase tracking-widest font-black">Judge Reasoning</div>
-                    <p className="text-xs text-gray-400 leading-relaxed">{MOCK_JUDGE_VERDICT.reasoning}</p>
+                    <p className="text-xs text-gray-400 leading-relaxed whitespace-pre-line">{judgeVerdict.reasoning}</p>
                   </div>
                 </div>
               </div>
