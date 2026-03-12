@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useDebateStore } from "@/lib/store";
+import { useShallow } from "zustand/shallow";
 import {
   MOCK_TURNS, MOCK_PERSONAS, MOCK_STRATEGIC_ANALYSIS, MOCK_PHASE_SEQUENCE,
   MOCK_SCORES, MOCK_POSITIONS, MOCK_RESEARCH_STEPS, MOCK_JUDGE_VERDICT,
@@ -249,7 +250,23 @@ export default function DebatePage() {
     proPersona, conPersona,
     setStreaming, setActivePhase, appendStreamToken, appendInternalAnalysis,
     setPersonas, markPhaseComplete,
-  } = useDebateStore();
+  } = useDebateStore(
+    useShallow((state) => ({
+      activePhase: state.activePhase,
+      debateTurns: state.debateTurns,
+      internalAnalysis: state.internalAnalysis,
+      isStreaming: state.isStreaming,
+      completedPhases: state.completedPhases,
+      proPersona: state.proPersona,
+      conPersona: state.conPersona,
+      setStreaming: state.setStreaming,
+      setActivePhase: state.setActivePhase,
+      appendStreamToken: state.appendStreamToken,
+      appendInternalAnalysis: state.appendInternalAnalysis,
+      setPersonas: state.setPersonas,
+      markPhaseComplete: state.markPhaseComplete,
+    }))
+  );
 
   const [phaseTransitionMsg, setPhaseTransitionMsg] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
