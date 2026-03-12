@@ -264,6 +264,7 @@ For custom topics, Claude Haiku analyzes the resolution and generates argument d
 - [ ] Research prompts instruct for deep advocacy research, not balanced overview
 - [ ] Accepts optional user-supplied argumentation lines (Could Have — only if US-9 is implemented)
 - [ ] User can review/edit generated positions before proceeding
+- [ ] **Debate Caching:** If user requests a Custom Topic that already exists in DB with status "completed", backend retrieves stored turns and artificially plays back the SSE stream to avoid invoking LLMs.
 - [ ] Unit tests verify analysis returns valid structured output
 
 ---

@@ -280,6 +280,7 @@ Three AI judges evaluate the complete debate transcript on a four-criterion rubr
 - **Sprint 1 estimated cost per debate:** $0.15-$0.25 (no research API calls — pre-loaded evidence)
 - **Sprint 2 estimated cost per debate:** $0.20-$0.35 (research prompt generation is cheap, user supplies their own research)
 - Research phase API costs eliminated by design; users leverage their own AI tool subscriptions
+- **Caching Feature:** Completed debates MUST be stored in the database. If a user requests an identical topic configuration that already has a completed status, the Backend MUST stream the stored `debate_turns` over the SSE endpoint artificially, rather than invoking the LangGraph pipeline, driving token costs to $0.00 on cache hit.
 
 ---
 
