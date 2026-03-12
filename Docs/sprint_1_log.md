@@ -81,3 +81,41 @@
 
 **Action Items for Next Issues:**
 - Continue maintaining separate routing tables (`topics.py` vs `auth.py`) mapped to unified endpoints in `main.py`! The FastAPI structure scale is holding perfectly.
+
+### Issue #5: LangGraph debate state machine
+**Status:** Completed
+**What Went Well:**
+- Isolated the pure sequential flow of our 7-phase debate into 10 explicit LangGraph nodes. This structure guarantees that transitions like `opening_pro` -> `opening_con` execute flawlessly before agents are even attached.
+- Successfully implemented DB synchronization callbacks so the physical PostgreSQL row (`status`) updates precisely as the StateGraph moves.
+
+**Challenges & Insights:**
+- I opted to explicitly write unit tests mapping the `debate_turns` array mutations first, simulating the LLM with placeholder strings. This test-driven approach proved we were appending histories correctly prior to dealing with complex Anthropic logic.
+
+**Action Items for Next Issues:**
+- Issue #6 will plug directly into these 10 empty state machine nodes and replace the placeholders with `langchain-anthropic` models interacting with structured personas.
+
+### Issue #6: Dynamic persona generation + debate agent prompts
+**Status:** Completed
+**What Went Well:**
+- Implemented `generate_persona` using Claude 3 Haiku for high-speed, dynamic character generation tailored directly to the `(topic, side)` parameters.
+- LangChain's `SystemMessage` / `HumanMessage` encapsulation provided immediate logical splits between absolute system-level rules (like Steelmanning / Persona Voice constraints) and dynamic local inputs (Opponent Histories / Evidence Bundles).
+- Refactored our `agents.py` and `graph.py` pipeline using GitHub Copilot's review suggestions to effectively run internal evaluations concurrently via `asyncio.gather`, slashing execution latency.
+
+**Challenges & Insights:**
+- **Context Leaks:** Our initial tests proved that the Language Models were leaking their internal, invisible `eval` turning notes directly to their opponents during Rebuttal/Closing rounds. Copilot flagged this, and we implemented strict `is_internal` boolean filtering on our array structures.
+- **Async Mocking:** Testing the LLMs requires rigorous understanding of `AsyncMock` behaviors interacting heavily with Python's `await` loops inside heavily mocked `@patch` structures. Testing the LLMs is infinitely harder than calling the LLMs.
+
+**Action Items for Next Issues:**
+- Now that agents autonomously reason asynchronously across our LangGraph architecture, Issue #7 revolves entirely around opening up the SSE interface pipeline to begin actively streaming those generated tokens sequentially directly to external consumers.
+
+### Issue #7: SSE streaming endpoint for debate
+**Status:** Completed
+**What Went Well:**
+- Implemented `stream_debate_events()` as a highly resilient asynchronous generator interpreting the raw outputs from LangGraph's `.astream_events(version="v2")`.
+- Cleanly separated FastAPI's `StreamingResponse` routing logic allowing UI architectures standard SSE compatibility (`text/event-stream`).
+
+**Challenges & Insights:**
+- Mocking a full end-to-end `httpx.AsyncClient` parsing `data:` structs inside local `pytest` pipelines requires strict control over how `event["metadata"]["langgraph_node"]` transitions are fired natively during `.astream_events()`. Once mapped appropriately, httpx validated the entire flow effortlessly.
+
+**Action Items for Next Issues:**
+- We are ready to consume this endpoint. The backend pipeline logic is formally completed for the core debate loop. Issue #8 will shift into Next.js and Tailwind to construct the User Interface for displaying it.
