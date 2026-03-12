@@ -63,7 +63,6 @@ async def stream_debate_events(
                 if node_name:
                     current_node = node_name
                     if current_node in INTERNAL_PHASES:
-                        # Yield a phase transition when an internal node starts
                         payload = {
                             "type": "phase_transition",
                             "phase": current_node,
@@ -107,22 +106,34 @@ async def stream_debate_events(
                     and phase_name not in streamed_phases
                 ):
                     data = event.get("data", {}) or {}
-                    output = data.get("output", {})
-
-                    # Node returns a state-update dict; extract new turn text
+                    output = data.get("output", "")
                     text = None
+
+                    # Node outputs are state-update dicts; extract the
+                    # most recent non-internal turn for this phase.
                     if isinstance(output, dict):
                         turns = output.get("debate_turns", [])
-                        if turns:
-                            last = turns[-1]
-                            if isinstance(last, dict):
-                                text = last.get("text")
-                            else:
-                                text = getattr(last, "text", None)
+                        for turn in reversed(turns):
+                            if not isinstance(turn, dict):
+                                continue
+                            if (
+                                turn.get("phase") == phase_name
+                                and not turn.get(
+                                    "is_internal", False
+                                )
+                            ):
+                                text = turn.get("text", "")
+                                break
                     else:
-                        text = getattr(output, "content", None)
+                        try:
+                            text = (
+                                getattr(output, "content", None)
+                                or str(output)
+                            )
+                        except Exception:
+                            text = str(output)
 
-                    if text:
+                    if text and text not in ("None", "{}"):
                         chunk_size = 200
                         for i in range(0, len(text), chunk_size):
                             chunk = text[i:i + chunk_size]
