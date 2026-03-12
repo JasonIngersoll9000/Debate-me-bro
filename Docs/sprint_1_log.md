@@ -115,7 +115,7 @@
 - Cleanly separated FastAPI's `StreamingResponse` routing logic allowing UI architectures standard SSE compatibility (`text/event-stream`).
 
 **Challenges & Insights:**
-- Mocking a full end-to-end `httpx.AsyncClient` parsing `data:` structs inside local `pytest` pipelines requires strict control over how `event["metadata"]["langgraph_node"]` transitions are fired natively during `.astream_events()`. Once mapped appropriately, HTTpx validated the entire flow effortlessly.
+- Mocking a full end-to-end `httpx.AsyncClient` parsing `data:` structs inside local `pytest` pipelines requires strict control over how `event["metadata"]["langgraph_node"]` transitions are fired natively during `.astream_events()`. Once mapped appropriately, httpx validated the entire flow effortlessly.
 
 **Action Items for Next Issues:**
 - We are ready to consume this endpoint. The backend pipeline logic is formally completed for the core debate loop. Issue #8 will shift into Next.js and Tailwind to construct the User Interface for displaying it.
