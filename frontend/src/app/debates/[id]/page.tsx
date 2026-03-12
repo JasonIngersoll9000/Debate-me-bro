@@ -310,8 +310,12 @@ export default function DebatePage() {
     setStreaming(true);
 
     const wait = (ms: number) => new Promise<void>((resolve) => {
-      const t = setTimeout(resolve, ms);
-      const check = setInterval(() => {
+      let check: ReturnType<typeof setInterval>;
+      const t = setTimeout(() => {
+        clearInterval(check);
+        resolve();
+      }, ms);
+      check = setInterval(() => {
         if (mockAbortRef.current) {
           clearTimeout(t);
           clearInterval(check);
