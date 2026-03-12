@@ -104,6 +104,8 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
                     if isinstance(output, dict):
                         turns = output.get("debate_turns", [])
                         for turn in reversed(turns):
+                            if not isinstance(turn, dict):
+                                continue
                             if (
                                 turn.get("phase") == phase_name
                                 and not turn.get("is_internal", False)
