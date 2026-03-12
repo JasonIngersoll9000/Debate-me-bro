@@ -47,15 +47,61 @@ function ResearchDocModal({ side, onClose }: { side: "pro" | "con"; onClose: () 
       .catch(() => { setContent("Failed to load document."); setLoading(false); });
   }, [side]);
 
+  // Escape HTML special characters to prevent XSS
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // Sanitize URLs to allow only http/https
+  function sanitizeMdUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === "http:" || parsed.protocol === "https:" ? url : "#";
+    } catch {
+      return "#";
+    }
+  }
+
+  // Inline formatting (bold, links) — HTML-escapes text portions and sanitizes link URLs
+  function inlineFormat(text: string): string {
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: string[] = [];
+    let lastIndex = 0;
+    let match;
+    while ((match = linkRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        // `escaped` is already HTML-sanitized; bold captures from it are safe
+        const escaped = escapeHtml(text.slice(lastIndex, match.index));
+        parts.push(escaped.replace(/\*\*([^*]+)\*\*/g, (_, inner) => `<strong class="text-gray-200 font-bold">${inner}</strong>`));
+      }
+      const safeUrl = sanitizeMdUrl(match[2]);
+      parts.push(
+        `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 decoration-emerald-500/40 hover:decoration-emerald-400 transition-colors">${escapeHtml(match[1])}</a>`
+      );
+      lastIndex = linkRegex.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      // `escaped` is already HTML-sanitized; bold captures from it are safe
+      const escaped = escapeHtml(text.slice(lastIndex));
+      parts.push(escaped.replace(/\*\*([^*]+)\*\*/g, (_, inner) => `<strong class="text-gray-200 font-bold">${inner}</strong>`));
+    }
+    return parts.join("");
+  }
+
   // Simple markdown → HTML converter
   const renderMarkdown = (md: string) => {
     return md
       .split("\n")
       .map((line) => {
         // Headings
-        if (line.startsWith("### ")) return `<h3 class="text-base font-bold text-gray-200 mt-6 mb-2">${line.slice(4)}</h3>`;
-        if (line.startsWith("## ")) return `<h2 class="text-lg font-black text-white mt-10 mb-3 pb-2 border-b border-white/10">${line.slice(3)}</h2>`;
-        if (line.startsWith("# ")) return `<h1 class="text-2xl font-black text-white mt-8 mb-4">${line.slice(2)}</h1>`;
+        if (line.startsWith("### ")) return `<h3 class="text-base font-bold text-gray-200 mt-6 mb-2">${escapeHtml(line.slice(4))}</h3>`;
+        if (line.startsWith("## ")) return `<h2 class="text-lg font-black text-white mt-10 mb-3 pb-2 border-b border-white/10">${escapeHtml(line.slice(3))}</h2>`;
+        if (line.startsWith("# ")) return `<h1 class="text-2xl font-black text-white mt-8 mb-4">${escapeHtml(line.slice(2))}</h1>`;
         if (line.startsWith("---")) return `<hr class="border-white/10 my-8" />`;
         if (line.trim() === "") return `<div class="h-3"></div>`;
 
@@ -73,17 +119,6 @@ function ResearchDocModal({ side, onClose }: { side: "pro" | "con"; onClose: () 
       })
       .join("\n");
   };
-
-  // Inline formatting (bold, links)
-  function inlineFormat(text: string): string {
-    // Links: [text](url)
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 decoration-emerald-500/40 hover:decoration-emerald-400 transition-colors">$1</a>'
-    );
-    // Bold: **text**
-    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-gray-200 font-bold">$1</strong>');
-    return text;
-  }
 
   return (
     <div className="fixed inset-0 z-[200] flex items-start justify-center pt-8 pb-8 px-4 overflow-hidden">
@@ -258,9 +293,17 @@ export default function DebatePage() {
     setStreaming(true);
 
     const wait = (ms: number) => new Promise<void>((resolve) => {
-      const t = setTimeout(resolve, ms);
-      const check = setInterval(() => {
-        if (mockAbortRef.current) { clearTimeout(t); clearInterval(check); resolve(); }
+      let check: ReturnType<typeof setInterval>;
+      const t = setTimeout(() => {
+        clearInterval(check);
+        resolve();
+      }, ms);
+      check = setInterval(() => {
+        if (mockAbortRef.current) {
+          clearTimeout(t);
+          clearInterval(check);
+          resolve();
+        }
       }, 100);
     });
 
@@ -366,23 +409,47 @@ export default function DebatePage() {
 
   // ── Real SSE ──
   const connectSSE = useCallback(() => {
+    // Close any existing connection before opening a new one to avoid duplicate events
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
     setConnectionError(null);
     setPersonas({ name: "Proponent Agent", role: "AI Debater" }, { name: "Opponent Agent", role: "AI Debater" });
     const es = new EventSource(`${API_BASE_URL}/debates/${id}/stream`);
     eventSourceRef.current = es;
     es.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === "phase_transition") { setActivePhase(mapPhase(data.phase)); setPhaseTransitionMsg(data.message); setStreaming(true); }
-      else if (data.type === "content") {
-        setStreaming(true); setPhaseTransitionMsg(null);
-        const mp = mapPhase(data.phase); const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
-        if (data.phase_type === "internal") { setActivePhase(mp); appendInternalAnalysis(mp, side, data.chunk || ""); }
-        else { setActivePhase(mp); appendStreamToken(side, mp, data.chunk || ""); }
+      if (data.type === "phase_transition") {
+        setActivePhase(mapPhase(data.phase));
+        setPhaseTransitionMsg(data.message);
+        setStreaming(true);
+      } else if (data.type === "content") {
+        setStreaming(true);
+        setPhaseTransitionMsg(null);
+        const mp = mapPhase(data.phase);
+        const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
+        // In live mode, the backend streams only debate content chunks (phase_type is "streamed"),
+        // and does not emit separate internal-analysis chunks. Treat all streamed content here
+        // as debate turns and append via appendStreamToken.
+        setActivePhase(mp);
+        appendStreamToken(side, mp, data.chunk || "");
+      } else if (data.type === "complete") {
+        setStreaming(false);
+        setActivePhase("judging");
+        setPhaseTransitionMsg(null);
+        es.close();
+      } else if (data.type === "error") {
+        es.close();
+        setStreaming(false);
+        setConnectionError(data.message || "Backend error.");
       }
-      else if (data.type === "complete") { setStreaming(false); setActivePhase("judging"); setPhaseTransitionMsg(null); es.close(); }
-      else if (data.type === "error") { es.close(); setStreaming(false); setConnectionError(data.message || "Backend error."); }
     };
-    es.onerror = () => { es.close(); setStreaming(false); setConnectionError("Could not connect. Make sure FastAPI is running on " + API_BASE_URL.replace("/api", "") + "."); };
+    es.onerror = () => {
+      es.close();
+      setStreaming(false);
+      setConnectionError(
+        "Could not connect. Make sure FastAPI is running on " + API_BASE_URL.replace("/api", "") + ".",
+      );
+    };
   }, [id]);
 
   useEffect(() => {
