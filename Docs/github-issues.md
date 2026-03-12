@@ -47,14 +47,14 @@
 Initialize the monorepo with backend (FastAPI) and frontend (Next.js), Docker Compose for local dev, `.agent/` rules and workflows, and basic CI.
 
 #### Acceptance Criteria
-- [ ] FastAPI backend runs on `localhost:8000` with `/health` returning `{"status": "ok"}`
-- [ ] Next.js frontend runs on `localhost:3000` with a placeholder page
-- [ ] Docker Compose starts PostgreSQL 16, Redis, backend, and frontend with `docker compose up`
-- [ ] `.env.example` includes all required env vars (ANTHROPIC_API_KEY, DATABASE_URL, REDIS_URL, JWT_SECRET)
-- [ ] `.agent/rules/` and `.agent/workflows/` committed with all rule and workflow files
-- [ ] `.gitignore` excludes .env, __pycache__, node_modules, .next
-- [ ] Basic GitHub Actions CI runs linting on push
-- [ ] README includes setup instructions
+- [x] FastAPI backend runs on `localhost:8000` with `/health` returning `{"status": "ok"}`
+- [x] Next.js frontend runs on `localhost:3000` with a placeholder page
+- [x] Docker Compose starts PostgreSQL 16, Redis, backend, and frontend with `docker compose up`
+- [x] `.env.example` includes all required env vars (ANTHROPIC_API_KEY, DATABASE_URL, REDIS_URL, JWT_SECRET)
+- [x] `.agent/rules/` and `.agent/workflows/` committed with all rule and workflow files
+- [x] `.gitignore` excludes .env, __pycache__, node_modules, .next
+- [x] Basic GitHub Actions CI runs linting on push
+- [x] README includes setup instructions
 
 ---
 
@@ -68,12 +68,12 @@ Initialize the monorepo with backend (FastAPI) and frontend (Next.js), Docker Co
 Create PostgreSQL schema, SQLAlchemy ORM models, Alembic migrations, and corresponding Pydantic request/response models.
 
 #### Acceptance Criteria
-- [ ] SQLAlchemy ORM models for: `users`, `debates`, `debate_turns`, `votes`, `judge_scores`
-- [ ] Pydantic models in `models/`: `DebateState`, `DebateTurn`, `DebateConfig`, `DebatePhase`, `TopicAnalysis`, `JudgeScore`
-- [ ] Alembic initialized with first migration creating all tables
-- [ ] `database.py` provides async session factory using asyncpg
-- [ ] Database connection verified in Docker Compose
-- [ ] At least 3 unit tests verifying Pydantic model validation (invalid status rejected, etc.)
+- [x] SQLAlchemy ORM models for: `users`, `debates`, `debate_turns`, `votes`, `judge_scores`
+- [x] Pydantic models in `models/`: `DebateState`, `DebateTurn`, `DebateConfig`, `DebatePhase`, `TopicAnalysis`, `JudgeScore`
+- [x] Alembic initialized with first migration creating all tables
+- [x] `database.py` provides async session factory using asyncpg
+- [x] Database connection verified in Docker Compose
+- [x] At least 3 unit tests verifying Pydantic model validation (invalid status rejected, etc.)
 
 ---
 
@@ -87,12 +87,12 @@ Create PostgreSQL schema, SQLAlchemy ORM models, Alembic migrations, and corresp
 JWT-based auth so users can register, log in, and access protected routes.
 
 #### Acceptance Criteria
-- [ ] `POST /auth/register` creates user with hashed password (passlib bcrypt)
-- [ ] `POST /auth/login` returns JWT access token on valid credentials
-- [ ] `get_current_user` dependency validates JWT from Authorization header
-- [ ] Protected routes return 401 without valid token
-- [ ] Passwords never stored in plaintext
-- [ ] Integration tests for register, login, and protected route access
+- [x] `POST /auth/register` creates user with hashed password (passlib bcrypt)
+- [x] `POST /auth/login` returns JWT access token on valid credentials
+- [x] `get_current_user` dependency validates JWT from Authorization header
+- [x] Protected routes return 401 without valid token
+- [x] Passwords never stored in plaintext
+- [x] Integration tests for register, login, and protected route access
 
 ---
 
@@ -106,13 +106,13 @@ JWT-based auth so users can register, log in, and access protected routes.
 Create preset topic system with pre-loaded research. Evidence loader parses structured Markdown research docs with hyperlinked sources into a format debate agents can reference and cite.
 
 #### Acceptance Criteria
-- [ ] `GET /topics/presets` returns 3+ preset topics with titles, descriptions, Pro/Con positions
-- [ ] Pre-researched evidence files in `backend/evidence/` for all preset topics (structured Markdown with hyperlinked sources)
-- [ ] Each topic has Pro research doc and Con research doc (generated via Claude Research / ChatGPT Deep Research during development)
-- [ ] `evidence.py` parses Markdown research files, extracts arguments, and builds a citation index (`[Source Title](URL)` → `CitationDetail`)
-- [ ] Evidence loader returns ALL research (Pro + Con combined) as a single `EvidenceBundle` — no side restriction
-- [ ] Evidence format identical whether from pre-loaded files or future uploaded docs
-- [ ] Unit tests verify evidence loading, parsing, and citation extraction
+- [x] `GET /topics/presets` returns 3+ preset topics with titles, descriptions, Pro/Con positions
+- [x] Pre-researched evidence files in `backend/evidence/` for all preset topics (structured Markdown with hyperlinked sources)
+- [x] Each topic has Pro research doc and Con research doc (generated via Claude Research / ChatGPT Deep Research during development)
+- [x] `evidence.py` parses Markdown research files, extracts arguments, and builds a citation index (`[Source Title](URL)` → `CitationDetail`)
+- [x] Evidence loader returns ALL research (Pro + Con combined) as a single `EvidenceBundle` — no side restriction
+- [x] Evidence format identical whether from pre-loaded files or future uploaded docs
+- [x] Unit tests verify evidence loading, parsing, and citation extraction
 
 ---
 
@@ -126,13 +126,13 @@ Create preset topic system with pre-loaded research. Evidence loader parses stru
 Core debate orchestration as a LangGraph state machine with nodes for all 7 phases (including internal evaluation phases).
 
 #### Acceptance Criteria
-- [ ] `DebateState` TypedDict tracks: debate_id, topic, status, current_phase, debate_turns, evidence_bundle (shared Pro + Con), personas
-- [ ] Graph nodes for full pipeline: `research_consultation` → `opening_pro` → `opening_con` → `eval_openings` → `rebuttal_pro` → `rebuttal_con` → `eval_full_debate` → `closing_pro` → `closing_con` → `judging` → `complete`
-- [ ] Internal phases (research_consultation, eval_openings, eval_full_debate) produce strategic analysis output but do NOT stream to user by default
-- [ ] Streamed phases (opening, rebuttal, closing) emit SSE events with argument content
-- [ ] Phase transition events sent between phases (including transition messages for internal phases)
-- [ ] Debate status updates in database at each transition
-- [ ] Unit tests verify state machine transitions with mocked agents
+- [x] `DebateState` TypedDict tracks: debate_id, topic, status, current_phase, debate_turns, evidence_bundle (shared Pro + Con), personas
+- [x] Graph nodes for full pipeline: `research_consultation` → `opening_pro` → `opening_con` → `eval_openings` → `rebuttal_pro` → `rebuttal_con` → `eval_full_debate` → `closing_pro` → `closing_con` → `judging` → `complete`
+- [x] Internal phases (research_consultation, eval_openings, eval_full_debate) produce strategic analysis output but do NOT stream to user by default
+- [x] Streamed phases (opening, rebuttal, closing) emit SSE events with argument content
+- [x] Phase transition events sent between phases (including transition messages for internal phases)
+- [x] Debate status updates in database at each transition
+- [x] Unit tests verify state machine transitions with mocked agents
 
 ---
 
@@ -146,17 +146,17 @@ Core debate orchestration as a LangGraph state machine with nodes for all 7 phas
 Build the prompt construction system: dynamic persona generation (tailored to topic + evidence), phase-specific instructions, shared evidence injection, and internal evaluation prompts. Agents should appeal to values and argue persuasively, not produce dry academic output.
 
 #### Acceptance Criteria
-- [ ] `persona_generator.py` generates a tailored advocate persona based on topic and evidence (via Claude Haiku) — not a fixed character
-- [ ] System prompt includes: dynamic persona, assigned position (re-injected every phase), commitment device, steelmanning requirement, instruction to appeal to values
-- [ ] **Research consultation prompt:** Agent receives ALL research, identifies strengths/vulnerabilities/opponent strategy/source conflicts
-- [ ] **Opening prompt:** Agent presents case with citations, hasn't seen opponent's opening
-- [ ] **Eval openings prompt (internal):** Agent reads opponent's opening, assesses sources, plans rebuttal — output stored but not streamed
-- [ ] **Rebuttal prompt:** Steelman → respond → challenge evidence → introduce new sources → connect to values
-- [ ] **Eval full debate prompt (internal):** Agent reflects on all arguments, plans closing — output stored but not streamed
-- [ ] **Closing prompt:** Acknowledge opponent, name core disagreement, synthesize, address hardest question, close with impact
-- [ ] All prompts use minimums (not maximums) for length and sources — as long as needed
-- [ ] Evidence passed with `[Source: Title](URL)` citation markers so agents can reference specific sources
-- [ ] Unit tests verify prompt construction includes all required components per phase
+- [x] `persona_generator.py` generates a tailored advocate persona based on topic and evidence (via Claude Haiku) — not a fixed character
+- [x] System prompt includes: dynamic persona, assigned position (re-injected every phase), commitment device, steelmanning requirement, instruction to appeal to values
+- [x] **Research consultation prompt:** Agent receives ALL research, identifies strengths/vulnerabilities/opponent strategy/source conflicts
+- [x] **Opening prompt:** Agent presents case with citations, hasn't seen opponent's opening
+- [x] **Eval openings prompt (internal):** Agent reads opponent's opening, assesses sources, plans rebuttal — output stored but not streamed
+- [x] **Rebuttal prompt:** Steelman → respond → challenge evidence → introduce new sources → connect to values
+- [x] **Eval full debate prompt (internal):** Agent reflects on all arguments, plans closing — output stored but not streamed
+- [x] **Closing prompt:** Acknowledge opponent, name core disagreement, synthesize, address hardest question, close with impact
+- [x] All prompts use minimums (not maximums) for length and sources — as long as needed
+- [x] Evidence passed with `[Source: Title](URL)` citation markers so agents can reference specific sources
+- [x] Unit tests verify prompt construction includes all required components per phase
 
 ---
 
@@ -170,14 +170,14 @@ Build the prompt construction system: dynamic persona generation (tailored to to
 Server-Sent Events endpoint that streams debate content to the frontend as the debate progresses, including phase transitions and internal phase notifications.
 
 #### Acceptance Criteria
-- [ ] `GET /debates/{id}/stream` returns SSE stream (content-type: text/event-stream)
-- [ ] Streamed phases: argument content sent token-by-token as SSE events
-- [ ] Internal phases: transition event sent (type: "phase_transition", message: "Agents evaluating...")
-- [ ] Internal phase strategic analysis available via separate endpoint (hidden by default, viewable on request)
-- [ ] Stream includes metadata: current phase, speaker (pro/con), phase type (streamed vs internal)
-- [ ] Stream ends with completion event
-- [ ] Frontend SSE handler connects, processes events, handles reconnection
-- [ ] Integration test verifies events sent in correct order for complete debate
+- [x] `GET /debates/{id}/stream` returns SSE stream (content-type: text/event-stream)
+- [x] Streamed phases: argument content sent token-by-token as SSE events
+- [x] Internal phases: transition event sent (type: "phase_transition", message: "Agents evaluating...")
+- [x] Internal phase strategic analysis available via separate endpoint (hidden by default, viewable on request)
+- [x] Stream includes metadata: current phase, speaker (pro/con), phase type (streamed vs internal)
+- [x] Stream ends with completion event
+- [x] Frontend SSE handler connects, processes events, handles reconnection
+- [x] Integration test verifies events sent in correct order for complete debate
 
 ---
 

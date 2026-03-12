@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, topics
+from app.routes import auth, topics, debates
 
 app = FastAPI(
     title="DebateMeBro API",
@@ -22,3 +22,4 @@ def health_check():
 
 app.include_router(auth.router)
 app.include_router(topics.router)
+app.include_router(debates.router)
