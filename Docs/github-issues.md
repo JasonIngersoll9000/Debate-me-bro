@@ -191,12 +191,12 @@ Server-Sent Events endpoint that streams debate content to the frontend as the d
 Landing page with topic input, preset topic cards, "How it works" flow, and navigation to debate view.
 
 #### Acceptance Criteria
-- [ ] Displays app title, tagline, topic input field (dark theme, gradient title per mockup)
-- [ ] 3+ preset topic cards fetched from `GET /topics/presets`
-- [ ] Clicking a preset navigates to `/debates/[id]` and launches debate
-- [ ] "How it works" shows 7-phase flow: Research → Opening → Eval → Rebuttal → Eval → Closing → Judging
-- [ ] Styled with TailwindCSS matching v3 mockup
-- [ ] Component test verifies preset topics render and are clickable
+- [x] Displays app title, tagline, topic input field (dark theme, gradient title per mockup)
+- [x] 3+ preset topic cards fetched from `GET /topics/presets`
+- [x] Clicking a preset navigates to `/debates/[id]` and launches debate
+- [x] "How it works" shows 7-phase flow: Research → Opening → Eval → Rebuttal → Eval → Closing → Judging
+- [x] Styled with TailwindCSS matching v3 mockup
+- [x] Component test verifies preset topics render and are clickable
 
 ---
 
@@ -264,6 +264,7 @@ For custom topics, Claude Haiku analyzes the resolution and generates argument d
 - [ ] Research prompts instruct for deep advocacy research, not balanced overview
 - [ ] Accepts optional user-supplied argumentation lines (Could Have — only if US-9 is implemented)
 - [ ] User can review/edit generated positions before proceeding
+- [ ] **Debate Caching:** If user requests a Custom Topic that already exists in DB with status "completed", backend retrieves stored turns and artificially plays back the SSE stream to avoid invoking LLMs.
 - [ ] Unit tests verify analysis returns valid structured output
 
 ---
