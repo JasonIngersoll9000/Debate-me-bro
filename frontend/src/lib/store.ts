@@ -28,9 +28,28 @@ export const DEBATE_PHASES = [
   { id: "judging", label: "Judging", icon: "📊", internal: false },
 ];
 
+export interface JudgingScores {
+  pro: { logic: number; evidence: number; refutation: number; steelman: number; weighted_total?: number };
+  con: { logic: number; evidence: number; refutation: number; steelman: number; weighted_total?: number };
+}
+
+export interface JudgingResults {
+  winner: string;
+  scores: JudgingScores;
+  judges?: Array<{ name: string; reasoning: string }>;
+  summary?: string;
+}
+
+export interface TopicMeta {
+  resolution: string;
+  proPosition: string;
+  conPosition: string;
+}
+
 export interface DebateState {
   topicId: string | null;
   topicTitle: string;
+  topicMeta: TopicMeta | null;
   activePhase: string;
   debateTurns: DebateTurn[];
   internalAnalysis: Record<string, Record<"pro" | "con", string>>;
@@ -38,8 +57,11 @@ export interface DebateState {
   isStreaming: boolean;
   proPersona: Persona | null;
   conPersona: Persona | null;
+  judgingResults: JudgingResults | null;
+  isFromCache: boolean;
   
   setTopic: (id: string, title: string) => void;
+  setTopicMeta: (meta: TopicMeta) => void;
   setActivePhase: (phase: string) => void;
   setPersonas: (pro: Persona, con: Persona) => void;
   addTurn: (turn: DebateTurn) => void;
@@ -47,12 +69,15 @@ export interface DebateState {
   appendInternalAnalysis: (phase: string, side: "pro" | "con", token: string) => void;
   markPhaseComplete: (phase: string) => void;
   setStreaming: (isStreaming: boolean) => void;
+  setJudgingResults: (results: JudgingResults) => void;
+  setIsFromCache: (cached: boolean) => void;
   reset: () => void;
 }
 
 export const useDebateStore = create<DebateState>((set) => ({
   topicId: null,
   topicTitle: "",
+  topicMeta: null,
   activePhase: "research",
   debateTurns: [],
   internalAnalysis: {},
@@ -60,8 +85,12 @@ export const useDebateStore = create<DebateState>((set) => ({
   isStreaming: false,
   proPersona: null,
   conPersona: null,
+  judgingResults: null,
+  isFromCache: false,
   
   setTopic: (id, title) => set({ topicId: id, topicTitle: title }),
+  
+  setTopicMeta: (meta) => set({ topicMeta: meta }),
   
   setActivePhase: (phase) => set({ activePhase: phase }),
   
@@ -99,9 +128,14 @@ export const useDebateStore = create<DebateState>((set) => ({
   
   setStreaming: (isStreaming) => set({ isStreaming }),
   
+  setJudgingResults: (results) => set({ judgingResults: results }),
+  
+  setIsFromCache: (cached) => set({ isFromCache: cached }),
+  
   reset: () => set({
     topicId: null,
     topicTitle: "",
+    topicMeta: null,
     activePhase: "research",
     debateTurns: [],
     internalAnalysis: {},
@@ -109,5 +143,7 @@ export const useDebateStore = create<DebateState>((set) => ({
     isStreaming: false,
     proPersona: null,
     conPersona: null,
+    judgingResults: null,
+    isFromCache: false,
   }),
 }));

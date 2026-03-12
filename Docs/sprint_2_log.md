@@ -45,6 +45,28 @@
 
 ## Issue Retrospectives
 
-*(Each issue will be documented here as it is completed.)*
+### Issue #16: Debate Persistence and Caching
+**Status:** Completed
+**Branch:** `feature/16-debate-persistence-caching`
+
+**What Went Well:**
+- Backend persistence layer (`store.py`) was already solid from Sprint 1 bonus work — save/load/list/exists all functional with JSON file store.
+- Backend `stream.py` already had cache-check and replay logic working correctly.
+- The replay SSE flow (evidence_loaded → personas → turns → judging → complete) was well-structured for consumption.
+
+**Challenges & Insights:**
+- **Frontend SSE handler was incomplete:** The `connectSSE()` function in the debate view only handled `phase_transition`, `content`, `complete`, and `error` events. It completely ignored `evidence_loaded`, `personas`, and `judging_results` events from the backend. This meant live mode couldn't display real topic metadata, persona names, or judging scores.
+- **Judging UI was entirely hardcoded:** The judging results section used `MOCK_SCORES` and `MOCK_JUDGE_VERDICT` constants regardless of mode. Required adding `judgingResults` to the Zustand store and wiring dynamic score computation.
+- **Frontend cache-first pattern:** Added `fetchDebate()` API call that checks `GET /api/debates/{id}` before opening an SSE connection. If the debate is already completed, it loads all data directly into the store without streaming — much faster UX for replays.
+
+**Key Changes:**
+- `frontend/src/lib/store.ts` — Added `JudgingResults`, `TopicMeta`, `isFromCache` to Zustand store
+- `frontend/src/lib/api.ts` — Added `fetchDebate()` and `DebateData` interface
+- `frontend/src/app/debates/[id]/page.tsx` — Wired all SSE event types, added `loadCachedDebate()` for direct cache loading, replaced hardcoded mock scores with dynamic `judgingResults` from store
+- `backend/tests/integration/test_persistence.py` — 9 tests covering store round-trip, API endpoints, and SSE cache replay
+
+**Action Items for Next Issues:**
+- Issue #17 will add `DEBATE_MODE` env var to control whether debates run live Claude calls or demo mock data.
+- The one remaining unchecked AC (PostgreSQL production mode) is deferred — file-based JSON store is sufficient for development.
 
 ---
