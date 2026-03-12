@@ -10,3 +10,5 @@ alembic
 langgraph
 langchain-anthropic
 redis
+pgvector
+psycopg2-binary
