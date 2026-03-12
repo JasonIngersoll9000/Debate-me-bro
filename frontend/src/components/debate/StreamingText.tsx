@@ -10,13 +10,26 @@ interface Props {
   side: "pro" | "con";
 }
 
+/** Allow only http/https URLs to prevent javascript:/data: XSS from streamed LLM output. */
+function sanitizeCitationUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? url : "";
+  } catch {
+    return "";
+  }
+}
+
 export function StreamingText({ text, citations, isStreaming, side }: Props) {
   const [expandedCitation, setExpandedCitation] = useState<string | null>(null);
 
   const parsedContent = useMemo(() => {
     // Matches backend LLM Markdown format "[Source: Title](URL)" or simply "[Source Title]" or "[Title](URL)"
     const regex = /\[(?:Source:\s*)?([^\]]+)\](?:\(([^)]+)\))?/gi;
-    const parts = [];
+    const parts: Array<
+      | { type: 'text'; content: string }
+      | { type: 'citation'; citationId: string; defaultUrl: string | undefined }
+    > = [];
     let lastIndex = 0;
     
     let match;
@@ -26,7 +39,9 @@ export function StreamingText({ text, citations, isStreaming, side }: Props) {
       }
       
       const title = match[1];
-      const url = match[2];
+      // Sanitize the URL from LLM output — only http/https allowed
+      const rawUrl = match[2];
+      const url = rawUrl ? sanitizeCitationUrl(rawUrl) : undefined;
       
       parts.push({ 
         type: 'citation', 
