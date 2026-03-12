@@ -47,6 +47,52 @@ function ResearchDocModal({ side, onClose }: { side: "pro" | "con"; onClose: () 
       .catch(() => { setContent("Failed to load document."); setLoading(false); });
   }, [side]);
 
+  // Escape HTML special characters to prevent XSS
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // Sanitize URLs to allow only http/https
+  function sanitizeMdUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === "http:" || parsed.protocol === "https:" ? url : "#";
+    } catch {
+      return "#";
+    }
+  }
+
+  // Inline formatting (bold, links) — HTML-escapes text portions and sanitizes link URLs
+  function inlineFormat(text: string): string {
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const parts: string[] = [];
+    let lastIndex = 0;
+    let match;
+    while ((match = linkRegex.exec(text)) !== null) {
+      if (match.index > lastIndex) {
+        // `escaped` is already HTML-sanitized; bold captures from it are safe
+        const escaped = escapeHtml(text.slice(lastIndex, match.index));
+        parts.push(escaped.replace(/\*\*([^*]+)\*\*/g, (_, inner) => `<strong class="text-gray-200 font-bold">${inner}</strong>`));
+      }
+      const safeUrl = sanitizeMdUrl(match[2]);
+      parts.push(
+        `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 decoration-emerald-500/40 hover:decoration-emerald-400 transition-colors">${escapeHtml(match[1])}</a>`
+      );
+      lastIndex = linkRegex.lastIndex;
+    }
+    if (lastIndex < text.length) {
+      // `escaped` is already HTML-sanitized; bold captures from it are safe
+      const escaped = escapeHtml(text.slice(lastIndex));
+      parts.push(escaped.replace(/\*\*([^*]+)\*\*/g, (_, inner) => `<strong class="text-gray-200 font-bold">${inner}</strong>`));
+    }
+    return parts.join("");
+  }
+
   // Simple markdown → HTML converter
   const renderMarkdown = (md: string) => {
     return md
@@ -73,32 +119,6 @@ function ResearchDocModal({ side, onClose }: { side: "pro" | "con"; onClose: () 
       })
       .join("\n");
   };
-
-  // Escape HTML special characters to prevent XSS
-  function escapeHtml(text: string): string {
-    return text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-  }
-
-  // Inline formatting (bold, links) — text must be escaped before calling
-  function inlineFormat(text: string): string {
-    // Escape raw text first, then apply markdown patterns
-    const escaped = escapeHtml(text);
-    // Links: [text](url) — only allow safe URL schemes
-    const withLinks = escaped.replace(
-      /\[([^\]]+)\]\(([^)]+)\)/g,
-      (_match, linkText: string, url: string) => {
-        const safeUrl = /^(https?:|mailto:)/i.test(url) ? url : "#";
-        return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 decoration-emerald-500/40 hover:decoration-emerald-400 transition-colors">${linkText}</a>`;
-      }
-    );
-    // Bold: **text**
-    return withLinks.replace(/\*\*([^*]+)\*\*/g, '<strong class="text-gray-200 font-bold">$1</strong>');
-  }
 
   return (
     <div className="fixed inset-0 z-[200] flex items-start justify-center pt-8 pb-8 px-4 overflow-hidden">
@@ -274,9 +294,17 @@ export default function DebatePage() {
     setStreaming(true);
 
     const wait = (ms: number) => new Promise<void>((resolve) => {
-      const t = setTimeout(resolve, ms);
-      const check = setInterval(() => {
-        if (mockAbortRef.current) { clearTimeout(t); clearInterval(check); resolve(); }
+      let check: ReturnType<typeof setInterval>;
+      const t = setTimeout(() => {
+        clearInterval(check);
+        resolve();
+      }, ms);
+      check = setInterval(() => {
+        if (mockAbortRef.current) {
+          clearTimeout(t);
+          clearInterval(check);
+          resolve();
+        }
       }, 100);
     });
 
@@ -382,6 +410,9 @@ export default function DebatePage() {
 
   // ── Real SSE ──
   const connectSSE = useCallback(() => {
+    // Close any existing connection before opening a new one to avoid duplicate events
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
     setConnectionError(null);
     setPersonas({ name: "Proponent Agent", role: "AI Debater" }, { name: "Opponent Agent", role: "AI Debater" });
     const es = new EventSource(`${API_BASE_URL}/debates/${id}/stream`);
@@ -403,10 +434,17 @@ export default function DebatePage() {
         setPhaseTransitionMsg(data.message);
         setStreaming(true);
       } else if (data.type === "content") {
-        setStreaming(true); setPhaseTransitionMsg(null);
-        const mp = mapPhase(data.phase); const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
-        if (data.phase_type === "internal") { setActivePhase(mp); appendInternalAnalysis(mp, side, data.chunk || ""); }
-        else { setActivePhase(mp); appendStreamToken(side, mp, data.chunk || ""); }
+        setStreaming(true);
+        setPhaseTransitionMsg(null);
+        const mp = mapPhase(data.phase);
+        const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
+        if (data.phase_type === "internal") {
+          setActivePhase(mp);
+          appendInternalAnalysis(mp, side, data.chunk || "");
+        } else {
+          setActivePhase(mp);
+          appendStreamToken(side, mp, data.chunk || "");
+        }
       } else if (data.type === "judging_results") {
         const scores = data.results?.scores as Record<string, Record<string, number>> | undefined;
         if (scores) setJudgingResults(scores);
@@ -419,10 +457,18 @@ export default function DebatePage() {
         markPhaseComplete("closing");
         es.close();
       } else if (data.type === "error") {
-        es.close(); setStreaming(false); setConnectionError(data.message || "Backend error.");
+        es.close();
+        setStreaming(false);
+        setConnectionError(data.message || "Backend error.");
       }
     };
-    es.onerror = () => { es.close(); setStreaming(false); setConnectionError("Could not connect. Make sure FastAPI is running on " + API_BASE_URL.replace("/api", "") + "."); };
+    es.onerror = () => {
+      es.close();
+      setStreaming(false);
+      setConnectionError(
+        "Could not connect. Make sure FastAPI is running on " + API_BASE_URL.replace("/api", "") + ".",
+      );
+    };
   }, [id]);
 
   useEffect(() => {
