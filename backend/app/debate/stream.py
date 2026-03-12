@@ -25,33 +25,41 @@ def get_speaker(phase: str) -> str:
     return "system"
 
 
-async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
+async def stream_debate_events(
+    debate_id: str,
+) -> AsyncGenerator[str, None]:
     """
-    Invokes the LangGraph state machine and yields SSE payloads.
+    Invokes the LangGraph state machine and yields SSE payloads
+    token-by-token.
     """
     graph = create_debate_graph()
 
-    # In a real scenario, fetch the debate config/state from DB or presets.
+    # Placeholder initial state for the stream
+    # In a real scenario, fetch the debate config/state from DB or presets
     initial_state: DebateState = {
         "debate_id": debate_id,
         "topic": "Universal Healthcare",  # Placeholder until DB integration
         "status": "in_progress",
         "current_phase": "initial",
         "debate_turns": [],
-        "evidence_bundle": None,
-        "personas": {},
+        "evidence_bundle": None,  # Will be set if DB integration added
+        "personas": {},  # Will be set by persona generator
     }
 
     current_node = None
     streamed_phases = set()
 
     try:
-        async for event in graph.astream_events(initial_state, version="v2"):
+        async for event in graph.astream_events(
+            initial_state, version="v2"
+        ):
             kind = event["event"]
 
             # Track which LangGraph node we're currently executing
             if kind == "on_chain_start":
-                node_name = event.get("metadata", {}).get("langgraph_node")
+                node_name = (
+                    event.get("metadata", {}).get("langgraph_node")
+                )
                 if node_name:
                     current_node = node_name
                     if current_node in INTERNAL_PHASES:
@@ -66,7 +74,7 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
                         }
                         yield f"data: {json.dumps(payload)}\n\n"
 
-            # Stream tokens for chat models if in a public phase
+            # Stream tokens for chat models if we are in a public phase
             elif kind == "on_chat_model_stream":
                 if (
                     current_node
@@ -85,9 +93,11 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
                         }
                         yield f"data: {json.dumps(payload)}\n\n"
 
-            # Fallback: emit completed turn text for non-streaming nodes
+            # Fallback for non-streaming: emit content from debate_turns
             elif kind == "on_chain_end":
-                node_name = event.get("metadata", {}).get("langgraph_node")
+                node_name = (
+                    event.get("metadata", {}).get("langgraph_node")
+                )
                 phase_name = node_name or current_node
                 if (
                     phase_name
@@ -108,7 +118,9 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
                                 continue
                             if (
                                 turn.get("phase") == phase_name
-                                and not turn.get("is_internal", False)
+                                and not turn.get(
+                                    "is_internal", False
+                                )
                             ):
                                 text = turn.get("text", "")
                                 break

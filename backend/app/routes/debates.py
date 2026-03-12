@@ -9,7 +9,8 @@ router = APIRouter(prefix="/api/debates", tags=["debates"])
 @router.get("/{debate_id}/stream")
 async def stream_debate(debate_id: str):
     """
-    Server-Sent Events endpoint that streams debate content.
+    Server-Sent Events endpoint that streams debate content as the debate
+    progresses.
     """
     return StreamingResponse(
         stream_debate_events(debate_id),
