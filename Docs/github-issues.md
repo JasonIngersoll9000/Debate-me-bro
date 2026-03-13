@@ -25,23 +25,32 @@
 
 ### Sprint 2 — Live API Debates + Persistence
 ```
-#16 Debate Persistence + Caching (required before live API calls)
-      ↓
-#17 Demo Mode Toggle + Live API Integration
-      ↓
-#18 Topic Input Bug Fix
-#19 Public Debate Browsing + Likes
-#14 Human Voting System
-#15 Dashboard (real data)
-#20 API Usage Cap
+✅ #16 Debate Persistence + Caching
+✅ #17 Demo Mode Toggle + Live API Integration
+✅ #23 Frontend Debate UX Overhaul (7 sub-issues)
+⚠️ #15 Dashboard (partial — needs vote display, polish)
+❌ #18 Topic Input Bug Fix
+❌ #19 Public Debate Browsing + Likes
+❌ #14 Human Voting System
+❌ #20 API Usage Cap
 ```
 
-### Sprint 3 — AI-Powered Research + Custom Topics (Stretch)
+### Sprint 3 — Recommended Priority Order
 ```
-#11 Topic Analysis + Prompt Gen ──→ #12 Research Upload + Custom Flow
-#13 Position-Swapped Judging
-#21 AI Resolution Curation & Improvement
-#22 AI-Powered Research (user provides API key or pays)
+HIGH PRIORITY (core quality):
+  #25 Argument Quality — values/logic first, fallacy reduction (backend prompts)
+  #26 Judge Scoring Transparency — per-criterion breakdown (backend + frontend)
+  #27 Persona Reveal on Every Debate Load (frontend, quick fix)
+
+MEDIUM PRIORITY (features):
+  #28 "How It Works" Explanation Page (frontend, standalone)
+  #24 Persuasion / Argument Strength Judge (backend + frontend)
+  #13 Position-Swapped Judging Bias Elimination (backend)
+
+LOWER PRIORITY (custom topics pipeline):
+  #11 Topic Analysis + Prompt Gen (partial) ──→ #12 Research Upload + Custom Flow (partial)
+  #21 AI Resolution Curation & Improvement
+  #22 AI-Powered Research (user provides API key or pays)
 ```
 
 ---
@@ -206,7 +215,7 @@
 - [x] Each judge has detailed system prompt with anti-bias instructions per `prompts-doc.md`
 - [x] `judging/panel.py` orchestrator runs 3 judges concurrently via `asyncio.gather`
 - [x] Weighted scores computed and overall winner determined
-- [ ] *(Sprint 2)* Judging results emitted via SSE and displayed in frontend as score bars
+- [x] *(Sprint 2)* Judging results emitted via SSE and displayed in frontend as score bars
 
 ---
 
@@ -220,7 +229,8 @@
 **Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 2  
 **Assignee:** Jason  
-**Depends on:** #7
+**Depends on:** #7  
+**Status:** ✅ Complete (dev mode; Postgres migration deferred)
 
 #### Description
 Every completed debate is saved so it can be replayed without re-running AI calls. All debates are public and browseable. Uses file-based storage for development; migrates to PostgreSQL for production.
@@ -325,7 +335,8 @@ Authenticated users vote on debate winners, displayed alongside AI judge scores 
 **Labels:** `feature`, `priority: medium`  
 **Milestone:** Sprint 2  
 **Assignee:** Shuai  
-**Depends on:** #3, #16
+**Depends on:** #3, #16  
+**Status:** ⚠️ Partial — page exists, fetches real data, shows cards; missing vote display, quick actions polish, component tests
 
 #### Description
 Dashboard shows real debate data from the persistence store. All debates are public.
@@ -364,7 +375,8 @@ Protect API token spend by limiting how many new debates each user can generate.
 **Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 2  
 **Assignee:** Jason  
-**Depends on:** #17
+**Depends on:** #17  
+**Status:** ✅ Complete
 
 #### Description
 After running the first live debates, several UX gaps became apparent: phases auto-advance too quickly, markdown doesn't render in arguments, internal phases are invisible, evidence bundle uses mock data, personas appear silently, and judging lacks transparency. This issue addresses all 7 gaps in one cohesive overhaul.
@@ -372,42 +384,42 @@ After running the first live debates, several UX gaps became apparent: phases au
 #### Sub-issues
 
 **23a. Pause between phases — Continue button in live mode**
-- [ ] Opening, rebuttal, and closing phases wait for user to click "Continue" before advancing
-- [ ] SSE events continue buffering in the background; only the displayed phase is gated
-- [ ] Internal phases (eval, research_consultation) auto-advance without user action
+- [x] Opening, rebuttal, and closing phases wait for user to click "Continue" before advancing
+- [x] SSE events continue buffering in the background; only the displayed phase is gated
+- [x] Internal phases (eval, research_consultation) auto-advance without user action
 
 **23b. Markdown rendering in argument cards**
-- [ ] Headings (`#`, `##`, `###`), lists (`-`), and horizontal rules (`---`) render as styled HTML
-- [ ] Existing citation badge and bold rendering preserved
-- [ ] StreamingText component updated
+- [x] Headings (`#`, `##`, `###`), lists (`-`), and horizontal rules (`---`) render as styled HTML
+- [x] Existing citation badge and bold rendering preserved
+- [x] StreamingText component updated
 
 **23c. Evaluation phases — show agent thought process**
-- [ ] Backend streams internal phase LLM chunks as `internal_content` SSE events
-- [ ] Frontend stores internal analysis and displays in StrategicAnalysisPanel
-- [ ] Users can toggle-view the strategic analysis for eval_openings and eval_full_debate
+- [x] Backend streams internal phase LLM chunks as `internal_content` SSE events
+- [x] Frontend stores internal analysis and displays in StrategicAnalysisPanel
+- [x] Users can toggle-view the strategic analysis for eval_openings and eval_full_debate
 
 **23d. Evidence bundle based on actual research**
-- [ ] Backend sends real evidence data (pro_arguments, con_arguments, citations) in `evidence_loaded` SSE event
-- [ ] Frontend displays real evidence in research phase instead of hardcoded mock data
-- [ ] Falls back to mock data only in demo mode
+- [x] Backend sends real evidence data (pro_arguments, con_arguments, citations) in `evidence_loaded` SSE event
+- [x] Frontend displays real evidence in research phase instead of hardcoded mock data
+- [x] Falls back to mock data only in demo mode
 
 **23e. Research consultation viewable via toggle**
-- [ ] Research consultation phase output viewable in the research phase UI
-- [ ] Toggle panel shows pro/con strategic analysis from the research consultation
-- [ ] Uses same `internal_content` SSE mechanism as evaluation phases
+- [x] Research consultation phase output viewable in the research phase UI
+- [x] Toggle panel shows pro/con strategic analysis from the research consultation
+- [x] Uses same `internal_content` SSE mechanism as evaluation phases
 
 **23f. Persona reveal animation + "Start Debate" button**
-- [ ] Persona interface expanded to include expertise_areas, core_values, rhetorical_approach
-- [ ] Animated persona reveal UI shown after personas are generated
-- [ ] Full persona details displayed: name, identity, expertise, values, approach
-- [ ] "Start Debate →" button gates progression to the debate phases
+- [x] Persona interface expanded to include expertise_areas, core_values, rhetorical_approach
+- [x] Animated persona reveal UI shown after personas are generated
+- [x] Full persona details displayed: name, identity, expertise, values, approach
+- [x] "Start Debate →" button gates progression to the debate phases
 
 **23g. Judging phase — transparency and per-judge breakdowns**
-- [ ] Backend synthesizes a summary from the 3 judges' individual reasoning
-- [ ] Frontend shows per-judge expandable cards with scores, reasoning, strongest/weakest moves
-- [ ] Uses backend `weighted_total` instead of re-computing on frontend
-- [ ] Score bars include per-judge contribution labels
-- [ ] Verdict explanation shows why the winner was chosen with supporting judge analysis
+- [x] Backend synthesizes a summary from the 3 judges' individual reasoning
+- [x] Frontend shows per-judge expandable cards with scores, reasoning, strongest/weakest moves
+- [x] Uses backend `weighted_total` instead of re-computing on frontend
+- [x] Score bars include per-judge contribution labels
+- [x] Verdict explanation shows why the winner was chosen with supporting judge analysis
 
 ---
 
@@ -421,7 +433,8 @@ After running the first live debates, several UX gaps became apparent: phases au
 **Labels:** `feature`, `priority: medium`  
 **Milestone:** Sprint 3  
 **Assignee:** Jason  
-**Depends on:** #4
+**Depends on:** #4  
+**Status:** ⚠️ Partial — backend routes + frontend 3-step flow exist; missing edit-positions UX and unit tests
 
 #### Description
 For custom topics, Claude Haiku analyzes the resolution and generates argument dimensions. The system produces two research prompts that **users copy into Claude or ChatGPT** to run externally, then upload the results. Backend prompt logic already exists in `topics/analysis.py` and `topics/prompts.py`.
@@ -442,7 +455,8 @@ For custom topics, Claude Haiku analyzes the resolution and generates argument d
 **Labels:** `feature`, `priority: medium`  
 **Milestone:** Sprint 3  
 **Assignee:** Shuai  
-**Depends on:** #11
+**Depends on:** #11  
+**Status:** ⚠️ Partial — upload endpoint exists; EvidenceLoader integration + debate launch flow incomplete
 
 #### Description
 End-to-end custom topic flow: enter resolution → get research prompts → run externally → upload → debate.
@@ -540,3 +554,165 @@ Instead of requiring users to manually copy research prompts and run them in ext
 - [ ] Research generation uses the same structured prompts from `topics/prompts.py`
 - [ ] Generated research goes through the same `EvidenceLoader` pipeline
 - [ ] Clear UX showing research generation progress and estimated API cost
+
+---
+
+### Issue #25: Argument Quality — Values & Logic First, Statistics Second
+
+**Labels:** `enhancement`, `priority: high`, `backend`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+
+#### Description
+
+The current debate agents over-rely on statistics, citations, and appeals to institutional authority at the expense of first-principles reasoning. A compelling argument should **lead with values and logic** — establishing *why* something matters from foundational principles — and then use real-world data to **support** those logical claims with evidence. Currently the agents do the opposite: they lead with statistics and name-drop institutions without establishing the underlying reasoning.
+
+**Concrete example from the healthcare debate (Pro side):**
+
+> "Healthcare satisfies every philosophical, legal, and religious criterion for recognition as a fundamental right. The UN Universal Declaration of Human Rights, the WHO Constitution, and the International Covenant on Economic, Social and Cultural Rights all recognize healthcare as a basic human right. The United States stands alone among industrialized nations in rejecting this moral consensus."
+
+This is an **appeal to authority fallacy** — it claims healthcare is a right *because institutions say so*, rather than building a logical argument for *why* it should be a right from first principles (e.g., bodily autonomy, social contract theory, diminishing marginal utility of wealth vs. health). A skilled debater would first establish the moral/logical framework and then cite institutional recognition as corroborating evidence, not as the argument itself.
+
+**Other observed fallacy patterns:**
+- **Appeal to authority:** Citing organizations, declarations, or expert consensus as proof rather than as supporting evidence for an independently established argument
+- **Appeal to popularity:** "Every other industrialized nation does X" — popularity does not establish correctness
+- **Hasty generalization:** Drawing broad conclusions from narrow statistical examples without establishing causal mechanisms
+- **Statistics without context:** Presenting numbers without explaining *why* they matter or *how* they connect to the logical argument
+
+**What needs to change:**
+
+1. **Agent system prompts** (`backend/app/debate/agents.py`) must instruct agents to structure arguments as: **(a) establish the value/principle → (b) build the logical chain → (c) support with evidence/statistics**
+2. **Persona prompts** (`backend/app/debate/persona_generator.py`) should emphasize that each persona's `rhetorical_approach` prioritizes logical reasoning and values-based argumentation
+3. **Debate phase prompts** (opening, rebuttal, closing) should explicitly instruct: "Do NOT lead with statistics or institutional citations. Lead with your core value proposition and logical reasoning. Use data to support your argument, not to substitute for one."
+4. **Fallacy awareness:** Add explicit instructions to agent prompts to avoid common logical fallacies (appeal to authority, appeal to popularity, hasty generalization, false dichotomy, strawman). Agents should be aware that judges will penalize fallacious reasoning.
+5. **Judge prompts** (especially the Logic Judge) should be updated to actively identify and penalize logical fallacies, with specific deductions for appeals to authority, circular reasoning, etc.
+
+#### Acceptance Criteria
+
+- [ ] Updated agent system prompts in `backend/app/debate/agents.py` to prioritize values-first, logic-first argument structure
+- [ ] Updated persona generation prompts to emphasize logical reasoning in `rhetorical_approach`
+- [ ] Updated debate phase prompts (opening, rebuttal, closing) with explicit instruction to lead with principles, follow with evidence
+- [ ] Added fallacy-awareness instructions to all agent prompts (list of common fallacies to avoid)
+- [ ] Updated Logic Judge prompt to actively identify and penalize logical fallacies with specific deductions
+- [ ] Updated Evidence Judge prompt to distinguish between "evidence supporting a logical argument" vs "evidence substituting for an argument"
+- [ ] Tested with healthcare preset: Pro side should argue *why* healthcare is a right from first principles, not just cite institutions
+- [ ] Tested with healthcare preset: Con side should argue from principles of market efficiency, individual liberty, innovation incentives — not just cite cost statistics
+- [ ] Arguments should follow clear structure: value claim → logical reasoning → supporting evidence
+- [ ] No argument should rely solely on "X organization says so" or "Y country does it" without independent logical justification
+
+---
+
+### Issue #26: Judge Scoring Transparency — Detailed Methodology & Point Traceability
+
+**Labels:** `enhancement`, `priority: high`, `frontend`, `backend`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+
+#### Description
+
+The current judging system lacks transparency. When a judge awards "Pro: 4, Con: 2," there is no clear explanation of **how** those numbers were calculated, **what specific criteria** contributed to each point, or **why** one side scored higher. The scores feel arbitrary to the user.
+
+**Current problems (see screenshot of Judge Analysis UI):**
+- Each judge shows only a single aggregate score per side (e.g., "4 vs 2") with no breakdown
+- The one-line description ("Evaluates logical validity, soundness of reasoning, and identification of fallacies") doesn't explain the scoring methodology
+- When expanded, the "Winner Explanation" and "Strongest/Weakest Moves" are helpful but disconnected from the numerical scores
+- There is no way to trace a specific point value back to a specific argument or criterion
+- The Engagement Judge sometimes shows "0 vs 0" with no explanation of why
+
+**What needs to change:**
+
+1. **Backend judge prompts** must require judges to output a **per-criterion score breakdown**, not just a single aggregate. For example, the Logic Judge should score:
+   - Logical validity (0-5)
+   - Soundness of premises (0-5)
+   - Fallacy avoidance (0-5)
+   - Argumentative structure (0-5)
+   - → Weighted aggregate = final score
+
+2. **Each criterion score must include a one-sentence justification** explaining why that score was given, referencing specific moments in the debate.
+
+3. **Frontend JudgeCard** must display:
+   - The per-criterion breakdown with individual scores
+   - The justification for each criterion score
+   - How the criteria are weighted to produce the final aggregate
+   - Clear visual indication of which criteria drove the winner determination
+
+4. **Scoring methodology section** — either in-card or as an info tooltip — explaining how each judge works, what criteria they evaluate, the weight of each criterion, and the score scale.
+
+#### Acceptance Criteria
+
+- [ ] Each judge prompt outputs per-criterion scores (not just aggregate pro_score/con_score)
+- [ ] Each criterion score includes a one-sentence justification referencing specific debate content
+- [ ] Judge JSON output schema updated: `criteria: [{ name, pro_score, con_score, pro_justification, con_justification, weight }]`
+- [ ] Frontend `JudgeCard` expanded view shows per-criterion breakdown with scores and justifications
+- [ ] Each criterion row shows: criterion name, pro score, con score, and justification text
+- [ ] Aggregate score shown as weighted sum of criteria with formula visible
+- [ ] Scoring methodology tooltip or info section explains what each criterion means and how it's weighted
+- [ ] No judge should produce 0/0 scores without an explicit explanation (if a criterion is N/A, explain why)
+- [ ] All three existing judges (Logic, Evidence, Engagement) updated with per-criterion output
+- [ ] Unit tests for new judge output schema validation
+
+---
+
+### Issue #27: Persona Reveal Animation on Every Debate Load
+
+**Labels:** `bug`, `priority: medium`, `frontend`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+
+#### Description
+
+The persona reveal overlay animation (the "Meet Your Debaters" modal with Start Debate button) should display **every time** a user opens a debate, regardless of whether it is a live debate, cached/replayed debate, or a preset topic like Healthcare. Currently, the persona reveal only appears in specific conditions (live mode, non-cached), which means users who open a cached debate or a preset topic never see the persona introduction.
+
+The persona reveal is an important part of the user experience — it sets the stage, introduces the AI advocates, and gives the user context before diving into arguments. Skipping it makes the experience feel abrupt.
+
+#### Acceptance Criteria
+
+- [ ] Persona reveal overlay appears on **every** debate load where personas are available (live, cached, demo)
+- [ ] For cached debates: personas load instantly from cache, overlay appears immediately with "Start Debate →" button
+- [ ] For live debates: overlay appears once personas SSE event arrives (existing behavior, already works)
+- [ ] For demo mode: overlay appears with mock personas before mock debate starts
+- [ ] After user clicks "Start Debate →", the debate content is shown starting from the research phase
+- [ ] The `personaRevealed` gate should not be bypassed by `isFromCache` or `isDemoMode` conditions
+- [ ] Overlay uses the existing `fadeIn` / `slideUp` animations from `globals.css`
+
+---
+
+### Issue #28: "How It Works" Explanation Page
+
+**Labels:** `feature`, `priority: medium`, `frontend`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+
+#### Description
+
+Create a dedicated, in-depth explanation page (accessible from the landing page and navigation) that functions as a "blog post" or "deep dive" explaining **exactly what DebateMeBro does, why it matters, and how it works at every stage**. The goal is to clearly communicate the value proposition so that a new visitor can understand why this is superior to typical human debates or other AI debate tools.
+
+**The page should cover:**
+
+1. **The Problem:** Why most online debates are unproductive — echo chambers, bad-faith arguments, no structured evaluation, no accountability for logical fallacies.
+
+2. **The DebateMeBro Approach:** How structured AI debate solves these problems — both sides receive the same research, personas are generated to be genuine advocates (not strawmen), arguments follow a formal structure (opening → rebuttal → closing), and an independent AI judging panel evaluates based on explicit criteria.
+
+3. **Stage-by-Stage Walkthrough:**
+   - **Topic Analysis & Research:** How the system analyzes a debate topic, generates balanced research for both sides, and ensures both agents start with the same factual foundation.
+   - **Persona Generation:** How AI personas are created with specific expertise, values, and rhetorical approaches — not generic "Pro Bot / Con Bot" but nuanced advocates.
+   - **Structured Debate Phases:** Opening arguments → strategic evaluation → rebuttals → final evaluation → closing statements. Explain why each phase exists and what it accomplishes.
+   - **Internal Strategy Phases:** How agents privately analyze each other's arguments between rounds, planning their responses — mimicking real debate preparation.
+   - **AI Judging Panel:** How three (or four) independent judges evaluate the debate on different dimensions (logic, evidence, engagement, persuasion), each with transparent scoring criteria.
+   - **Human Voting:** How user votes are combined with AI judge scores for a final determination.
+
+4. **Why This Matters:** The educational value — users learn to recognize strong vs weak arguments, identify logical fallacies, understand how evidence should support reasoning, and see both sides of complex issues presented at their best.
+
+5. **Technical Differentiators:** What makes this different from ChatGPT debates, Reddit arguments, or other AI tools — the structured pipeline, position-swapped judge verification, evidence-grounded arguments, transparent scoring.
+
+#### Acceptance Criteria
+
+- [ ] New page at `/how-it-works` (or `/about`) accessible from landing page navigation
+- [ ] Page uses the same dark theme and styling as the rest of the app
+- [ ] Content covers all 5 sections described above with clear headings and visual hierarchy
+- [ ] Includes diagrams or visual flow showing the debate pipeline stages
+- [ ] Includes example screenshots or mockups of each phase (research, personas, arguments, judging)
+- [ ] Mobile-responsive layout
+- [ ] Link from landing page (prominent CTA or nav link)
+- [ ] Content is written in engaging, accessible prose — not dry technical documentation
+- [ ] SEO-friendly: proper meta tags, headings, and page title

@@ -171,13 +171,15 @@
 - 22 files total (16 new, 6 modified) — every prompt exactly matches `prompts-doc.md`.
 
 ### Issue #16: Debate Persistence and Caching
-**Status:** Partially Complete
+**Status:** ✅ Complete (dev mode; Postgres migration deferred)
 **What Went Well:**
-- `debate/store.py` implemented with JSON file-based persistence.
+- `debate/store.py` implemented with JSON file-based persistence (`save_debate`, `load_debate`, `list_debates`, `debate_exists`).
 - `stream.py` checks cache before invoking LLMs and saves completed debates after streaming.
 - `GET /api/debates/` and `GET /api/debates/{id}` endpoints working.
+- Frontend `fetchDebate()` checks cache before opening SSE — cached debates load instantly.
 - `routes/research.py` created with analyze, upload, and status endpoints.
 - `/debates/new` frontend page built with 3-step custom topic flow.
+- Integration tests covering store round-trip, API endpoints, and SSE cache replay.
 
 ---
 
