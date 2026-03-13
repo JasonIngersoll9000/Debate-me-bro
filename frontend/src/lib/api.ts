@@ -35,18 +35,13 @@ export interface DebateSummary {
 }
 
 export async function fetchDebates(): Promise<DebateSummary[]> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/debates/`, {
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch debates: ${response.status}`);
-    }
-    return response.json();
-  } catch (error) {
-    console.error("Error fetching debates:", error);
-    return [];
+  const response = await fetch(`${API_BASE_URL}/debates/`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch debates: ${response.status}`);
   }
+  return response.json();
 }
 
 export interface DebateData {

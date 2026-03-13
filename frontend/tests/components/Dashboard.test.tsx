@@ -25,13 +25,14 @@ jest.mock('@/lib/api', () => ({
 
 describe('DashboardPage', () => {
   beforeEach(() => {
-    // Mock local storage for an authenticated user
-    Storage.prototype.getItem = jest.fn((key) => {
-      if (key === 'token') return 'mock-token';
-      if (key === 'user_email') return 'test@example.com';
-      return null;
-    });
+    localStorage.clear();
+    localStorage.setItem('token', 'mock-token');
+    localStorage.setItem('user_email', 'test@example.com');
     jest.clearAllMocks();
+  });
+
+  afterEach(() => {
+    localStorage.clear();
   });
 
   it('renders loading skeleton initially', async () => {
