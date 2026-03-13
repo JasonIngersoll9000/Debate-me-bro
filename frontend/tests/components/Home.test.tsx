@@ -1,12 +1,13 @@
 import "@testing-library/jest-dom";
 import { render, screen, fireEvent } from "@testing-library/react";
 import Home from "@/app/page";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { fetchPresetTopics } from "@/lib/api";
 
 // Mock next/navigation
 jest.mock("next/navigation", () => ({
   useRouter: jest.fn(),
+  useSearchParams: jest.fn(),
 }));
 
 // Mock next/link so it renders as a plain <a> in tests
@@ -24,10 +25,12 @@ jest.mock("@/lib/api", () => ({
 }));
 
 const mockPush = jest.fn();
+const mockReplace = jest.fn();
 
 describe("Landing Page", () => {
   beforeEach(() => {
-    (useRouter as jest.Mock).mockReturnValue({ push: mockPush });
+    (useRouter as jest.Mock).mockReturnValue({ push: mockPush, replace: mockReplace });
+    (useSearchParams as jest.Mock).mockReturnValue(new URLSearchParams());
     (fetchPresetTopics as jest.Mock).mockResolvedValue([
       { id: "test-topic", title: "Test Topic", description: "", pro_position: "", con_position: "" },
     ]);
@@ -52,7 +55,8 @@ describe("Landing Page", () => {
     const presetBtn = await screen.findByRole("button", { name: "Preset topic: Test Topic" });
     fireEvent.click(presetBtn);
 
-    expect(mockPush).toHaveBeenCalledWith("/auth");
+    const expectedReturnTo = encodeURIComponent("/debates/test-topic?demo=true");
+    expect(mockPush).toHaveBeenCalledWith(`/auth?returnTo=${expectedReturnTo}`);
   });
 
   it("redirects unauthenticated users to /auth when submitting a custom topic", async () => {
@@ -62,7 +66,8 @@ describe("Landing Page", () => {
     fireEvent.change(input, { target: { value: "Should pineapple go on pizza?" } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
 
-    expect(mockPush).toHaveBeenCalledWith("/auth");
+    const expectedReturnTo = encodeURIComponent("/?topic=Should%20pineapple%20go%20on%20pizza%3F");
+    expect(mockPush).toHaveBeenCalledWith(`/auth?returnTo=${expectedReturnTo}`);
   });
 
   it("navigates authenticated users to the demo URL when clicking a preset topic", async () => {
