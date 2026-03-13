@@ -78,7 +78,7 @@ function JudgeCard({ judge }: { judge: JudgeResult }) {
             </div>
             {winner && (
               <span className={`text-xs font-black uppercase px-2.5 py-0.5 rounded-full border inline-block mt-1 ${winnerBg} ${winnerColor}`}>
-                {winner === "pro" ? "Pro wins" : "Con wins"}
+                {winner === "pro" ? "Pro wins" : winner === "con" ? "Con wins" : "Tie"}
               </span>
             )}
           </div>
@@ -388,6 +388,60 @@ function normalizeScores(raw: Record<string, Record<string, number>> | undefined
       weighted_total: raw?.con?.weighted_total,
     },
   };
+}
+
+/* ─── Persona Card ─── */
+function PersonaCard({ persona, side, position }: { persona: Persona; side: "pro" | "con"; position: string }) {
+  const [open, setOpen] = useState(false);
+  const isPro = side === "pro";
+  const iconBg = isPro ? "bg-gradient-to-br from-cyan-400 to-blue-600" : "bg-gradient-to-br from-fuchsia-400 to-purple-600";
+  const iconShadow = isPro ? "shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "shadow-[0_0_20px_rgba(217,70,239,0.3)]";
+  const borderColor = isPro ? "border-cyan-500/20" : "border-fuchsia-500/20";
+  const bgColor = isPro ? "bg-cyan-950/20" : "bg-fuchsia-950/20";
+  const labelColor = isPro ? "text-cyan-400" : "text-fuchsia-400";
+  const tagBg = isPro ? "bg-cyan-500/10 text-cyan-300 border-cyan-500/20" : "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20";
+  const align = isPro ? "text-left" : "text-right";
+  return (
+    <div className={`rounded-2xl border ${borderColor} ${bgColor} overflow-hidden transition-all`}>
+      <button onClick={() => setOpen(!open)} className={`w-full px-5 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors ${!isPro ? "flex-row-reverse" : ""}`}>
+        <div className={`w-12 h-12 rounded-2xl ${iconBg} ${iconShadow} flex items-center justify-center text-lg font-black text-white shrink-0`}>{isPro ? "P" : "C"}</div>
+        <div className={`min-w-0 flex-1 ${align}`}>
+          <div className={`text-xs font-black uppercase tracking-widest ${labelColor} mb-0.5`}>{isPro ? "Pro" : "Con"}</div>
+          <div className="font-black text-white text-base truncate">{persona.name}</div>
+          <div className="text-sm text-gray-400 truncate">{persona.role}</div>
+        </div>
+        <span className={`text-xs text-gray-500 transition-transform shrink-0 ${open ? "rotate-180" : ""}`}>▼</span>
+      </button>
+      {open && (
+        <div className={`px-5 pb-5 pt-3 border-t border-white/[0.06] space-y-3 ${align}`}>
+          {position && (
+            <div>
+              <div className={`text-xs font-black uppercase tracking-widest text-gray-500 mb-1`}>Position</div>
+              <p className="text-sm text-gray-300 leading-relaxed">{position}</p>
+            </div>
+          )}
+          {persona.expertise_areas && persona.expertise_areas.length > 0 && (
+            <div>
+              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1.5">Expertise</div>
+              <div className={`flex flex-wrap gap-1.5 ${!isPro ? "justify-end" : ""}`}>{persona.expertise_areas.map((e, i) => <span key={i} className={`text-xs px-2.5 py-1 rounded-full border ${tagBg}`}>{e}</span>)}</div>
+            </div>
+          )}
+          {persona.core_values && persona.core_values.length > 0 && (
+            <div>
+              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1.5">Core Values</div>
+              <div className={`flex flex-wrap gap-1.5 ${!isPro ? "justify-end" : ""}`}>{persona.core_values.map((v, i) => <span key={i} className={`text-xs px-2.5 py-1 rounded-full border ${tagBg}`}>{v}</span>)}</div>
+            </div>
+          )}
+          {persona.rhetorical_approach && (
+            <div>
+              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Approach</div>
+              <p className="text-sm text-gray-400 leading-relaxed">{persona.rhetorical_approach}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ─── Main Page ─── */
@@ -926,73 +980,19 @@ export default function DebatePage() {
         </div>
 
         {/* ─── Persona Cards ─── */}
-        {proPersona && conPersona && (() => {
-          const PersonaCard = ({ persona, side, position }: { persona: Persona; side: "pro" | "con"; position: string }) => {
-            const [open, setOpen] = useState(false);
-            const isPro = side === "pro";
-            const iconBg = isPro ? "bg-gradient-to-br from-cyan-400 to-blue-600" : "bg-gradient-to-br from-fuchsia-400 to-purple-600";
-            const iconShadow = isPro ? "shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "shadow-[0_0_20px_rgba(217,70,239,0.3)]";
-            const borderColor = isPro ? "border-cyan-500/20" : "border-fuchsia-500/20";
-            const bgColor = isPro ? "bg-cyan-950/20" : "bg-fuchsia-950/20";
-            const labelColor = isPro ? "text-cyan-400" : "text-fuchsia-400";
-            const tagBg = isPro ? "bg-cyan-500/10 text-cyan-300 border-cyan-500/20" : "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20";
-            const align = isPro ? "text-left" : "text-right";
-            return (
-              <div className={`rounded-2xl border ${borderColor} ${bgColor} overflow-hidden transition-all`}>
-                <button onClick={() => setOpen(!open)} className={`w-full px-5 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors ${!isPro ? "flex-row-reverse" : ""}`}>
-                  <div className={`w-12 h-12 rounded-2xl ${iconBg} ${iconShadow} flex items-center justify-center text-lg font-black text-white shrink-0`}>{isPro ? "P" : "C"}</div>
-                  <div className={`min-w-0 flex-1 ${align}`}>
-                    <div className={`text-xs font-black uppercase tracking-widest ${labelColor} mb-0.5`}>{isPro ? "Pro" : "Con"}</div>
-                    <div className="font-black text-white text-base truncate">{persona.name}</div>
-                    <div className="text-sm text-gray-400 truncate">{persona.role}</div>
-                  </div>
-                  <span className={`text-xs text-gray-500 transition-transform shrink-0 ${open ? "rotate-180" : ""}`}>▼</span>
-                </button>
-                {open && (
-                  <div className={`px-5 pb-5 pt-3 border-t border-white/[0.06] space-y-3 ${align}`}>
-                    {position && (
-                      <div>
-                        <div className={`text-xs font-black uppercase tracking-widest text-gray-500 mb-1`}>Position</div>
-                        <p className="text-sm text-gray-300 leading-relaxed">{position}</p>
-                      </div>
-                    )}
-                    {persona.expertise_areas && persona.expertise_areas.length > 0 && (
-                      <div>
-                        <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1.5">Expertise</div>
-                        <div className={`flex flex-wrap gap-1.5 ${!isPro ? "justify-end" : ""}`}>{persona.expertise_areas.map((e, i) => <span key={i} className={`text-xs px-2.5 py-1 rounded-full border ${tagBg}`}>{e}</span>)}</div>
-                      </div>
-                    )}
-                    {persona.core_values && persona.core_values.length > 0 && (
-                      <div>
-                        <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1.5">Core Values</div>
-                        <div className={`flex flex-wrap gap-1.5 ${!isPro ? "justify-end" : ""}`}>{persona.core_values.map((v, i) => <span key={i} className={`text-xs px-2.5 py-1 rounded-full border ${tagBg}`}>{v}</span>)}</div>
-                      </div>
-                    )}
-                    {persona.rhetorical_approach && (
-                      <div>
-                        <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Approach</div>
-                        <p className="text-sm text-gray-400 leading-relaxed">{persona.rhetorical_approach}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          };
-          return (
-            <div className="flex items-start gap-3 px-6 py-4 bg-gradient-to-r from-cyan-950/20 via-transparent to-fuchsia-950/20">
-              <div className="flex-1 min-w-0">
-                <PersonaCard persona={proPersona} side="pro" position={topicMeta?.proPosition || (isDemoMode ? MOCK_POSITIONS.pro : "")} />
-              </div>
-              <div className="flex items-center justify-center w-10 pt-6 shrink-0">
-                <span className="text-gray-600 font-black text-2xl select-none">⚡</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <PersonaCard persona={conPersona} side="con" position={topicMeta?.conPosition || (isDemoMode ? MOCK_POSITIONS.con : "")} />
-              </div>
+        {proPersona && conPersona && (
+          <div className="flex items-start gap-3 px-6 py-4 bg-gradient-to-r from-cyan-950/20 via-transparent to-fuchsia-950/20">
+            <div className="flex-1 min-w-0">
+              <PersonaCard persona={proPersona} side="pro" position={topicMeta?.proPosition || (isDemoMode ? MOCK_POSITIONS.pro : "")} />
             </div>
-          );
-        })()}
+            <div className="flex items-center justify-center w-10 pt-6 shrink-0">
+              <span className="text-gray-600 font-black text-2xl select-none">⚡</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <PersonaCard persona={conPersona} side="con" position={topicMeta?.conPosition || (isDemoMode ? MOCK_POSITIONS.con : "")} />
+            </div>
+          </div>
+        )}
       </header>
 
       {/* ─── Persona Reveal Overlay ─── */}
