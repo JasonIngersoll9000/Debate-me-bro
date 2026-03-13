@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useDebateStore } from "@/lib/store";
 import { useShallow } from "zustand/shallow";
-import { fetchDebate, DebateData } from "@/lib/api";
+import { fetchDebate, fetchDebateMode, DebateData } from "@/lib/api";
 import {
   MOCK_TURNS, MOCK_PERSONAS, MOCK_STRATEGIC_ANALYSIS, MOCK_PHASE_SEQUENCE,
   MOCK_SCORES, MOCK_POSITIONS, MOCK_RESEARCH_STEPS, MOCK_JUDGE_VERDICT,
@@ -32,6 +32,93 @@ function ScoreBar({ label, weight, proScore, conScore }: { label: string; weight
           <div className="bg-gradient-to-r from-fuchsia-400 to-fuchsia-600 transition-all duration-1000 rounded-r-full" style={{ width: `${conScore * 20}%` }} />
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ─── Judge Card (expandable) ─── */
+function JudgeCard({ judge }: { judge: Record<string, unknown> }) {
+  const [expanded, setExpanded] = useState(false);
+  const name = (judge.judge_name as string) || "Judge";
+  const proScore = (judge.pro_score as number) ?? 0;
+  const conScore = (judge.con_score as number) ?? 0;
+  const winner = (judge.winner as string) || (judge.overall_winner as string) || "";
+  const winnerExpl = (judge.winner_explanation as string) || "";
+  const reasoning = (judge.reasoning as string) || "";
+  const proStrongest = (judge.pro_strongest_move as string) || "";
+  const conStrongest = (judge.con_strongest_move as string) || "";
+  const proWeakest = (judge.pro_weakest_move as string) || "";
+  const conWeakest = (judge.con_weakest_move as string) || "";
+
+  const iconMap: Record<string, string> = { "Logic Judge": "🧠", "Evidence Judge": "📚", "Engagement Judge": "⚔️" };
+  const icon = iconMap[name] || "📋";
+
+  return (
+    <div className="rounded-2xl bg-white/[0.03] backdrop-blur-3xl border border-white/10 overflow-hidden transition-all">
+      <button onClick={() => setExpanded(!expanded)} className="w-full text-left px-6 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors">
+        <span className="text-2xl">{icon}</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-black text-white">{name}</div>
+          <div className="text-xs text-gray-500">{winnerExpl ? winnerExpl.slice(0, 80) + (winnerExpl.length > 80 ? "..." : "") : `Pro: ${proScore}/5 · Con: ${conScore}/5`}</div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-xs font-bold"><span className="text-cyan-400">{proScore}</span> <span className="text-gray-600">vs</span> <span className="text-fuchsia-400">{conScore}</span></span>
+          {winner && (
+            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${winner === "pro" ? "bg-cyan-900/40 text-cyan-400 border border-cyan-500/30" : "bg-fuchsia-900/40 text-fuchsia-400 border border-fuchsia-500/30"}`}>
+              {winner === "pro" ? "Pro" : "Con"}
+            </span>
+          )}
+          <span className={`text-xs transition-transform ${expanded ? "rotate-180" : ""}`}>▼</span>
+        </div>
+      </button>
+      {expanded && (
+        <div className="px-6 pb-5 space-y-4 border-t border-white/[0.06]">
+          {winnerExpl && (
+            <div className="pt-4">
+              <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Winner Explanation</div>
+              <p className="text-xs text-gray-300 leading-relaxed">{winnerExpl}</p>
+            </div>
+          )}
+          {(proStrongest || conStrongest) && (
+            <div className="grid md:grid-cols-2 gap-4">
+              {proStrongest && (
+                <div className="p-3 rounded-xl bg-cyan-500/5 border border-cyan-500/10">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-cyan-500 mb-1">Pro Strongest Move</div>
+                  <p className="text-xs text-gray-400 leading-relaxed">{proStrongest}</p>
+                </div>
+              )}
+              {conStrongest && (
+                <div className="p-3 rounded-xl bg-fuchsia-500/5 border border-fuchsia-500/10">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-fuchsia-500 mb-1">Con Strongest Move</div>
+                  <p className="text-xs text-gray-400 leading-relaxed">{conStrongest}</p>
+                </div>
+              )}
+            </div>
+          )}
+          {(proWeakest || conWeakest) && (
+            <div className="grid md:grid-cols-2 gap-4">
+              {proWeakest && (
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-1">Pro Weakest Move</div>
+                  <p className="text-xs text-gray-500 leading-relaxed">{proWeakest}</p>
+                </div>
+              )}
+              {conWeakest && (
+                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-1">Con Weakest Move</div>
+                  <p className="text-xs text-gray-500 leading-relaxed">{conWeakest}</p>
+                </div>
+              )}
+            </div>
+          )}
+          {reasoning && (
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Full Reasoning</div>
+              <p className="text-xs text-gray-400 leading-relaxed whitespace-pre-line">{reasoning}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -277,10 +364,10 @@ export default function DebatePage() {
 
   const {
     activePhase, debateTurns, internalAnalysis, isStreaming, completedPhases,
-    proPersona, conPersona, judgingResults, topicMeta, isFromCache,
+    proPersona, conPersona, judgingResults, topicMeta, isFromCache, evidenceBundle,
     setStreaming, setActivePhase, appendStreamToken, appendInternalAnalysis,
     setPersonas, markPhaseComplete, setJudgingResults, setTopicMeta, setIsFromCache,
-    setTopic,
+    setTopic, setEvidenceBundle,
   } = useDebateStore(
     useShallow((state) => ({
       activePhase: state.activePhase,
@@ -293,6 +380,7 @@ export default function DebatePage() {
       judgingResults: state.judgingResults,
       topicMeta: state.topicMeta,
       isFromCache: state.isFromCache,
+      evidenceBundle: state.evidenceBundle,
       setStreaming: state.setStreaming,
       setActivePhase: state.setActivePhase,
       appendStreamToken: state.appendStreamToken,
@@ -303,16 +391,20 @@ export default function DebatePage() {
       setTopicMeta: state.setTopicMeta,
       setIsFromCache: state.setIsFromCache,
       setTopic: state.setTopic,
+      setEvidenceBundle: state.setEvidenceBundle,
     }))
   );
 
   const [phaseTransitionMsg, setPhaseTransitionMsg] = useState<string | null>(null);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isDemoMode, setIsDemoMode] = useState(isDemo);
+  const [serverMode, setServerMode] = useState<"demo" | "live" | null>(null);
   const [userVote, setUserVote] = useState<"pro" | "con" | null>(null);
   const [researchStepIdx, setResearchStepIdx] = useState(0);
   const [researchReady, setResearchReady] = useState(false);
   const [docModal, setDocModal] = useState<"pro" | "con" | null>(null);
+  const [personaRevealed, setPersonaRevealed] = useState(false);
+  const [pendingPhase, setPendingPhase] = useState<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const mockAbortRef = useRef(false);
 
@@ -327,6 +419,12 @@ export default function DebatePage() {
 
   const handleContinue = () => {
     setWaitingForUser(false);
+    // Flush pending phase gate (live mode)
+    if (pendingPhase) {
+      setActivePhase(pendingPhase);
+      setPendingPhase(null);
+    }
+    // Resume mock engine (demo mode)
     waitResolveRef.current?.();
     waitResolveRef.current = null;
   };
@@ -522,7 +620,8 @@ export default function DebatePage() {
     setConnectionError(null);
     setPersonas({ name: "Proponent Agent", role: "AI Debater" }, { name: "Opponent Agent", role: "AI Debater" });
     setStreaming(true);
-    const es = new EventSource(`${API_BASE_URL}/debates/${id}/stream`);
+    const modeParam = serverMode ? `?mode=${serverMode}` : "";
+    const es = new EventSource(`${API_BASE_URL}/debates/${id}/stream${modeParam}`);
     eventSourceRef.current = es;
 
     // Track current and previous phase transitions for completion marking
@@ -539,6 +638,14 @@ export default function DebatePage() {
           proPosition: data.pro_position || "",
           conPosition: data.con_position || "",
         });
+        // Store real evidence bundle if provided
+        if (data.pro_arguments || data.con_arguments) {
+          setEvidenceBundle({
+            proArguments: (data.pro_arguments || []).map((a: string) => ({ title: a })),
+            conArguments: (data.con_arguments || []).map((a: string) => ({ title: a })),
+            citations: data.citations || {},
+          });
+        }
         setActivePhase("research");
         setResearchReady(true);
         setResearchStepIdx(MOCK_RESEARCH_STEPS.length);
@@ -547,9 +654,25 @@ export default function DebatePage() {
         const proP = data.pro || {};
         const conP = data.con || {};
         setPersonas(
-          { name: proP.name || "Pro Agent", role: proP.identity || "AI Debater" },
-          { name: conP.name || "Con Agent", role: conP.identity || "AI Debater" },
+          {
+            name: proP.name || "Pro Agent",
+            role: proP.identity || "AI Debater",
+            expertise_areas: proP.expertise_areas || [],
+            core_values: proP.core_values || [],
+            rhetorical_approach: proP.rhetorical_approach || "",
+          },
+          {
+            name: conP.name || "Con Agent",
+            role: conP.identity || "AI Debater",
+            expertise_areas: conP.expertise_areas || [],
+            core_values: conP.core_values || [],
+            rhetorical_approach: conP.rhetorical_approach || "",
+          },
         );
+      } else if (data.type === "internal_content") {
+        // Stream internal phase thought process into store
+        const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
+        appendInternalAnalysis(data.phase, side, data.chunk || "");
       } else if (data.type === "phase_transition") {
         const mp = mapPhase(data.phase);
         // Mark the previous phase complete when a new phase starts
@@ -558,9 +681,20 @@ export default function DebatePage() {
         }
         prevPhaseTransition = lastPhaseTransition;
         lastPhaseTransition = data.phase;
-        setActivePhase(mp);
         setPhaseTransitionMsg(data.message);
         setStreaming(true);
+
+        // Phase gating: for user-facing content phases, don't auto-advance
+        const USER_PHASES = ["opening", "rebuttal", "closing"];
+        const prevMp = prevPhaseTransition ? mapPhase(prevPhaseTransition) : "";
+        if (USER_PHASES.includes(mp) && prevMp && prevMp !== mp && USER_PHASES.includes(prevMp)) {
+          // Previous phase just ended, new one starting — gate it
+          setPendingPhase(mp);
+          setWaitingForUser(true);
+        } else {
+          setActivePhase(mp);
+        }
+
         // Mark internal phases complete immediately when they transition
         if (data.phase_type === "internal") {
           markPhaseComplete(mp);
@@ -570,8 +704,11 @@ export default function DebatePage() {
         setPhaseTransitionMsg(null);
         const mp = mapPhase(data.phase);
         const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
-        setActivePhase(mp);
+        // Always append content to the store (buffered); only advance displayed phase if not gated
         appendStreamToken(side, mp, data.chunk || "");
+        if (!pendingPhase) {
+          setActivePhase(mp);
+        }
         // Mark the previous phase complete if we've moved on to a different phase
         if (prevPhaseTransition && mapPhase(prevPhaseTransition) !== mp) {
           markPhaseComplete(mapPhase(prevPhaseTransition));
@@ -596,6 +733,11 @@ export default function DebatePage() {
         setPhaseTransitionMsg(null);
         setIsFromCache(data.cached === true);
         es.close();
+      } else if (data.type === "mode" && data.mode === "demo") {
+        // Backend says "use demo mode" — switch to mock engine
+        es.close();
+        setStreaming(false);
+        setIsDemoMode(true);
       } else if (data.type === "error") {
         es.close();
         setStreaming(false);
@@ -609,17 +751,37 @@ export default function DebatePage() {
         "Could not connect. Make sure FastAPI is running on " + API_BASE_URL.replace("/api", "") + ".",
       );
     };
-  }, [id]);
+  }, [id, serverMode]);
 
-  // ── Init: check cache first, then SSE or demo ──
+  // ── Init: fetch server mode, check cache, then SSE or demo ──
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
 
+    // If user already triggered demo (via URL param or fallback), skip mode fetch
     if (isDemoMode) {
+      setServerMode("demo");
       runMockDebate();
-    } else {
-      // Check if debate is already cached before opening SSE
+      return () => {
+        cancelled = true;
+        mockAbortRef.current = true;
+        eventSourceRef.current?.close();
+        useDebateStore.getState().reset();
+      };
+    }
+
+    // Fetch server mode, then check cache, then connect
+    fetchDebateMode().then((mode) => {
+      if (cancelled) return;
+      setServerMode(mode);
+
+      if (mode === "demo") {
+        // Server says demo — run mock engine directly
+        setIsDemoMode(true);
+        return;
+      }
+
+      // Live mode: check cache first, then SSE
       fetchDebate(id).then((cached) => {
         if (cancelled) return;
         if (cached && cached.status === "completed") {
@@ -628,7 +790,7 @@ export default function DebatePage() {
           connectSSE();
         }
       });
-    }
+    });
 
     return () => {
       cancelled = true;
@@ -647,13 +809,14 @@ export default function DebatePage() {
   const scores = judgingResults?.scores ?? MOCK_SCORES;
   const proScores = scores.pro || MOCK_SCORES.pro;
   const conScores = scores.con || MOCK_SCORES.con;
-  const proTotal = (proScores.logic || 0) * .3 + (proScores.evidence || 0) * .25 + (proScores.refutation || 0) * .25 + (proScores.steelman || 0) * .2;
-  const conTotal = (conScores.logic || 0) * .3 + (conScores.evidence || 0) * .25 + (conScores.refutation || 0) * .25 + (conScores.steelman || 0) * .2;
+  const proTotal = proScores.weighted_total ?? ((proScores.logic || 0) * .3 + (proScores.evidence || 0) * .25 + (proScores.refutation || 0) * .25 + (proScores.steelman || 0) * .2);
+  const conTotal = conScores.weighted_total ?? ((conScores.logic || 0) * .3 + (conScores.evidence || 0) * .25 + (conScores.refutation || 0) * .25 + (conScores.steelman || 0) * .2);
   const judgeVerdict = judgingResults?.summary
     ? { summary: judgingResults.summary, reasoning: judgingResults.judges?.map(j => j.reasoning).join("\n\n") || "" }
     : MOCK_JUDGE_VERDICT;
   const rawWinner = judgingResults?.winner || (proTotal > conTotal ? "pro" : conTotal > proTotal ? "con" : "tie");
   const debateWinner = rawWinner === "pro" ? "Pro" : rawWinner === "con" ? "Con" : "Tie";
+  const judges = judgingResults?.judges || [];
 
   return (
     <div className="min-h-screen bg-slate-950 text-gray-100 flex flex-col relative overflow-hidden">
@@ -670,7 +833,10 @@ export default function DebatePage() {
             <span className="text-lg font-black tracking-tighter bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent">DebateMeBro</span>
           </a>
           <div className="flex items-center gap-3">
-            {isDemoMode && <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-900/30 px-2.5 py-1 rounded-full border border-amber-500/30">Demo</span>}
+            {isDemoMode
+              ? <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-900/30 px-2.5 py-1 rounded-full border border-amber-500/30">Demo</span>
+              : <span className="text-[10px] font-bold text-sky-400 uppercase tracking-widest bg-sky-900/30 px-2.5 py-1 rounded-full border border-sky-500/30">Live</span>
+            }
             {isFromCache && <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest bg-violet-900/30 px-2.5 py-1 rounded-full border border-violet-500/30">Cached</span>}
             {isStreaming ? (
               <span className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-900/30 px-2.5 py-1 rounded-full border border-emerald-500/30 shadow-[0_0_10px_rgba(52,211,153,0.2)]">
@@ -720,6 +886,85 @@ export default function DebatePage() {
           </div>
         )}
       </header>
+
+      {/* ─── Persona Reveal Overlay ─── */}
+      {proPersona && conPersona && !personaRevealed && !isDemoMode && !isFromCache && activePhase === "research" && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
+          <div className="max-w-5xl w-full mx-4 animate-[fadeIn_0.5s_ease-out]">
+            <div className="text-center mb-8">
+              <div className="text-5xl mb-3">⚔️</div>
+              <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Meet Your Debaters</h2>
+              <p className="text-sm text-gray-400 font-medium">Two AI advocates have been generated for this debate. Review their profiles, then start the debate.</p>
+            </div>
+            <div className="grid md:grid-cols-2 gap-6 mb-8">
+              {/* Pro Persona Card */}
+              <div className="p-6 rounded-[2rem] bg-gradient-to-b from-cyan-950/40 to-slate-950/80 border border-cyan-500/20 shadow-[0_0_40px_rgba(6,182,212,0.1)] animate-[slideUp_0.6s_ease-out]">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-xl font-black text-white shadow-lg">P</div>
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-widest text-cyan-400">Pro</div>
+                    <div className="font-black text-white text-lg">{proPersona.name}</div>
+                    <div className="text-xs text-gray-400">{proPersona.role}</div>
+                  </div>
+                </div>
+                {proPersona.expertise_areas && proPersona.expertise_areas.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Expertise</div>
+                    <div className="flex flex-wrap gap-1.5">{proPersona.expertise_areas.map((e, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">{e}</span>)}</div>
+                  </div>
+                )}
+                {proPersona.core_values && proPersona.core_values.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Core Values</div>
+                    <div className="flex flex-wrap gap-1.5">{proPersona.core_values.map((v, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">{v}</span>)}</div>
+                  </div>
+                )}
+                {proPersona.rhetorical_approach && (
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Approach</div>
+                    <p className="text-xs text-gray-400 leading-relaxed">{proPersona.rhetorical_approach}</p>
+                  </div>
+                )}
+              </div>
+              {/* Con Persona Card */}
+              <div className="p-6 rounded-[2rem] bg-gradient-to-b from-fuchsia-950/40 to-slate-950/80 border border-fuchsia-500/20 shadow-[0_0_40px_rgba(217,70,239,0.1)] animate-[slideUp_0.6s_ease-out_0.15s_both]">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-purple-600 flex items-center justify-center text-xl font-black text-white shadow-lg">C</div>
+                  <div>
+                    <div className="text-xs font-black uppercase tracking-widest text-fuchsia-400">Con</div>
+                    <div className="font-black text-white text-lg">{conPersona.name}</div>
+                    <div className="text-xs text-gray-400">{conPersona.role}</div>
+                  </div>
+                </div>
+                {conPersona.expertise_areas && conPersona.expertise_areas.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Expertise</div>
+                    <div className="flex flex-wrap gap-1.5">{conPersona.expertise_areas.map((e, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20">{e}</span>)}</div>
+                  </div>
+                )}
+                {conPersona.core_values && conPersona.core_values.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Core Values</div>
+                    <div className="flex flex-wrap gap-1.5">{conPersona.core_values.map((v, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">{v}</span>)}</div>
+                  </div>
+                )}
+                {conPersona.rhetorical_approach && (
+                  <div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Approach</div>
+                    <p className="text-xs text-gray-400 leading-relaxed">{conPersona.rhetorical_approach}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="text-center">
+              <button
+                onClick={() => setPersonaRevealed(true)}
+                className="px-10 py-4 text-sm font-black uppercase tracking-widest bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-2xl border border-white/20 shadow-[0_0_40px_rgba(168,85,247,0.4)] transition-all hover:scale-105 hover:shadow-[0_0_60px_rgba(168,85,247,0.6)]"
+              >Start Debate →</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <PhaseNav />
 
@@ -780,43 +1025,79 @@ export default function DebatePage() {
               )}
 
               {/* Research content — visible once loaded */}
-              {researchReady && (
-                <>
-                  <div className="text-center mb-8">
-                    <h2 className="text-2xl font-black text-white mb-2">📚 Evidence Bundle</h2>
-                    <p className="text-sm text-gray-400 font-medium">Both agents received the same research. Expand any section to explore the evidence.</p>
-                  </div>
-                  <div className="grid lg:grid-cols-2 gap-8">
-                    <div>
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-sm font-black text-white">P</div>
-                        <div>
-                          <div className="text-xs font-black uppercase tracking-widest text-cyan-400">Pro Research</div>
-                          <div className="text-xs text-gray-500">{MOCK_PRO_RESEARCH.length} argument dimensions • {MOCK_PRO_RESEARCH.reduce((a, s) => a + s.sources.length, 0)} sources</div>
-                        </div>
-                      </div>
-                      <ResearchCard side="pro" sections={MOCK_PRO_RESEARCH} />
-                      <button onClick={() => setDocModal("pro")} className="mt-3 w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all">
-                        📄 View Full Pro Document
-                      </button>
+              {researchReady && (() => {
+                const proResearch = evidenceBundle && !isDemoMode
+                  ? evidenceBundle.proArguments.map(a => ({ title: a.title, keyStats: a.key_stats || [], sources: a.sources || [] }))
+                  : MOCK_PRO_RESEARCH;
+                const conResearch = evidenceBundle && !isDemoMode
+                  ? evidenceBundle.conArguments.map(a => ({ title: a.title, keyStats: a.key_stats || [], sources: a.sources || [] }))
+                  : MOCK_CON_RESEARCH;
+                const citationCount = evidenceBundle && !isDemoMode
+                  ? Object.keys(evidenceBundle.citations).length
+                  : null;
+                return (
+                  <>
+                    <div className="text-center mb-8">
+                      <h2 className="text-2xl font-black text-white mb-2">📚 Evidence Bundle</h2>
+                      <p className="text-sm text-gray-400 font-medium">
+                        Both agents received the same research. {citationCount ? `${citationCount} sources indexed.` : "Expand any section to explore the evidence."}
+                      </p>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-3 mb-4">
-                        <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-fuchsia-400 to-purple-600 flex items-center justify-center text-sm font-black text-white">C</div>
-                        <div>
-                          <div className="text-xs font-black uppercase tracking-widest text-fuchsia-400">Con Research</div>
-                          <div className="text-xs text-gray-500">{MOCK_CON_RESEARCH.length} argument dimensions • {MOCK_CON_RESEARCH.reduce((a, s) => a + s.sources.length, 0)} sources</div>
+                    <div className="grid lg:grid-cols-2 gap-8">
+                      <div>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-sm font-black text-white">P</div>
+                          <div>
+                            <div className="text-xs font-black uppercase tracking-widest text-cyan-400">Pro Research</div>
+                            <div className="text-xs text-gray-500">{proResearch.length} argument dimensions • {proResearch.reduce((a, s) => a + s.sources.length, 0)} sources</div>
+                          </div>
                         </div>
+                        <ResearchCard side="pro" sections={proResearch} />
+                        <button onClick={() => setDocModal("pro")} className="mt-3 w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest text-cyan-400 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 transition-all">
+                          📄 View Full Pro Document
+                        </button>
                       </div>
-                      <ResearchCard side="con" sections={MOCK_CON_RESEARCH} />
-                      <button onClick={() => setDocModal("con")} className="mt-3 w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest text-fuchsia-400 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/20 transition-all">
-                        📄 View Full Con Document
-                      </button>
+                      <div>
+                        <div className="flex items-center gap-3 mb-4">
+                          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-fuchsia-400 to-purple-600 flex items-center justify-center text-sm font-black text-white">C</div>
+                          <div>
+                            <div className="text-xs font-black uppercase tracking-widest text-fuchsia-400">Con Research</div>
+                            <div className="text-xs text-gray-500">{conResearch.length} argument dimensions • {conResearch.reduce((a, s) => a + s.sources.length, 0)} sources</div>
+                          </div>
+                        </div>
+                        <ResearchCard side="con" sections={conResearch} />
+                        <button onClick={() => setDocModal("con")} className="mt-3 w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest text-fuchsia-400 bg-fuchsia-500/10 hover:bg-fuchsia-500/20 border border-fuchsia-500/20 transition-all">
+                          📄 View Full Con Document
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
 
+                    {/* Research Consultation — Agent Strategic Analysis */}
+                    {(internalAnalysis["research_consultation"]?.pro || internalAnalysis["research_consultation"]?.con) && (
+                      <div className="mt-10">
+                        <div className="text-center mb-6">
+                          <h3 className="text-lg font-black text-white mb-1">🧠 Agent Strategic Analysis</h3>
+                          <p className="text-xs text-gray-400 font-medium">Each agent privately analyzed ALL research to plan their strategy.</p>
+                        </div>
+                        <div className="grid md:grid-cols-2 gap-6">
+                          <div>
+                            <div className="flex items-center gap-3 mb-3 ml-2">
+                              <span className="text-cyan-400 font-black uppercase text-xs tracking-widest bg-cyan-900/40 px-3 py-1 rounded-full border border-cyan-500/30">{proPersona?.name || "Pro"} — Strategy</span>
+                            </div>
+                            <StrategicAnalysisPanel content={internalAnalysis["research_consultation"]?.pro || ""} side="pro" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-3 mb-3 ml-2">
+                              <span className="text-fuchsia-400 font-black uppercase text-xs tracking-widest bg-fuchsia-900/40 px-3 py-1 rounded-full border border-fuchsia-500/30">{conPersona?.name || "Con"} — Strategy</span>
+                            </div>
+                            <StrategicAnalysisPanel content={internalAnalysis["research_consultation"]?.con || ""} side="con" />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
 
             </div>
           </div>
@@ -825,58 +1106,69 @@ export default function DebatePage() {
         {/* ══ Judging ══ */}
         {activePhase === "judging" && (
           <div className="flex-1 overflow-y-auto p-8 lg:p-12 bg-black/20">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-5xl mx-auto">
+              {/* Winner Banner */}
               <div className="text-center mb-8">
                 <div className="text-5xl mb-4">📊</div>
                 <h2 className="text-2xl font-black text-white mb-2">Judging Results</h2>
-                <p className="text-sm text-gray-400 font-medium">3 AI judges with position-swapped verification. 2/3 judges consistent.</p>
+                <div className={`inline-block px-6 py-2 rounded-full text-sm font-black uppercase tracking-widest mt-2 ${rawWinner === "pro" ? "bg-cyan-600/30 text-cyan-300 border border-cyan-500/30" : rawWinner === "con" ? "bg-fuchsia-600/30 text-fuchsia-300 border border-fuchsia-500/30" : "bg-gray-600/30 text-gray-300 border border-gray-500/30"}`}>
+                  {debateWinner} wins — {proTotal.toFixed(2)} vs {conTotal.toFixed(2)}
+                </div>
               </div>
 
-              <div className="grid lg:grid-cols-2 gap-8">
-                <div className="p-8 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg">
-                  <div className="flex justify-between text-xs text-gray-500 mb-6">
-                    <span className="text-cyan-400 font-black uppercase tracking-widest">← Pro ({proPersona?.name})</span>
-                    <span className="text-fuchsia-400 font-black uppercase tracking-widest">Con ({conPersona?.name}) →</span>
-                  </div>
-                  <ScoreBar label="Logical Validity" weight="30%" proScore={proScores.logic ?? 0} conScore={conScores.logic ?? 0} />
-                  <ScoreBar label="Evidence Quality" weight="25%" proScore={proScores.evidence ?? 0} conScore={conScores.evidence ?? 0} />
-                  <ScoreBar label="Refutation Strength" weight="25%" proScore={proScores.refutation ?? 0} conScore={conScores.refutation ?? 0} />
-                  <ScoreBar label="Steelmanning Quality" weight="20%" proScore={proScores.steelman ?? 0} conScore={conScores.steelman ?? 0} />
-                  <div className="mt-6 pt-6 border-t border-white/10">
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-gray-400 font-bold uppercase tracking-widest text-xs">Weighted Total</span>
-                      <span className="font-mono font-black text-lg">
-                        <span className="text-cyan-400">{proTotal.toFixed(1)}</span>
-                        <span className="text-gray-600 mx-2">vs</span>
-                        <span className="text-fuchsia-400">{conTotal.toFixed(1)}</span>
-                      </span>
-                    </div>
+              {/* Score Overview */}
+              <div className="p-8 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg mb-8">
+                <div className="flex justify-between text-xs text-gray-500 mb-6">
+                  <span className="text-cyan-400 font-black uppercase tracking-widest">← Pro ({proPersona?.name})</span>
+                  <span className="text-fuchsia-400 font-black uppercase tracking-widest">Con ({conPersona?.name}) →</span>
+                </div>
+                <ScoreBar label="Logical Validity" weight="30%" proScore={proScores.logic ?? 0} conScore={conScores.logic ?? 0} />
+                <ScoreBar label="Evidence Quality" weight="25%" proScore={proScores.evidence ?? 0} conScore={conScores.evidence ?? 0} />
+                <ScoreBar label="Refutation Strength" weight="25%" proScore={proScores.refutation ?? 0} conScore={conScores.refutation ?? 0} />
+                <ScoreBar label="Steelmanning Quality" weight="20%" proScore={proScores.steelman ?? 0} conScore={conScores.steelman ?? 0} />
+                <div className="mt-6 pt-6 border-t border-white/10">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-400 font-bold uppercase tracking-widest text-xs">Weighted Total</span>
+                    <span className="font-mono font-black text-lg">
+                      <span className="text-cyan-400">{proTotal.toFixed(2)}</span>
+                      <span className="text-gray-600 mx-2">vs</span>
+                      <span className="text-fuchsia-400">{conTotal.toFixed(2)}</span>
+                    </span>
                   </div>
                 </div>
+              </div>
 
-                <div className="space-y-6">
-                  <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg">
-                    <div className="text-xs text-gray-500 mb-4 uppercase tracking-widest font-black">Your Vote</div>
-                    <div className="flex gap-3 mb-4">
-                      <button onClick={() => setUserVote("pro")} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "pro" ? "bg-cyan-600 text-white ring-2 ring-cyan-400/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"}`}>👍 Pro Wins</button>
-                      <button onClick={() => setUserVote("con")} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "con" ? "bg-fuchsia-600 text-white ring-2 ring-fuchsia-400/40 shadow-[0_0_20px_rgba(217,70,239,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"}`}>👍 Con Wins</button>
-                    </div>
-                    {userVote && (
-                      <div className="text-xs text-gray-400 p-4 bg-white/5 rounded-xl border border-white/10">
-                        <div className="font-black text-emerald-400 mb-1">Vote recorded!</div>
-                        Human votes: 47% Pro · 53% Con (23 total)<br />Weighting: 60% AI judges · 40% human votes
-                      </div>
-                    )}
-                  </div>
-                  <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg">
-                    <div className="text-xs text-gray-500 mb-3 uppercase tracking-widest font-black">AI Judges Verdict</div>
-                    <p className="text-sm text-gray-300 leading-relaxed"><strong className="text-yellow-400">{debateWinner} wins.</strong> {judgeVerdict.summary}</p>
-                  </div>
-                  <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg">
-                    <div className="text-xs text-gray-500 mb-3 uppercase tracking-widest font-black">Judge Reasoning</div>
-                    <p className="text-xs text-gray-400 leading-relaxed whitespace-pre-line">{judgeVerdict.reasoning}</p>
+              {/* Verdict Summary */}
+              <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg mb-8">
+                <div className="text-xs text-gray-500 mb-3 uppercase tracking-widest font-black">AI Judges Verdict</div>
+                <p className="text-sm text-gray-300 leading-relaxed"><strong className="text-yellow-400">{debateWinner} wins.</strong> {judgeVerdict.summary}</p>
+              </div>
+
+              {/* Per-Judge Breakdown */}
+              {judges.length > 0 && (
+                <div className="mb-8">
+                  <h3 className="text-lg font-black text-white mb-4">Individual Judge Analysis</h3>
+                  <div className="space-y-4">
+                    {judges.map((judge: Record<string, unknown>, idx: number) => (
+                      <JudgeCard key={idx} judge={judge} />
+                    ))}
                   </div>
                 </div>
+              )}
+
+              {/* Your Vote */}
+              <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg">
+                <div className="text-xs text-gray-500 mb-4 uppercase tracking-widest font-black">Your Vote</div>
+                <div className="flex gap-3 mb-4">
+                  <button onClick={() => setUserVote("pro")} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "pro" ? "bg-cyan-600 text-white ring-2 ring-cyan-400/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"}`}>👍 Pro Wins</button>
+                  <button onClick={() => setUserVote("con")} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "con" ? "bg-fuchsia-600 text-white ring-2 ring-fuchsia-400/40 shadow-[0_0_20px_rgba(217,70,239,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"}`}>👍 Con Wins</button>
+                </div>
+                {userVote && (
+                  <div className="text-xs text-gray-400 p-4 bg-white/5 rounded-xl border border-white/10">
+                    <div className="font-black text-emerald-400 mb-1">Vote recorded!</div>
+                    Human votes: 47% Pro · 53% Con (23 total)<br />Weighting: 60% AI judges · 40% human votes
+                  </div>
+                )}
               </div>
             </div>
           </div>
