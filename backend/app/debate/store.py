@@ -38,8 +38,8 @@ def _safe_path(debate_id: str) -> str:
     real_data_dir = os.path.realpath(DATA_DIR)
     if not resolved.startswith(real_data_dir + os.sep):
         raise ValueError(
-            f"Path traversal detected for debate_id: {
-                debate_id!r}")
+            f"Path traversal detected for debate_id: {debate_id!r}"
+        )
     return resolved
 
 
