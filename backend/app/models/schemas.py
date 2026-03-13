@@ -5,6 +5,7 @@ from datetime import datetime
 
 # ─── Persona (structured per prompts-doc.md §1) ───
 
+
 class Persona(BaseModel):
     """Dynamic persona generated for each debate side."""
     name: str = ""                              # e.g. "Dr. Amara Osei"
@@ -46,29 +47,36 @@ class DebateState(TypedDict):
     personas: Dict[str, Any]                    # side -> Persona.model_dump()
     judging_results: Optional[Dict[str, Any]]
 
+
 class UserBase(BaseModel):
     email: EmailStr
 
+
 class UserCreate(UserBase):
     password: str
+
 
 class UserResponse(UserBase):
     id: UUID
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
+
 class TopicBase(BaseModel):
     title: str
     description: Optional[str] = None
     is_preset: bool = False
+
 
 class TopicResponse(TopicBase):
     id: UUID
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
+
 class DebateCreate(BaseModel):
     topic_id: UUID
+
 
 class DebateResponse(BaseModel):
     id: UUID
@@ -77,6 +85,7 @@ class DebateResponse(BaseModel):
     status: str
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
 
 class TurnResponse(BaseModel):
     id: UUID
@@ -87,9 +96,11 @@ class TurnResponse(BaseModel):
     created_at: datetime
     model_config = ConfigDict(from_attributes=True)
 
+
 class JWTTokenResponse(BaseModel):
     access_token: str
     token_type: str
+
 
 class CitationDetail(BaseModel):
     """A single source with all metadata (prompts-doc.md §6)."""
@@ -100,6 +111,7 @@ class CitationDetail(BaseModel):
     finding: str = ""
     source_context: str = ""                   # Legacy: surrounding text chunk
 
+
 class EvidenceBundle(BaseModel):
     """All research for a debate — both sides see everything (prompts-doc.md §6)."""
     raw_content: str                            # Combined text for backward compat
@@ -109,9 +121,24 @@ class EvidenceBundle(BaseModel):
     pro_arguments: List[str] = Field(default_factory=list)
     con_arguments: List[str] = Field(default_factory=list)
 
+
 class PresetTopicResponse(BaseModel):
     id: str
     title: str
     description: str
     pro_position: str
     con_position: str
+
+
+class VoteCast(BaseModel):
+    """Payload for submitting a vote."""
+    debate_id: str
+    side: str
+
+
+class VoteTallyOut(BaseModel):
+    """Response format for vote counts on a debate."""
+    pro_votes: int
+    con_votes: int
+    total_votes: int
+    user_vote: Optional[str] = None

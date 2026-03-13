@@ -26,9 +26,11 @@ class EvidenceLoader:
         # Fallback: standard Markdown links [Title](URL)
         self.link_pattern = re.compile(r'\[([^\]]+)\]\(([^)]+)\)')
         # Extract argument headers: ## Argument N: Title
-        self.argument_pattern = re.compile(r'^##\s+Argument\s+\d+:\s*(.+)$', re.MULTILINE)
+        self.argument_pattern = re.compile(
+            r'^##\s+Argument\s+\d+:\s*(.+)$', re.MULTILINE)
 
-    def parse_markdown(self, content: str) -> Tuple[Dict[str, CitationDetail], List[str]]:
+    def parse_markdown(
+            self, content: str) -> Tuple[Dict[str, CitationDetail], List[str]]:
         """
         Parses Markdown content, extracts structured citations and argument summaries.
         Returns (citations_dict, argument_titles).
@@ -55,7 +57,8 @@ class EvidenceLoader:
             citations[title] = CitationDetail(
                 title=title, url=url, author=author, year=year,
                 finding=finding,
-                source_context=content[max(0, match.start()-50):match.end()+50].replace('\n', ' ').strip(),
+                source_context=content[max(
+                    0, match.start() - 50):match.end() + 50].replace('\n', ' ').strip(),
             )
 
         # Fallback: standard [Title](URL) links not already captured
@@ -110,7 +113,8 @@ class EvidenceLoader:
                         topic_id, len(con_cites), len(con_args))
 
         if not pro_text and not con_text:
-            raise FileNotFoundError(f"No research found for topic '{topic_id}'")
+            raise FileNotFoundError(
+                f"No research found for topic '{topic_id}'")
 
         # Combined text for backward compatibility
         combined = ""

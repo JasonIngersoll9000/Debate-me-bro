@@ -3,7 +3,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update
 from app.db.models import Debate
 
-async def sync_debate_state_to_db(debate_id: str, new_phase: str, status: str, db: AsyncSession):
+
+async def sync_debate_state_to_db(
+        debate_id: str, new_phase: str, status: str, db: AsyncSession):
     """
     Updates the physical Postgres Debate schema matching our internal LangGraph transitions.
     """

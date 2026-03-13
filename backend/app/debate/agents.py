@@ -60,7 +60,8 @@ def format_history(state: DebateState) -> str:
     for turn in state.get("debate_turns", []):
         if turn.get("is_internal"):
             continue
-        history.append(f"{turn['side'].upper()} ({turn['phase']}):\n{turn['text']}\n")
+        history.append(
+            f"{turn['side'].upper()} ({turn['phase']}):\n{turn['text']}\n")
     return "\n".join(history)
 
 

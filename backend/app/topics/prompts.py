@@ -68,12 +68,13 @@ Every source MUST include a clickable URL so claims can be verified.
 
 def format_dimensions(dimensions: List[str]) -> str:
     """Format argument dimensions as a numbered list."""
-    return "\n".join(f"{i+1}. {d}" for i, d in enumerate(dimensions))
+    return "\n".join(f"{i + 1}. {d}" for i, d in enumerate(dimensions))
 
 
 def format_values(values: List[str]) -> str:
     """Format values as a comma-separated list."""
-    return ", ".join(values) if values else "rational analysis, evidence-based reasoning"
+    return ", ".join(
+        values) if values else "rational analysis, evidence-based reasoning"
 
 
 def generate_research_prompts(
@@ -101,14 +102,16 @@ def generate_research_prompts(
         "pro_prompt": CUSTOM_RESEARCH_PROMPT_TEMPLATE.format(
             side="PRO",
             resolution=topic_analysis.resolution,
-            argument_dimensions_numbered=format_dimensions(topic_analysis.pro_dimensions),
+            argument_dimensions_numbered=format_dimensions(
+                topic_analysis.pro_dimensions),
             user_argumentation_lines=pro_args,
             values_and_frameworks=format_values(topic_analysis.pro_values),
         ),
         "con_prompt": CUSTOM_RESEARCH_PROMPT_TEMPLATE.format(
             side="CON",
             resolution=topic_analysis.resolution,
-            argument_dimensions_numbered=format_dimensions(topic_analysis.con_dimensions),
+            argument_dimensions_numbered=format_dimensions(
+                topic_analysis.con_dimensions),
             user_argumentation_lines=con_args,
             values_and_frameworks=format_values(topic_analysis.con_values),
         ),

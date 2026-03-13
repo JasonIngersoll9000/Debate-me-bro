@@ -1,3 +1,5 @@
+from app.config import settings
+from app.db.models import Base
 import asyncio
 from logging.config import fileConfig
 
@@ -16,8 +18,6 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-from app.db.models import Base
-from app.config import settings
 
 target_metadata = Base.metadata
 config.set_main_option("sqlalchemy.url", str(settings.database_url))

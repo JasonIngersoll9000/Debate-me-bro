@@ -489,6 +489,8 @@ export default function DebatePage() {
   const [isDemoMode, setIsDemoMode] = useState(isDemo);
   const [serverMode, setServerMode] = useState<"demo" | "live" | null>(null);
   const [userVote, setUserVote] = useState<"pro" | "con" | null>(null);
+  const [voteTally, setVoteTally] = useState<VoteTally | null>(null);
+  const [isVoting, setIsVoting] = useState(false);
   const [researchStepIdx, setResearchStepIdx] = useState(0);
   const [researchReady, setResearchReady] = useState(false);
   const [docModal, setDocModal] = useState<"pro" | "con" | null>(null);
@@ -924,6 +926,40 @@ export default function DebatePage() {
 
   const startDemoMode = () => { eventSourceRef.current?.close(); useDebateStore.getState().reset(); setConnectionError(null); setIsDemoMode(true); };
 
+  // ── Fetch Voting Tally when Judging ──
+  useEffect(() => {
+    if (activePhase === "judging") {
+      const token = localStorage.getItem("token"); // Use existing token if available
+      fetchVoteTally(id, token).then((tally) => {
+        if (tally) {
+          setVoteTally(tally);
+          if (tally.user_vote) {
+            setUserVote(tally.user_vote as "pro" | "con");
+          }
+        }
+      });
+    }
+  }, [activePhase, id]);
+
+  const handleVote = async (side: "pro" | "con") => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      alert("Please login to vote on debates.");
+      window.location.href = "/auth";
+      return;
+    }
+    setIsVoting(true);
+    try {
+      const tally = await castVote(id, side, token);
+      setVoteTally(tally);
+      setUserVote(side);
+    } catch (e: any) {
+      alert(e.message || "Failed to cast vote.");
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
   const proSideTurns = debateTurns.filter((t) => t.side === "pro" && t.phase === activePhase);
   const conSideTurns = debateTurns.filter((t) => t.side === "con" && t.phase === activePhase);
 
@@ -936,7 +972,7 @@ export default function DebatePage() {
   const judgeVerdict = judgingResults?.summary
     ? { summary: judgingResults.summary, reasoning: judgingResults.judges?.map(j => j.reasoning ?? "").join("\n\n") || "" }
     : MOCK_JUDGE_VERDICT;
-  const rawWinner = judgingResults?.winner || (proTotal > conTotal ? "pro" : conTotal > proTotal ? "con" : "tie");
+  const rawWinner = judgingResults?.winner || (finalProTotal > finalConTotal ? "pro" : finalConTotal > finalProTotal ? "con" : "tie");
   const debateWinner = rawWinner === "pro" ? "Pro" : rawWinner === "con" ? "Con" : "Tie";
   const judges = judgingResults?.judges || [];
 

@@ -7,11 +7,13 @@ from app.models.schemas import Persona
 
 
 def build_agent_system_prompt(persona: Persona, side: str, resolution: str,
-                               position_statement: str) -> str:
+                              position_statement: str) -> str:
     """Assemble the system prompt from dynamic persona + position anchoring."""
 
-    expertise_str = ", ".join(persona.expertise_areas) if persona.expertise_areas else "general debate"
-    values_str = ", ".join(persona.core_values) if persona.core_values else "rigorous argumentation"
+    expertise_str = ", ".join(
+        persona.expertise_areas) if persona.expertise_areas else "general debate"
+    values_str = ", ".join(
+        persona.core_values) if persona.core_values else "rigorous argumentation"
 
     return f"""# Your Identity
 

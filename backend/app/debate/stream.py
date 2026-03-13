@@ -205,16 +205,23 @@ async def stream_debate_events(
         return
 
     # ── Not cached — resolve topic info ──
-    # For custom topics, load the saved analysis; fall back to presets or defaults.
+    # For custom topics, load the saved analysis; fall back to presets or
+    # defaults.
     if debate_id.startswith("custom-"):
         topic_info = _load_custom_topic(debate_id)
     else:
         topic_info = PRESET_TOPICS.get(debate_id, {})
 
     topic_title = topic_info.get("title", debate_id.replace("_", " ").title())
-    resolution = topic_info.get("resolution", f"Should we support {topic_title}?")
-    pro_position = topic_info.get("pro_position", f"Arguing in favor of {topic_title}")
-    con_position = topic_info.get("con_position", f"Arguing against {topic_title}")
+    resolution = topic_info.get(
+        "resolution",
+        f"Should we support {topic_title}?")
+    pro_position = topic_info.get(
+        "pro_position",
+        f"Arguing in favor of {topic_title}")
+    con_position = topic_info.get(
+        "con_position",
+        f"Arguing against {topic_title}")
 
     # ── Load evidence ──
     evidence_loader = EvidenceLoader()
@@ -224,14 +231,23 @@ async def stream_debate_events(
         evidence_bundle = await evidence_loader.load_preset_evidence(debate_id)
         evidence_bundle_data = evidence_bundle.model_dump()
         evidence_summary = (
-            f"Pro research covers {len(evidence_bundle.pro_arguments)} argument dimensions. "
-            f"Con research covers {len(evidence_bundle.con_arguments)} argument dimensions. "
+            f"Pro research covers {
+                len(
+                    evidence_bundle.pro_arguments)} argument dimensions. "
+            f"Con research covers {
+                len(
+                    evidence_bundle.con_arguments)} argument dimensions. "
             f"Total sources indexed: {len(evidence_bundle.citations)}."
         )
-        logger.info("Loaded evidence for '%s': %s", debate_id, evidence_summary)
+        logger.info(
+            "Loaded evidence for '%s': %s",
+            debate_id,
+            evidence_summary)
     except FileNotFoundError:
         logger.warning("No evidence files found for topic '%s'", debate_id)
-        evidence_bundle_data = {"raw_content": "No pre-loaded evidence available.", "citations": {}}
+        evidence_bundle_data = {
+            "raw_content": "No pre-loaded evidence available.",
+            "citations": {}}
 
     # Build serializable evidence payload for frontend
     evidence_payload: Dict[str, Any] = {
@@ -262,8 +278,13 @@ async def stream_debate_events(
             position_statement=con_position,
             evidence_summary=evidence_summary,
         )
-        personas_data = {"pro": pro_persona.model_dump(), "con": con_persona.model_dump()}
-        logger.info("Generated personas: Pro=%s, Con=%s", pro_persona.name, con_persona.name)
+        personas_data = {
+            "pro": pro_persona.model_dump(),
+            "con": con_persona.model_dump()}
+        logger.info(
+            "Generated personas: Pro=%s, Con=%s",
+            pro_persona.name,
+            con_persona.name)
     except Exception as e:
         logger.warning("Persona generation failed (%s): %s", type(e).__name__, e, exc_info=True)
         personas_data = {

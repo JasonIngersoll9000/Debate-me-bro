@@ -106,7 +106,9 @@ async def upload_research(
     Side must be 'pro' or 'con'.
     """
     if side not in ("pro", "con"):
-        raise HTTPException(status_code=400, detail="Side must be 'pro' or 'con'")
+        raise HTTPException(
+            status_code=400,
+            detail="Side must be 'pro' or 'con'")
 
     content = await file.read()
     try:
@@ -160,7 +162,12 @@ async def research_status(topic_id: str):
 
 # ─── Internal helpers ────────────────────────────────────────────────
 
-TOPICS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "topics")
+TOPICS_DIR = os.path.join(
+    os.path.dirname(
+        os.path.dirname(
+            os.path.dirname(__file__))),
+    "data",
+    "topics")
 
 
 def _save_topic_analysis(topic_id: str, analysis: dict, prompts: dict) -> None:
