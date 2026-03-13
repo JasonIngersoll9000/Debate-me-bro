@@ -80,7 +80,7 @@ function HomeInner() {
         return;
       }
       if (selectedTopic) {
-        const returnTo = `/debates/${selectedTopic.id}?demo=true`;
+        const returnTo = `/debates/${selectedTopic.id}`;
         router.push(buildAuthReturnToUrl(returnTo));
         return;
       }
@@ -97,7 +97,7 @@ function HomeInner() {
       router.push(`/debates/new?topic=${encodeURIComponent(selectedTopic)}`);
     } else if (selectedTopic) {
       setStoreTopic(selectedTopic.id, selectedTopic.title);
-      router.push(`/debates/${selectedTopic.id}?demo=true`);
+      router.push(`/debates/${selectedTopic.id}`);
     } else {
       if (!topic.trim()) return;
       setStoreTopic("custom", topic);

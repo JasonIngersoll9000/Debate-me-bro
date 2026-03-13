@@ -198,4 +198,55 @@
 **Completed:** 3 of 8 issues (including the massive 7-sub-issue #23 overhaul + follow-up bugfix pass)
 **Remaining:** 5 issues — #15 needs polish, #18/#19/#14/#20 not started
 
+### Known Bugs (Deferred to Sprint 3)
+
+| Issue | Title | Severity |
+| ----- | ----- | -------- |
+| #29 | Phase gating incomplete — Continue button missing on research, opening, rebuttal | High |
+| #30 | Browse Debates page likes not functional | Medium |
+| #31 | Judging metrics display issues (score bars, per-judge data) | Medium |
+
+---
+
+## Deployment
+
+**Frontend:** Vercel (Next.js native) — `https://debatemebro.vercel.app`
+**Backend:** Render.com free tier (persistent FastAPI web service) — `https://debatemebro-api.onrender.com`
+
+**Why two platforms:** Vercel serverless has a 10-second execution limit (60s on Pro). Debate SSE streams run 2-5 minutes, making serverless incompatible. Render provides a persistent web service with no timeout.
+
+**Config files added:**
+- `frontend/vercel.json` — Vercel build config for Next.js
+- `backend/render.yaml` — Render blueprint for one-click deploy
+
+**Environment variables (set on each platform):**
+- Vercel: `NEXT_PUBLIC_API_URL` → Render backend URL
+- Render: `ANTHROPIC_API_KEY`, `DEBATE_MODE=live`, `JWT_SECRET`, `DEBATE_MODEL`, `PERSONA_MODEL`
+
+---
+
+## Sprint 2 — Final Retrospective
+
+### What Went Well
+- **Live debates work end-to-end.** From landing page → persona generation → 7-phase streaming debate → AI judging panel. The core product loop is complete and compelling.
+- **Cache-first architecture.** Once a debate is generated, it's permanently cached as JSON. Replay is instant, costs $0, and the entire debate history is browseable.
+- **Prompt caching.** Anthropic prompt caching on system prompts + evidence bundles significantly reduced input token costs per debate.
+- **UX overhaul was massive.** Issue #23 alone touched 7 sub-features (phase gating, markdown rendering, eval phases, evidence bundle, research consultation, persona reveal, judging transparency) and required a follow-up bugfix pass of 6 additional fixes.
+- **SSE streaming architecture held up.** The `stream.py` → SSE → frontend pipeline handled all event types (content, phase_transition, personas, evidence_loaded, internal_content, judging_results, mode, complete, error) without architectural changes.
+
+### What Was Challenging
+- **Phase gating edge cases.** Gating on `phase_transition` events wasn't enough — content events for new phases arrived without preceding transitions, bypassing the gate. Required `lastContentPhase` tracking in the content handler. Still not fully resolved (Issue #29).
+- **Internal phase speaker detection.** LangGraph's concurrent execution of pro/con eval phases meant `get_speaker()` couldn't distinguish which agent produced which chunk. Required adding tags to `llm.ainvoke()` calls and reading them in the stream handler.
+- **Mock data removal.** The original frontend was built entirely on mock data. Replacing every mock fallback with real data + loading states was a multi-day effort spanning 15+ files.
+- **Merge conflicts.** The `fix/debate-phase-gating-and-styling` branch required resolving 4 merge conflicts against main (auth, main.py, debate page, new debate page) due to parallel work on votes, auth improvements, and Suspense fallbacks.
+
+### What We'd Do Differently
+- **Start with live mode earlier.** Most Sprint 2 bugs were only discovered when running real Claude debates. Demo mode masked issues that wouldn't surface until the real pipeline ran.
+- **Smaller PRs.** Issue #23's 7 sub-issues should have been separate branches/PRs instead of one monolithic change.
+- **Test the judging pipeline more thoroughly.** The judging display still has issues (#31) that could have been caught with better integration tests.
+
+### Team Contributions
+- **Jason:** Backend debate pipeline (LangGraph, agents, streaming, judging), frontend debate view (1500+ line page.tsx), phase gating, SSE handler, deployment config, all documentation
+- **Shuai:** Authentication (register/login/JWT), voting system (backend routes + frontend), dashboard page, browse page, auth improvements (returnTo params, Suspense fallbacks)
+
 ---

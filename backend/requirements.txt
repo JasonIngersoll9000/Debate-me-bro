@@ -13,7 +13,10 @@ redis
 pgvector
 psycopg2-binary
 pytest
+pytest-cov
+pytest-asyncio
 email-validator
 python-multipart
 httpx
-pytest-asyncio
+asgi-lifespan
+pip-audit

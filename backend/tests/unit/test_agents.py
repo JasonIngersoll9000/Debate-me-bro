@@ -32,7 +32,7 @@ def mock_debate_state():
 
 
 def test_format_evidence(mock_debate_state):
-    evidence = format_evidence(mock_debate_state["evidence_bundle"])
+    evidence = format_evidence(mock_debate_state)
     assert "Study 1" in evidence
 
 
@@ -51,18 +51,15 @@ def test_format_history(mock_debate_state):
 @pytest.mark.asyncio
 @patch('app.debate.persona_generator.ChatAnthropic')
 async def test_generate_persona(mock_chat_class):
-    # Setup mock
+    # Setup mock — generate_persona now returns a Persona object parsed from JSON
     mock_instance = mock_chat_class.return_value
-    mock_chain = AsyncMock()
     mock_response = AsyncMock()
-    mock_response.content = " A synthesized test persona description. "
-    mock_chain.ainvoke.return_value = mock_response
+    mock_response.content = '{"name": "Dr. Test", "identity": "A test persona", "expertise_areas": ["testing"], "core_values": ["truth"], "rhetorical_approach": "data-driven"}'
+    mock_instance.ainvoke = AsyncMock(return_value=mock_response)
 
-    # We patch PromptTemplate | LLM chain behavior
-    with patch('app.debate.persona_generator.PromptTemplate.from_template') as mock_prompt:
-        mock_prompt.return_value.__or__.return_value = mock_chain
-        result = await generate_persona("Topic", "pro")
-        assert result == "A synthesized test persona description."
+    result = await generate_persona("Topic", "pro", "Pro position statement")
+    assert result.name == "Dr. Test"
+    assert result.identity == "A test persona"
 
 
 @pytest.mark.asyncio
@@ -79,10 +76,19 @@ async def test_call_agent_formatting(mock_chat_class, mock_debate_state):
     # Ensure ainvoke was called with Messages
     call_args = mock_instance.ainvoke.call_args[0][0]
     assert len(call_args) == 2  # System and Human
-    sys_msg = call_args[0].content
-    assert "Universal Healthcare" in sys_msg
-    assert "A confident public health expert." in sys_msg
+    # System message uses cache_control structure: content is a list of dicts
+    sys_content = call_args[0].content
+    if isinstance(sys_content, list):
+        sys_text = sys_content[0]["text"]
+    else:
+        sys_text = sys_content
+    assert "Universal Healthcare" in sys_text
 
-    human_msg = call_args[1].content
-    assert "Study 1" in human_msg  # evidence should be injected
-    assert "Con opening argument." in human_msg  # opponent turn should be injected
+    # Human message also uses cache_control structure
+    human_content = call_args[1].content
+    if isinstance(human_content, list):
+        human_text = " ".join(block["text"] for block in human_content)
+    else:
+        human_text = human_content
+    assert "Study 1" in human_text  # evidence should be injected
+    assert "Con opening argument." in human_text  # opponent turn should be injected

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "jest --passWithNoTests",
+    "test:coverage": "jest --coverage --passWithNoTests"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.19",
