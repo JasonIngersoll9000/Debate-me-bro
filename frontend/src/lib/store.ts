@@ -48,10 +48,24 @@ export interface JudgingScores {
   con: { logic: number; evidence: number; refutation: number; steelman: number; weighted_total?: number };
 }
 
+export interface JudgeResult {
+  judge_name?: string;
+  pro_score?: number;
+  con_score?: number;
+  winner?: string;
+  overall_winner?: string;
+  winner_explanation?: string;
+  reasoning?: string;
+  pro_strongest_move?: string;
+  con_strongest_move?: string;
+  pro_weakest_move?: string;
+  con_weakest_move?: string;
+}
+
 export interface JudgingResults {
   winner: string;
   scores: JudgingScores;
-  judges?: Array<Record<string, unknown>>;
+  judges?: JudgeResult[];
   summary?: string;
 }
 

@@ -338,7 +338,20 @@ async def stream_debate_events(
 
             elif kind == "on_chat_model_stream":
                 if current_node and current_node != "judging":
-                    chunk = event["data"]["chunk"].content
+                    raw_content = event["data"]["chunk"].content
+                    # Normalize to string: content may be a list of
+                    # structured blocks (e.g. Anthropic tool-use format)
+                    if isinstance(raw_content, str):
+                        chunk = raw_content
+                    elif isinstance(raw_content, list):
+                        chunk = "".join(
+                            block.get("text", "")
+                            if isinstance(block, dict)
+                            else (str(block) if block else "")
+                            for block in raw_content
+                        )
+                    else:
+                        chunk = str(raw_content) if raw_content else ""
                     if chunk:
                         if current_node in INTERNAL_PHASES:
                             # Stream internal phase content so frontend
@@ -570,7 +583,11 @@ async def stream_debate_events(
 
         yield f"data: {json.dumps({'type': 'complete', 'cached': False})}\n\n"
 
-    except Exception as exc:
+    except Exception:
         logger.exception("Error streaming debate %s", debate_id)
-        error_detail = f"{type(exc).__name__}: {exc}"
-        yield f"data: {json.dumps({'type': 'error', 'code': 'INTERNAL_ERROR', 'message': f'Debate streaming error: {error_detail}'})}\n\n"
+        payload = {
+            "type": "error",
+            "code": "INTERNAL_ERROR",
+            "message": "An internal error occurred. Please try again.",
+        }
+        yield f"data: {json.dumps(payload)}\n\n"

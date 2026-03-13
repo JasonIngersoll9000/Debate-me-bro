@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useDebateStore } from "@/lib/store";
+import { useDebateStore, JudgeResult } from "@/lib/store";
 import { useShallow } from "zustand/shallow";
 import { fetchDebate, fetchDebateMode, DebateData } from "@/lib/api";
 import {
@@ -37,18 +37,18 @@ function ScoreBar({ label, weight, proScore, conScore }: { label: string; weight
 }
 
 /* ─── Judge Card (expandable) ─── */
-function JudgeCard({ judge }: { judge: Record<string, unknown> }) {
+function JudgeCard({ judge }: { judge: JudgeResult }) {
   const [expanded, setExpanded] = useState(false);
-  const name = (judge.judge_name as string) || "Judge";
-  const proScore = (judge.pro_score as number) ?? 0;
-  const conScore = (judge.con_score as number) ?? 0;
-  const winner = (judge.winner as string) || (judge.overall_winner as string) || "";
-  const winnerExpl = (judge.winner_explanation as string) || "";
-  const reasoning = (judge.reasoning as string) || "";
-  const proStrongest = (judge.pro_strongest_move as string) || "";
-  const conStrongest = (judge.con_strongest_move as string) || "";
-  const proWeakest = (judge.pro_weakest_move as string) || "";
-  const conWeakest = (judge.con_weakest_move as string) || "";
+  const name = judge.judge_name || "Judge";
+  const proScore = judge.pro_score ?? 0;
+  const conScore = judge.con_score ?? 0;
+  const winner = judge.winner || judge.overall_winner || "";
+  const winnerExpl = judge.winner_explanation || "";
+  const reasoning = judge.reasoning || "";
+  const proStrongest = judge.pro_strongest_move || "";
+  const conStrongest = judge.con_strongest_move || "";
+  const proWeakest = judge.pro_weakest_move || "";
+  const conWeakest = judge.con_weakest_move || "";
 
   const iconMap: Record<string, string> = { "Logic Judge": "🧠", "Evidence Judge": "📚", "Engagement Judge": "⚔️" };
   const icon = iconMap[name] || "📋";
@@ -404,7 +404,9 @@ export default function DebatePage() {
   const [researchReady, setResearchReady] = useState(false);
   const [docModal, setDocModal] = useState<"pro" | "con" | null>(null);
   const [personaRevealed, setPersonaRevealed] = useState(false);
+  const personaRevealedRef = useRef(false);
   const [pendingPhase, setPendingPhase] = useState<string | null>(null);
+  const pendingPhaseRef = useRef<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const mockAbortRef = useRef(false);
 
@@ -420,9 +422,10 @@ export default function DebatePage() {
   const handleContinue = () => {
     setWaitingForUser(false);
     // Flush pending phase gate (live mode)
-    if (pendingPhase) {
-      setActivePhase(pendingPhase);
+    if (pendingPhaseRef.current) {
+      setActivePhase(pendingPhaseRef.current);
       setPendingPhase(null);
+      pendingPhaseRef.current = null;
     }
     // Resume mock engine (demo mode)
     waitResolveRef.current?.();
@@ -687,9 +690,14 @@ export default function DebatePage() {
         // Phase gating: for user-facing content phases, don't auto-advance
         const USER_PHASES = ["opening", "rebuttal", "closing"];
         const prevMp = prevPhaseTransition ? mapPhase(prevPhaseTransition) : "";
-        if (USER_PHASES.includes(mp) && prevMp && prevMp !== mp && USER_PHASES.includes(prevMp)) {
+        // Gate the opening phase if personas haven't been acknowledged yet,
+        // or gate any subsequent user phase when transitioning from another user phase.
+        const gateForPersona = mp === "opening" && !personaRevealedRef.current;
+        const gateForContinue = USER_PHASES.includes(mp) && prevMp && prevMp !== mp && USER_PHASES.includes(prevMp);
+        if (gateForPersona || gateForContinue) {
           // Previous phase just ended, new one starting — gate it
           setPendingPhase(mp);
+          pendingPhaseRef.current = mp;
           setWaitingForUser(true);
         } else {
           setActivePhase(mp);
@@ -706,7 +714,7 @@ export default function DebatePage() {
         const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
         // Always append content to the store (buffered); only advance displayed phase if not gated
         appendStreamToken(side, mp, data.chunk || "");
-        if (!pendingPhase) {
+        if (!pendingPhaseRef.current) {
           setActivePhase(mp);
         }
         // Mark the previous phase complete if we've moved on to a different phase
@@ -812,7 +820,7 @@ export default function DebatePage() {
   const proTotal = proScores.weighted_total ?? ((proScores.logic || 0) * .3 + (proScores.evidence || 0) * .25 + (proScores.refutation || 0) * .25 + (proScores.steelman || 0) * .2);
   const conTotal = conScores.weighted_total ?? ((conScores.logic || 0) * .3 + (conScores.evidence || 0) * .25 + (conScores.refutation || 0) * .25 + (conScores.steelman || 0) * .2);
   const judgeVerdict = judgingResults?.summary
-    ? { summary: judgingResults.summary, reasoning: judgingResults.judges?.map(j => j.reasoning).join("\n\n") || "" }
+    ? { summary: judgingResults.summary, reasoning: judgingResults.judges?.map(j => j.reasoning ?? "").join("\n\n") || "" }
     : MOCK_JUDGE_VERDICT;
   const rawWinner = judgingResults?.winner || (proTotal > conTotal ? "pro" : conTotal > proTotal ? "con" : "tie");
   const debateWinner = rawWinner === "pro" ? "Pro" : rawWinner === "con" ? "Con" : "Tie";
@@ -958,7 +966,11 @@ export default function DebatePage() {
             </div>
             <div className="text-center">
               <button
-                onClick={() => setPersonaRevealed(true)}
+                onClick={() => {
+                  personaRevealedRef.current = true;
+                  setPersonaRevealed(true);
+                  handleContinue();
+                }}
                 className="px-10 py-4 text-sm font-black uppercase tracking-widest bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-2xl border border-white/20 shadow-[0_0_40px_rgba(168,85,247,0.4)] transition-all hover:scale-105 hover:shadow-[0_0_60px_rgba(168,85,247,0.6)]"
               >Start Debate →</button>
             </div>
@@ -1149,7 +1161,7 @@ export default function DebatePage() {
                 <div className="mb-8">
                   <h3 className="text-lg font-black text-white mb-4">Individual Judge Analysis</h3>
                   <div className="space-y-4">
-                    {judges.map((judge: Record<string, unknown>, idx: number) => (
+                    {judges.map((judge, idx: number) => (
                       <JudgeCard key={idx} judge={judge} />
                     ))}
                   </div>
