@@ -126,6 +126,9 @@ function HomeInner() {
           </span>
         </div>
         <div className="flex items-center gap-5">
+          <Link href="/browse" className="text-sm font-medium text-gray-400 hover:text-white transition-colors">
+            Browse
+          </Link>
           {isLoggedIn ? (
             <>
               <Link href="/dashboard" className="text-sm font-medium text-gray-300 hover:text-white transition-colors">

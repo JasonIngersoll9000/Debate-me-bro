@@ -158,5 +158,5 @@ async def call_agent(state: DebateState, phase: str, role: str) -> str:
         ]),
     ]
 
-    response = await llm.ainvoke(messages)
+    response = await llm.ainvoke(messages, config={"tags": [role]})
     return response.content

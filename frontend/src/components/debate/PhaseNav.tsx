@@ -2,7 +2,7 @@
 import { useShallow } from "zustand/shallow";
 import { useDebateStore, DEBATE_PHASES } from "@/lib/store";
 
-export function PhaseNav() {
+export function PhaseNav({ onManualNav }: { onManualNav?: () => void } = {}) {
   const { activePhase, completedPhases, setActivePhase } = useDebateStore(
     useShallow((state) => ({
       activePhase: state.activePhase,
@@ -20,7 +20,7 @@ export function PhaseNav() {
         return (
           <div key={phase.id} className="flex items-center shrink-0">
             <button
-              onClick={() => { if (isComplete || isActive) setActivePhase(phase.id); }}
+              onClick={() => { if (isComplete || isActive) { setActivePhase(phase.id); onManualNav?.(); } }}
               className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap border
                 ${isActive ? "bg-white/10 text-white border-white/30 shadow-[0_0_20px_rgba(255,255,255,0.1)] scale-105" 
                   : isComplete ? "text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10 cursor-pointer" 

@@ -1,0 +1,44 @@
+{
+  "topic_id": "custom-873882cc",
+  "analysis": {
+    "resolution": "Should the US adopt a gold standard",
+    "pro_position": "The US should adopt a gold standard to restore monetary discipline, prevent inflation through unlimited currency creation, and stabilize the dollar's value by anchoring it to a tangible asset.",
+    "con_position": "The US should not adopt a gold standard because it would severely constrain economic flexibility, limit the government's ability to respond to crises, and sacrifice full employment and growth objectives for an arbitrary commodity constraint.",
+    "pro_dimensions": [
+      "Inflation control and price stability mechanisms under gold standard constraints",
+      "Historical performance of gold standard economies vs. fiat currency regimes",
+      "Fiscal discipline and reduced government spending incentives under commodity backing",
+      "International trade and currency stability benefits of gold-backed reserves",
+      "Protection against currency devaluation and purchasing power erosion"
+    ],
+    "con_dimensions": [
+      "Macroeconomic flexibility needed for countercyclical monetary policy during recessions",
+      "Real economic costs of deflationary pressures and reduced employment under gold constraints",
+      "Practical implementation challenges: gold supply inadequacy relative to modern economy size",
+      "Historical evidence of gold standard contributing to Great Depression severity",
+      "Opportunity costs of holding gold reserves vs. productive capital investment"
+    ],
+    "pro_values": [
+      "Fiscal responsibility and sound money principles",
+      "Protection of savings and stable purchasing power",
+      "Market discipline and constraint on government overreach"
+    ],
+    "con_values": [
+      "Economic growth and full employment",
+      "Democratic flexibility to respond to public needs",
+      "Pragmatic adaptation to modern economic complexity"
+    ],
+    "key_contested_facts": [
+      "Whether gold standard economies experienced greater or lesser price stability and economic volatility historically",
+      "What quantity of gold reserves would be required to back the current US money supply and at what price",
+      "Whether gold standard constraints would reduce or increase the severity of modern financial crises"
+    ],
+    "pro_persona_suggestion": "Monetary economist or economic historian specializing in classical economics, commodity-backed currency systems, or Austrian school economics with expertise in inflation dynamics",
+    "con_persona_suggestion": "Macroeconomist or Federal Reserve expert specializing in monetary policy implementation, business cycle management, and modern central banking with historical knowledge of Depression-era economics"
+  },
+  "prompts": {
+    "pro_prompt": "# Research Prompt: PRO Position on \"Should the US adopt a gold standard\"\n\nI need deep, well-sourced research to build the strongest possible PRO case in a structured debate.\n\n**Resolution:** Should the US adopt a gold standard\n\n## What I Need\n\nResearch the following argument dimensions in depth:\n1. Inflation control and price stability mechanisms under gold standard constraints\n2. Historical performance of gold standard economies vs. fiat currency regimes\n3. Fiscal discipline and reduced government spending incentives under commodity backing\n4. International trade and currency stability benefits of gold-backed reserves\n5. Protection against currency devaluation and purchasing power erosion\n\nFor each dimension:\n- The core claim and the strongest evidence supporting it\n- Specific, citable sources (studies, data, reporting) with key findings\n- Evidence that anticipates and undermines the opposing side's likely counterarguments\n- An honest assessment of where this argument is weakest\n\n\n\n## Important\nIf the user has requested specific lines of argumentation above, you MUST include them — but do NOT limit your research to only those lines. They are starting points, not boundaries. Investigate those AND any other strong arguments, values, frameworks, or evidence that would strengthen the PRO case. The goal is the most comprehensive and compelling body of advocacy research possible.\n\n## Source Standards\n- Prioritize sources with strong methodology, specific data, and verifiable claims\n- Include both institutional and independent sources — judge on accuracy and   citation quality, not credentials\n- For each source, include: title, author/institution, date, and key finding\n\n## Style\nThis is advocacy research — go deep for the PRO position. Find the most compelling evidence available. Be thorough — no artificial limits on length or number of sources.\n\n## Values and Frameworks\nThe PRO position often appeals to:\nFiscal responsibility and sound money principles, Protection of savings and stable purchasing power, Market discipline and constraint on government overreach\n\nUse these as framing guidance, but let the evidence drive the argument structure.\n\n## Output Format — CRITICAL\nOutput MUST be in structured Markdown. This will be parsed by AI debate agents.\n\nUse this structure:\n- Clear `## Argument N: Title` headers for each dimension\n- Under each argument: `### Core Claim`, `### Supporting Evidence`,   `### Anticipated Counter-Arguments`, `### Evidence Against Counter`,   `### Vulnerability Assessment`\n- ALL source citations as Markdown hyperlinks: `**[Source Title](URL)** (Author, Year): Finding`\n- End with a `## Source Bibliography` listing all sources as `[Title](URL) — Author, Year`\n\nEvery source MUST include a clickable URL so claims can be verified.\n",
+    "con_prompt": "# Research Prompt: CON Position on \"Should the US adopt a gold standard\"\n\nI need deep, well-sourced research to build the strongest possible CON case in a structured debate.\n\n**Resolution:** Should the US adopt a gold standard\n\n## What I Need\n\nResearch the following argument dimensions in depth:\n1. Macroeconomic flexibility needed for countercyclical monetary policy during recessions\n2. Real economic costs of deflationary pressures and reduced employment under gold constraints\n3. Practical implementation challenges: gold supply inadequacy relative to modern economy size\n4. Historical evidence of gold standard contributing to Great Depression severity\n5. Opportunity costs of holding gold reserves vs. productive capital investment\n\nFor each dimension:\n- The core claim and the strongest evidence supporting it\n- Specific, citable sources (studies, data, reporting) with key findings\n- Evidence that anticipates and undermines the opposing side's likely counterarguments\n- An honest assessment of where this argument is weakest\n\n\n\n## Important\nIf the user has requested specific lines of argumentation above, you MUST include them — but do NOT limit your research to only those lines. They are starting points, not boundaries. Investigate those AND any other strong arguments, values, frameworks, or evidence that would strengthen the CON case. The goal is the most comprehensive and compelling body of advocacy research possible.\n\n## Source Standards\n- Prioritize sources with strong methodology, specific data, and verifiable claims\n- Include both institutional and independent sources — judge on accuracy and   citation quality, not credentials\n- For each source, include: title, author/institution, date, and key finding\n\n## Style\nThis is advocacy research — go deep for the CON position. Find the most compelling evidence available. Be thorough — no artificial limits on length or number of sources.\n\n## Values and Frameworks\nThe CON position often appeals to:\nEconomic growth and full employment, Democratic flexibility to respond to public needs, Pragmatic adaptation to modern economic complexity\n\nUse these as framing guidance, but let the evidence drive the argument structure.\n\n## Output Format — CRITICAL\nOutput MUST be in structured Markdown. This will be parsed by AI debate agents.\n\nUse this structure:\n- Clear `## Argument N: Title` headers for each dimension\n- Under each argument: `### Core Claim`, `### Supporting Evidence`,   `### Anticipated Counter-Arguments`, `### Evidence Against Counter`,   `### Vulnerability Assessment`\n- ALL source citations as Markdown hyperlinks: `**[Source Title](URL)** (Author, Year): Finding`\n- End with a `## Source Bibliography` listing all sources as `[Title](URL) — Author, Year`\n\nEvery source MUST include a clickable URL so claims can be verified.\n"
+  },
+  "created_at": "2026-03-13T16:41:25.086392+00:00"
+}

@@ -149,20 +149,53 @@
 
 ---
 
+### Issue #23 Follow-up: Debate Phase Gating & Styling Bugfixes
+
+**Status:** ✅ Complete
+**Branch:** `fix/debate-phase-gating-and-styling`
+
+**Context:** After running custom topic debates (not just preset Healthcare), 6 additional bugs were discovered in the #23 overhaul. All fixed in one branch.
+
+**What Was Fixed:**
+
+1. **Markdown typography in research prompts** — Installed `@tailwindcss/typography` plugin and upgraded prose classes on custom topic research prompt cards (`/debates/new`). Headers, lists, and text hierarchy now render properly.
+
+2. **Phase auto-advance on content events** — The original gating only triggered on `phase_transition` SSE events. But content events for new phases (rebuttal, closing) arrived without a preceding transition, bypassing the gate. Added `lastContentPhase` tracking in the SSE `content` handler to detect phase changes and gate them with a Continue button.
+
+3. **PhaseNav manual navigation override** — Added `userNavigatedRef` to track when the user manually clicks a phase tab. SSE content events no longer override the displayed phase when this flag is set. Cleared on `handleContinue()` and on non-gated phase transitions (judging, eval).
+
+4. **Internal phase speaker detection** — Pro eval was stuck on "computing strategy" because `get_speaker()` returned `"system"` for all internal phases. Fixed by adding `config={"tags": [role]}` to `llm.ainvoke()` in `agents.py`, and reading `event.tags` in `stream.py` to determine the correct pro/con speaker for concurrent internal phase chunks.
+
+5. **Judging loading UI** — Removed `MOCK_SCORES` and `MOCK_JUDGE_VERDICT` fallbacks. Added `judgingReady` flag. When judges haven't returned results yet, shows a "Judges Are Deliberating" loading state with spinner instead of stale/mock data.
+
+6. **ScoreBar gradient direction** — Pro bar gradient was `bg-gradient-to-r` (bright end at the wrong side). Changed to `bg-gradient-to-l` so both bars have their bright end at the center tip, making visual bar length match actual scores.
+
+**Key Changes:**
+
+- `frontend/package.json` — Added `@tailwindcss/typography`
+- `frontend/src/app/globals.css` — Added `@plugin "@tailwindcss/typography"`
+- `frontend/src/app/debates/new/page.tsx` — Upgraded prose classes in research prompt cards
+- `frontend/src/app/debates/[id]/page.tsx` — Content-stream phase gating, `userNavigatedRef`, `judgingReady` loading UI, ScoreBar gradient fix, removed mock score fallbacks
+- `frontend/src/components/debate/PhaseNav.tsx` — Added `onManualNav` callback prop
+- `backend/app/debate/agents.py` — Added `config={"tags": [role]}` to `ainvoke()`
+- `backend/app/debate/stream.py` — Read event tags for internal phase speaker detection
+
+---
+
 ## Sprint 2 — Current Status Summary
 
 | Issue | Title | Status |
 |-------|-------|--------|
 | #16 | Debate Persistence & Caching | ✅ Complete |
 | #17 | Demo Mode Toggle + Live API | ✅ Complete |
-| #23 | Frontend UX Overhaul (7 sub-issues) | ✅ Complete |
+| #23 | Frontend UX Overhaul (7 sub-issues) | ✅ Complete (+ bugfix pass) |
 | #15 | Dashboard (real data) | ⚠️ Partial — page + API + cards done; needs vote display, polish |
 | #18 | Topic Input Bug Fix | ❌ Not started |
 | #19 | Public Debate Browsing + Likes | ❌ Not started |
 | #14 | Human Voting System | ❌ Not started |
 | #20 | API Usage Cap | ❌ Not started |
 
-**Completed:** 3 of 8 issues (including the massive 7-sub-issue #23 overhaul)
+**Completed:** 3 of 8 issues (including the massive 7-sub-issue #23 overhaul + follow-up bugfix pass)
 **Remaining:** 5 issues — #15 needs polish, #18/#19/#14/#20 not started
 
 ---

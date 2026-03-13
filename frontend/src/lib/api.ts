@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export interface PresetTopic {
   id: string;
@@ -9,7 +9,7 @@ export interface PresetTopic {
 }
 
 export async function fetchPresetTopics(): Promise<PresetTopic[]> {
-  const response = await fetch(`${API_BASE_URL}/topics/presets`, {
+  const response = await fetch(`${API_BASE_URL}/api/topics/presets`, {
     // Next.js cache configuration for presets (revalidate periodically if needed, or static)
     next: { revalidate: 3600 },
   });
@@ -32,14 +32,33 @@ export interface DebateSummary {
   pro_score: number;
   con_score: number;
   turn_count: number;
+  like_count?: number;
+  user_liked?: boolean;
 }
 
 export async function fetchDebates(): Promise<DebateSummary[]> {
-  const response = await fetch(`${API_BASE_URL}/debates/`, {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const response = await fetch(`${API_BASE_URL}/api/debates/`, {
     cache: "no-store",
+    headers,
   });
   if (!response.ok) {
     throw new Error(`Failed to fetch debates: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function likeDebate(debateId: string): Promise<{ liked: boolean; like_count: number }> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (!token) throw new Error("Authentication required");
+  const response = await fetch(`${API_BASE_URL}/api/debates/${debateId}/like`, {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${token}` },
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to like debate: ${response.status}`);
   }
   return response.json();
 }
@@ -80,7 +99,7 @@ export interface DebateData {
 
 export async function fetchDebateMode(): Promise<"demo" | "live"> {
   try {
-    const response = await fetch(`${API_BASE_URL}/debates/mode`, {
+    const response = await fetch(`${API_BASE_URL}/api/debates/mode`, {
       cache: "no-store",
     });
     if (response.ok) {
@@ -95,7 +114,7 @@ export async function fetchDebateMode(): Promise<"demo" | "live"> {
 
 export async function fetchDebate(debateId: string): Promise<DebateData | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/debates/${debateId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/debates/${debateId}`, {
       cache: "no-store",
     });
     if (response.status === 404) {
@@ -124,7 +143,7 @@ export async function fetchVoteTally(debateId: string, token: string | null): Pr
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/votes/${debateId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/votes/${debateId}`, {
       headers,
       cache: "no-store",
     });
@@ -140,7 +159,7 @@ export async function fetchVoteTally(debateId: string, token: string | null): Pr
 }
 
 export async function castVote(debateId: string, side: "pro" | "con", token: string): Promise<VoteTally> {
-  const response = await fetch(`${API_BASE_URL}/votes/`, {
+  const response = await fetch(`${API_BASE_URL}/api/votes/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

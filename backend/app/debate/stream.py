@@ -377,12 +377,22 @@ async def stream_debate_events(
                         if current_node in INTERNAL_PHASES:
                             # Stream internal phase content so frontend
                             # can display agent thought processes.
+                            # Determine speaker from tags (set by
+                            # call_agent) since internal phases run
+                            # pro and con concurrently in one node.
+                            tags = event.get("tags", [])
+                            if "pro" in tags:
+                                speaker = "pro"
+                            elif "con" in tags:
+                                speaker = "con"
+                            else:
+                                speaker = get_speaker(
+                                    current_node
+                                )
                             payload = {
                                 "type": "internal_content",
                                 "phase": current_node,
-                                "speaker": get_speaker(
-                                    current_node
-                                ),
+                                "speaker": speaker,
                                 "chunk": chunk,
                             }
                             yield (

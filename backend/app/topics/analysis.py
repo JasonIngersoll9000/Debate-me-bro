@@ -8,6 +8,7 @@ import logging
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
 
+from app.config import settings
 from app.models.schemas import TopicAnalysis
 
 logger = logging.getLogger(__name__)
@@ -43,7 +44,11 @@ async def analyze_topic(resolution: str,
     """
     Analyze a custom topic using Claude Haiku and return structured TopicAnalysis.
     """
-    llm = ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.5)
+    llm = ChatAnthropic(
+        model_name=settings.persona_model,
+        temperature=0.5,
+        anthropic_api_key=settings.anthropic_api_key,
+    )
 
     prompt_text = TOPIC_ANALYSIS_PROMPT.format(
         resolution=resolution,
