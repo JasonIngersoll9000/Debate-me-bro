@@ -25,8 +25,16 @@ jest.mock("@/lib/api", () => ({
   fetchPresetTopics: jest.fn(),
 }));
 
+// Mock Zustand store
+jest.mock("@/lib/store", () => ({
+  useDebateStore: jest.fn(),
+}));
+
+type MockStoreState = { topicTitle: string; setTopic: jest.Mock };
+
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
+const mockSetTopic = jest.fn();
 
 describe("Landing Page", () => {
   beforeEach(() => {
@@ -35,6 +43,9 @@ describe("Landing Page", () => {
     (fetchPresetTopics as jest.Mock).mockResolvedValue([
       { id: "test-topic", title: "Test Topic", description: "", pro_position: "", con_position: "" },
     ]);
+    (useDebateStore as jest.Mock).mockImplementation((selector: (s: MockStoreState) => unknown) =>
+      selector({ topicTitle: "", setTopic: mockSetTopic })
+    );
     localStorage.clear();
     useDebateStore.getState().reset();
   });
