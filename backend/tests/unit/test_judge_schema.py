@@ -87,6 +87,8 @@ def _make_engagement_result():
         "con_refutation_score": 4,
         "pro_steelman_score": 4,
         "con_steelman_score": 3,
+        "pro_score": 3.5,
+        "con_score": 3.25,
         "overall_winner": "con",
         "winner_explanation": "Con's direct engagement with Pro's specific claims was stronger.",
         "pro_strongest_move": "Pro's genuine steelman of market efficiency argument.",

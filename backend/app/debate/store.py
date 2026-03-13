@@ -9,6 +9,7 @@ import json
 import os
 import re
 import logging
+import tempfile
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
 
@@ -146,14 +147,12 @@ def list_debates() -> List[Dict[str, Any]]:
     return debates
 
 
-LIKES_DIR = os.path.join(os.path.dirname(DATA_DIR), "likes")
-
-
 def _likes_path(debate_id: str) -> str:
     """Return the path to the likes file for a debate."""
     _validate_debate_id(debate_id)
-    os.makedirs(LIKES_DIR, exist_ok=True)
-    return os.path.join(LIKES_DIR, f"{debate_id}.json")
+    likes_dir = os.path.join(os.path.dirname(DATA_DIR), "likes")
+    os.makedirs(likes_dir, exist_ok=True)
+    return os.path.join(likes_dir, f"{debate_id}.json")
 
 
 def get_likes(debate_id: str) -> List[str]:
@@ -183,8 +182,13 @@ def like_debate(debate_id: str, user_email: str) -> bool:
         likes.append(user_email)
         liked = True
     path = _likes_path(debate_id)
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(likes, f)
+    dir_name = os.path.dirname(path)
+    with tempfile.NamedTemporaryFile(
+        mode="w", encoding="utf-8", dir=dir_name, delete=False, suffix=".tmp"
+    ) as tmp:
+        json.dump(likes, tmp)
+        tmp_path = tmp.name
+    os.replace(tmp_path, path)
     return liked
 
 

@@ -6,6 +6,7 @@ import os
 import re
 import uuid
 import json
+import logging
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -17,6 +18,8 @@ from app.topics.analysis import analyze_topic
 from app.topics.prompts import generate_research_prompts
 
 router = APIRouter(prefix="/api/research", tags=["research"])
+
+logger = logging.getLogger(__name__)
 
 # topic_id must look like "custom-<hex8>" or any safe preset name
 _VALID_TOPIC_ID_RE = re.compile(r"^[a-z0-9_-]+$")
@@ -76,7 +79,11 @@ async def analyze_custom_topic(request: TopicAnalyzeRequest):
         # Analyze the topic with Claude Haiku
         analysis = await analyze_topic(request.resolution, request.context or "")
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Topic analysis failed: {exc}")
+        logger.error("Topic analysis failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="Topic analysis failed. Please try again later.",
+        )
 
     # Generate research prompts
     prompts = generate_research_prompts(analysis)
