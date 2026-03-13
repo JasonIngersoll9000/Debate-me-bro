@@ -1,8 +1,9 @@
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import Home from "@/app/page";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchPresetTopics } from "@/lib/api";
+import { useDebateStore } from "@/lib/store";
 
 // Mock next/navigation
 jest.mock("next/navigation", () => ({
@@ -35,6 +36,7 @@ describe("Landing Page", () => {
       { id: "test-topic", title: "Test Topic", description: "", pro_position: "", con_position: "" },
     ]);
     localStorage.clear();
+    useDebateStore.getState().reset();
   });
 
   afterEach(() => {
@@ -66,7 +68,9 @@ describe("Landing Page", () => {
     fireEvent.change(input, { target: { value: "Should pineapple go on pizza?" } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
 
-    const expectedReturnTo = encodeURIComponent("/?topic=Should%20pineapple%20go%20on%20pizza%3F");
+    const topicParams = new URLSearchParams();
+    topicParams.set("topic", "Should pineapple go on pizza?");
+    const expectedReturnTo = encodeURIComponent(`/?${topicParams.toString()}`);
     expect(mockPush).toHaveBeenCalledWith(`/auth?returnTo=${expectedReturnTo}`);
   });
 
@@ -93,5 +97,30 @@ describe("Landing Page", () => {
     fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
 
     expect(mockPush).toHaveBeenCalledWith("/debates/new?topic=Who%20would%20win%2C%20Goku%20or%20Superman%3F");
+  });
+
+  it("syncs custom topic to URL when typing", () => {
+    render(<Home />);
+
+    const input = screen.getByPlaceholderText("Enter any debate topic or statement...");
+    fireEvent.change(input, { target: { value: "Climate change solutions" } });
+
+    const params = new URLSearchParams();
+    params.set("topic", "Climate change solutions");
+    expect(mockReplace).toHaveBeenCalledWith(`/?${params.toString()}`);
+  });
+
+  it("initializes input from ?topic= URL parameter", async () => {
+    const params = new URLSearchParams();
+    params.set("topic", "Universal basic income");
+    (useSearchParams as jest.Mock).mockReturnValue(params);
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByPlaceholderText("Enter any debate topic or statement...")
+      ).toHaveValue("Universal basic income");
+    });
   });
 });
