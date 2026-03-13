@@ -376,10 +376,19 @@ Protect API token spend by limiting how many new debates each user can generate.
 **Milestone:** Sprint 2  
 **Assignee:** Jason  
 **Depends on:** #17  
-**Status:** ✅ Complete
+**Status:** ✅ Complete (+ follow-up bugfix pass)
 
 #### Description
 After running the first live debates, several UX gaps became apparent: phases auto-advance too quickly, markdown doesn't render in arguments, internal phases are invisible, evidence bundle uses mock data, personas appear silently, and judging lacks transparency. This issue addresses all 7 gaps in one cohesive overhaul.
+
+> **Follow-up bugfix pass (branch: `fix/debate-phase-gating-and-styling`):**
+> After the initial #23 completion, additional issues were discovered during custom topic debates:
+> - Phase gating in `content` SSE events (not just `phase_transition`) — debate still auto-advanced through rebuttal/closing
+> - Manual PhaseNav clicks were overridden by incoming SSE events
+> - Internal phase speaker detection broken — pro eval stuck on "computing strategy" (backend tags fix)
+> - Judging panel showed mock/stale data while judges were deliberating (replaced with loading UI)
+> - ScoreBar pro gradient direction was inverted, making bars not match actual scores
+> - Markdown rendering in custom topic research prompt cards lacked typography hierarchy
 
 #### Sub-issues
 
@@ -387,6 +396,8 @@ After running the first live debates, several UX gaps became apparent: phases au
 - [x] Opening, rebuttal, and closing phases wait for user to click "Continue" before advancing
 - [x] SSE events continue buffering in the background; only the displayed phase is gated
 - [x] Internal phases (eval, research_consultation) auto-advance without user action
+- [x] *(bugfix)* Content-stream phase gating: gate on `content` events too, not just `phase_transition`
+- [x] *(bugfix)* Manual PhaseNav navigation preserved — SSE won't override user's tab click
 
 **23b. Markdown rendering in argument cards**
 - [x] Headings (`#`, `##`, `###`), lists (`-`), and horizontal rules (`---`) render as styled HTML
@@ -397,6 +408,8 @@ After running the first live debates, several UX gaps became apparent: phases au
 - [x] Backend streams internal phase LLM chunks as `internal_content` SSE events
 - [x] Frontend stores internal analysis and displays in StrategicAnalysisPanel
 - [x] Users can toggle-view the strategic analysis for eval_openings and eval_full_debate
+- [x] *(bugfix)* Backend `call_agent` now passes `tags=[role]` so internal phase streaming events carry correct speaker identity
+- [x] *(bugfix)* `stream.py` reads event tags to determine pro/con speaker instead of falling back to `get_speaker()` which always returned "system"
 
 **23d. Evidence bundle based on actual research**
 - [x] Backend sends real evidence data (pro_arguments, con_arguments, citations) in `evidence_loaded` SSE event
@@ -420,6 +433,8 @@ After running the first live debates, several UX gaps became apparent: phases au
 - [x] Uses backend `weighted_total` instead of re-computing on frontend
 - [x] Score bars include per-judge contribution labels
 - [x] Verdict explanation shows why the winner was chosen with supporting judge analysis
+- [x] *(bugfix)* Removed MOCK_SCORES / MOCK_JUDGE_VERDICT fallback — shows "Judges Are Deliberating" loading UI until real results arrive
+- [x] *(bugfix)* ScoreBar pro gradient direction fixed (`bg-gradient-to-l`) so bar length visually matches actual scores
 
 ---
 
@@ -446,6 +461,7 @@ For custom topics, Claude Haiku analyzes the resolution and generates argument d
 - [x] Accepts optional user-supplied argumentation lines
 - [x] `POST /api/topics/analyze` route exists
 - [x] Frontend `/debates/new` page exists with 3-step flow
+- [x] Research prompt cards render markdown with proper typography hierarchy (`@tailwindcss/typography` prose classes)
 - [ ] User can review/edit generated positions before proceeding
 - [ ] Unit tests verify analysis returns valid structured output
 

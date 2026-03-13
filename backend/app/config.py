@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     debate_mode: str = "demo"
     debate_model: str = "claude-sonnet-4-20250514"
-    persona_model: str = "claude-haiku-4-20250414"
+    persona_model: str = "claude-haiku-4-5"
     
     model_config = SettingsConfigDict(env_file=str(_ENV_FILE), env_file_encoding="utf-8", extra="ignore")
 

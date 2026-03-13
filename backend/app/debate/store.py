@@ -146,6 +146,48 @@ def list_debates() -> List[Dict[str, Any]]:
     return debates
 
 
+LIKES_DIR = os.path.join(os.path.dirname(DATA_DIR), "likes")
+
+
+def _likes_path(debate_id: str) -> str:
+    """Return the path to the likes file for a debate."""
+    _validate_debate_id(debate_id)
+    os.makedirs(LIKES_DIR, exist_ok=True)
+    return os.path.join(LIKES_DIR, f"{debate_id}.json")
+
+
+def get_likes(debate_id: str) -> List[str]:
+    """Get all user emails who liked a debate."""
+    path = _likes_path(debate_id)
+    if not os.path.isfile(path):
+        return []
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError):
+        return []
+
+
+def get_like_count(debate_id: str) -> int:
+    """Get the number of likes for a debate."""
+    return len(get_likes(debate_id))
+
+
+def like_debate(debate_id: str, user_email: str) -> bool:
+    """Toggle like for a debate. Returns True if now liked, False if unliked."""
+    likes = get_likes(debate_id)
+    if user_email in likes:
+        likes.remove(user_email)
+        liked = False
+    else:
+        likes.append(user_email)
+        liked = True
+    path = _likes_path(debate_id)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(likes, f)
+    return liked
+
+
 def delete_debate(debate_id: str) -> bool:
     """Delete a debate from the store. Returns True if deleted."""
     try:

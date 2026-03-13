@@ -48,6 +48,15 @@ export interface JudgingScores {
   con: { logic: number; evidence: number; refutation: number; steelman: number; weighted_total?: number };
 }
 
+export interface CriterionScore {
+  name: string;
+  weight: number;
+  pro_score: number;
+  con_score: number;
+  pro_justification: string;
+  con_justification: string;
+}
+
 export interface JudgeResult {
   judge_name?: string;
   pro_score?: number;
@@ -60,6 +69,7 @@ export interface JudgeResult {
   con_strongest_move?: string;
   pro_weakest_move?: string;
   con_weakest_move?: string;
+  criteria?: CriterionScore[];
 }
 
 export interface JudgingResults {

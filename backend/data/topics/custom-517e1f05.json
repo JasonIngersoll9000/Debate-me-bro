@@ -1,0 +1,44 @@
+{
+  "topic_id": "custom-517e1f05",
+  "analysis": {
+    "resolution": "test",
+    "pro_position": "Testing is a necessary and beneficial practice that provides valuable information, validates systems, and ensures quality and safety across applications.",
+    "con_position": "Testing often consumes excessive resources, creates false confidence, and may be counterproductive or unnecessary depending on context and implementation.",
+    "pro_dimensions": [
+      "Efficacy: Does testing reliably identify problems and validate functionality?",
+      "Risk mitigation: How does testing reduce failures, errors, and negative outcomes?",
+      "Cost-benefit analysis: Do the benefits of testing justify resource expenditure?",
+      "Standardization: Should testing be mandatory or universally applied?",
+      "Innovation impact: Does rigorous testing accelerate or impede progress?"
+    ],
+    "con_dimensions": [
+      "Resource efficiency: Are testing costs proportionate to actual risk reduction?",
+      "Diminishing returns: At what point does additional testing provide minimal new value?",
+      "False security: Can testing create unwarranted confidence in flawed systems?",
+      "Context-dependency: When is testing unnecessary or inappropriate?",
+      "Alternative approaches: Are there more efficient validation methods?"
+    ],
+    "pro_values": [
+      "Safety and harm prevention",
+      "Accountability and reliability",
+      "Evidence-based decision making"
+    ],
+    "con_values": [
+      "Efficiency and resource optimization",
+      "Pragmatism and proportionality",
+      "Adaptive learning over rigid protocols"
+    ],
+    "key_contested_facts": [
+      "What percentage of real-world failures are actually prevented by testing protocols?",
+      "How do testing costs compare to the actual damages from untested systems?",
+      "Does increased testing intensity produce proportional increases in quality/safety?"
+    ],
+    "pro_persona_suggestion": "Quality assurance director, clinical trial researcher, or aerospace safety engineer—experts who work in high-stakes domains where testing prevents catastrophic failures",
+    "con_persona_suggestion": "Lean startup entrepreneur, agile software developer, or behavioral economist—experts focused on resource optimization and iterative learning over comprehensive pre-deployment validation"
+  },
+  "prompts": {
+    "pro_prompt": "# Research Prompt: PRO Position on \"test\"\n\nI need deep, well-sourced research to build the strongest possible PRO case in a structured debate.\n\n**Resolution:** test\n\n## What I Need\n\nResearch the following argument dimensions in depth:\n1. Efficacy: Does testing reliably identify problems and validate functionality?\n2. Risk mitigation: How does testing reduce failures, errors, and negative outcomes?\n3. Cost-benefit analysis: Do the benefits of testing justify resource expenditure?\n4. Standardization: Should testing be mandatory or universally applied?\n5. Innovation impact: Does rigorous testing accelerate or impede progress?\n\nFor each dimension:\n- The core claim and the strongest evidence supporting it\n- Specific, citable sources (studies, data, reporting) with key findings\n- Evidence that anticipates and undermines the opposing side's likely counterarguments\n- An honest assessment of where this argument is weakest\n\n\n\n## Important\nIf the user has requested specific lines of argumentation above, you MUST include them — but do NOT limit your research to only those lines. They are starting points, not boundaries. Investigate those AND any other strong arguments, values, frameworks, or evidence that would strengthen the PRO case. The goal is the most comprehensive and compelling body of advocacy research possible.\n\n## Source Standards\n- Prioritize sources with strong methodology, specific data, and verifiable claims\n- Include both institutional and independent sources — judge on accuracy and   citation quality, not credentials\n- For each source, include: title, author/institution, date, and key finding\n\n## Style\nThis is advocacy research — go deep for the PRO position. Find the most compelling evidence available. Be thorough — no artificial limits on length or number of sources.\n\n## Values and Frameworks\nThe PRO position often appeals to:\nSafety and harm prevention, Accountability and reliability, Evidence-based decision making\n\nUse these as framing guidance, but let the evidence drive the argument structure.\n\n## Output Format — CRITICAL\nOutput MUST be in structured Markdown. This will be parsed by AI debate agents.\n\nUse this structure:\n- Clear `## Argument N: Title` headers for each dimension\n- Under each argument: `### Core Claim`, `### Supporting Evidence`,   `### Anticipated Counter-Arguments`, `### Evidence Against Counter`,   `### Vulnerability Assessment`\n- ALL source citations as Markdown hyperlinks: `**[Source Title](URL)** (Author, Year): Finding`\n- End with a `## Source Bibliography` listing all sources as `[Title](URL) — Author, Year`\n\nEvery source MUST include a clickable URL so claims can be verified.\n",
+    "con_prompt": "# Research Prompt: CON Position on \"test\"\n\nI need deep, well-sourced research to build the strongest possible CON case in a structured debate.\n\n**Resolution:** test\n\n## What I Need\n\nResearch the following argument dimensions in depth:\n1. Resource efficiency: Are testing costs proportionate to actual risk reduction?\n2. Diminishing returns: At what point does additional testing provide minimal new value?\n3. False security: Can testing create unwarranted confidence in flawed systems?\n4. Context-dependency: When is testing unnecessary or inappropriate?\n5. Alternative approaches: Are there more efficient validation methods?\n\nFor each dimension:\n- The core claim and the strongest evidence supporting it\n- Specific, citable sources (studies, data, reporting) with key findings\n- Evidence that anticipates and undermines the opposing side's likely counterarguments\n- An honest assessment of where this argument is weakest\n\n\n\n## Important\nIf the user has requested specific lines of argumentation above, you MUST include them — but do NOT limit your research to only those lines. They are starting points, not boundaries. Investigate those AND any other strong arguments, values, frameworks, or evidence that would strengthen the CON case. The goal is the most comprehensive and compelling body of advocacy research possible.\n\n## Source Standards\n- Prioritize sources with strong methodology, specific data, and verifiable claims\n- Include both institutional and independent sources — judge on accuracy and   citation quality, not credentials\n- For each source, include: title, author/institution, date, and key finding\n\n## Style\nThis is advocacy research — go deep for the CON position. Find the most compelling evidence available. Be thorough — no artificial limits on length or number of sources.\n\n## Values and Frameworks\nThe CON position often appeals to:\nEfficiency and resource optimization, Pragmatism and proportionality, Adaptive learning over rigid protocols\n\nUse these as framing guidance, but let the evidence drive the argument structure.\n\n## Output Format — CRITICAL\nOutput MUST be in structured Markdown. This will be parsed by AI debate agents.\n\nUse this structure:\n- Clear `## Argument N: Title` headers for each dimension\n- Under each argument: `### Core Claim`, `### Supporting Evidence`,   `### Anticipated Counter-Arguments`, `### Evidence Against Counter`,   `### Vulnerability Assessment`\n- ALL source citations as Markdown hyperlinks: `**[Source Title](URL)** (Author, Year): Finding`\n- End with a `## Source Bibliography` listing all sources as `[Title](URL) — Author, Year`\n\nEvery source MUST include a clickable URL so claims can be verified.\n"
+  },
+  "created_at": "2026-03-13T07:29:24.804319+00:00"
+}

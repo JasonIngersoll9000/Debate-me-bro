@@ -89,11 +89,16 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
           <Link href="/" className="group p-6 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/20 hover:border-cyan-500/40 transition-all hover:-translate-y-1">
             <div className="text-2xl mb-3">💡</div>
             <div className="text-sm font-black text-white mb-1">New Debate</div>
             <div className="text-xs text-gray-500">Pick a topic and start</div>
+          </Link>
+          <Link href="/browse" className="group p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-fuchsia-600/10 border border-purple-500/20 hover:border-purple-500/40 transition-all hover:-translate-y-1">
+            <div className="text-2xl mb-3">🌐</div>
+            <div className="text-sm font-black text-white mb-1">Browse All</div>
+            <div className="text-xs text-gray-500">Explore public debates</div>
           </Link>
           <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
             <div className="text-2xl mb-3">📊</div>
@@ -102,7 +107,7 @@ export default function DashboardPage() {
           </div>
           <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
             <div className="text-2xl mb-3">🗳️</div>
-            <div className="text-sm font-black text-white mb-1">0</div>
+            <div className="text-sm font-black text-white mb-1">Coming Soon</div>
             <div className="text-xs text-gray-500">Votes Cast</div>
           </div>
         </div>

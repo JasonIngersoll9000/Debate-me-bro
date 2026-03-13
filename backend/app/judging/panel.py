@@ -77,6 +77,15 @@ async def run_judging_panel(transcript: str) -> Dict[str, Any]:
         _run_judge("Engagement Judge", ENGAGEMENT_JUDGE_PROMPT, transcript),
     )
 
+    # Compute per-judge aggregate scores from criteria when available
+    for result in [logic_result, evidence_result, engagement_result]:
+        criteria = result.get("criteria", [])
+        if criteria and result.get("pro_score") is None:
+            pro_agg = sum(c["weight"] * c["pro_score"] for c in criteria)
+            con_agg = sum(c["weight"] * c["con_score"] for c in criteria)
+            result["pro_score"] = round(pro_agg, 2)
+            result["con_score"] = round(con_agg, 2)
+
     # Compute weighted scores
     # Logic: 30%, Evidence: 25%, Engagement: Refutation 25% + Steelman 20%
     pro_logic = logic_result.get("pro_score", 3)

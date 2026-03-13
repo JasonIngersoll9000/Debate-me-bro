@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from app.topics.analysis import analyze_topic
@@ -71,8 +72,11 @@ async def analyze_custom_topic(request: TopicAnalyzeRequest):
     Returns structured topic analysis + two research prompts (Pro + Con)
     that users can copy into Claude or ChatGPT to generate research.
     """
-    # Analyze the topic with Claude Haiku
-    analysis = await analyze_topic(request.resolution, request.context or "")
+    try:
+        # Analyze the topic with Claude Haiku
+        analysis = await analyze_topic(request.resolution, request.context or "")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Topic analysis failed: {exc}")
 
     # Generate research prompts
     prompts = generate_research_prompts(analysis)
@@ -139,6 +143,23 @@ async def upload_research(
         "size": len(text),
         "ready_to_debate": pro_exists and con_exists,
     }
+
+
+@router.get("/evidence/{topic_id}/{side}")
+async def get_evidence_document(topic_id: str, side: str):
+    """
+    Serve the raw markdown evidence document for a topic.
+    Side must be 'pro' or 'con'.
+    """
+    if side not in ("pro", "con"):
+        raise HTTPException(status_code=400, detail="Side must be 'pro' or 'con'.")
+    evidence_dir = _safe_evidence_dir(topic_id)
+    filepath = os.path.join(evidence_dir, f"{side}_research.md")
+    if not os.path.isfile(filepath):
+        raise HTTPException(status_code=404, detail=f"No {side} research found for topic '{topic_id}'.")
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read()
+    return PlainTextResponse(content, media_type="text/markdown")
 
 
 @router.get("/status/{topic_id}")

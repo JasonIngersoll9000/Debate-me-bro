@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useDebateStore, Persona, JudgeResult } from "@/lib/store";
+import { useDebateStore, Persona, JudgeResult, CriterionScore } from "@/lib/store";
 import { useShallow } from "zustand/shallow";
-import { fetchDebate, fetchDebateMode, DebateData } from "@/lib/api";
+import { fetchDebate, fetchDebateMode, fetchVoteTally, castVote, DebateData, VoteTally } from "@/lib/api";
 import {
   MOCK_TURNS, MOCK_PERSONAS, MOCK_STRATEGIC_ANALYSIS, MOCK_PHASE_SEQUENCE,
   MOCK_SCORES, MOCK_POSITIONS, MOCK_RESEARCH_STEPS, MOCK_JUDGE_VERDICT,
@@ -14,7 +14,7 @@ import { PhaseNav } from "@/components/debate/PhaseNav";
 import { ArgumentCard } from "@/components/debate/ArgumentCard";
 import { StrategicAnalysisPanel } from "@/components/debate/StrategicAnalysisPanel";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 /* ─── Score Bar ─── */
 function ScoreBar({ label, weight, proScore, conScore }: { label: string; weight: string; proScore: number; conScore: number }) {
@@ -26,7 +26,7 @@ function ScoreBar({ label, weight, proScore, conScore }: { label: string; weight
       </div>
       <div className="flex gap-1 h-3 rounded-full overflow-hidden">
         <div className="flex-1 bg-slate-800 rounded-l-full overflow-hidden flex justify-end">
-          <div className="bg-gradient-to-r from-cyan-600 to-cyan-400 transition-all duration-1000 rounded-l-full" style={{ width: `${proScore * 20}%` }} />
+          <div className="bg-gradient-to-l from-cyan-400 to-cyan-600 transition-all duration-1000 rounded-l-full" style={{ width: `${proScore * 20}%` }} />
         </div>
         <div className="flex-1 bg-slate-800 rounded-r-full overflow-hidden">
           <div className="bg-gradient-to-r from-fuchsia-400 to-fuchsia-600 transition-all duration-1000 rounded-r-full" style={{ width: `${conScore * 20}%` }} />
@@ -91,6 +91,41 @@ function JudgeCard({ judge }: { judge: JudgeResult }) {
             <div className="pt-5 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
               <div className="text-xs font-black uppercase tracking-widest text-yellow-500/80 mb-2">Winner Explanation</div>
               <p className="text-sm text-gray-200 leading-relaxed">{winnerExpl}</p>
+            </div>
+          )}
+
+          {/* Per-Criterion Breakdown */}
+          {judge.criteria && judge.criteria.length > 0 && (
+            <div className="pt-2">
+              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">Scoring Breakdown</div>
+              <div className="space-y-3">
+                {judge.criteria.map((c: CriterionScore, ci: number) => (
+                  <div key={ci} className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-gray-300">{c.name}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] text-gray-500 font-medium">{Math.round(c.weight * 100)}%</span>
+                        <span className="font-mono text-xs font-bold">
+                          <span className="text-cyan-400">{c.pro_score}</span>
+                          <span className="text-gray-600 mx-1">vs</span>
+                          <span className="text-fuchsia-400">{c.con_score}</span>
+                        </span>
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-2">
+                      <div className="text-[11px] text-gray-400 leading-snug">
+                        <span className="text-cyan-500/70 font-bold">Pro:</span> {c.pro_justification}
+                      </div>
+                      <div className="text-[11px] text-gray-400 leading-snug">
+                        <span className="text-fuchsia-500/70 font-bold">Con:</span> {c.con_justification}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 p-2 rounded-lg bg-white/[0.02] border border-white/[0.04] text-[10px] text-gray-500">
+                <span className="font-bold">Aggregate:</span> Weighted sum of criteria scores → Pro: <span className="text-cyan-400 font-mono">{proScore}</span> · Con: <span className="text-fuchsia-400 font-mono">{conScore}</span>
+              </div>
             </div>
           )}
 
@@ -159,17 +194,27 @@ function JudgeCard({ judge }: { judge: JudgeResult }) {
 }
 
 /* ─── Research Document Modal ─── */
-function ResearchDocModal({ side, onClose }: { side: "pro" | "con"; onClose: () => void }) {
+function ResearchDocModal({ side, topicId, onClose }: { side: "pro" | "con"; topicId: string; onClose: () => void }) {
   const [content, setContent] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const isPro = side === "pro";
 
   useEffect(() => {
-    fetch(`/evidence/healthcare/${side}_research.md`)
-      .then((r) => r.text())
+    // Try backend API first (works for all topics), fall back to static files for presets
+    fetch(`${API_BASE_URL}/api/research/evidence/${topicId}/${side}`)
+      .then((r) => {
+        if (!r.ok) throw new Error("not found");
+        return r.text();
+      })
       .then((text) => { setContent(text); setLoading(false); })
-      .catch(() => { setContent("Failed to load document."); setLoading(false); });
-  }, [side]);
+      .catch(() => {
+        // Fallback: try frontend static files for preset topics
+        fetch(`/evidence/${topicId}/${side}_research.md`)
+          .then((r) => r.text())
+          .then((text) => { setContent(text); setLoading(false); })
+          .catch(() => { setContent("Failed to load document."); setLoading(false); });
+      });
+  }, [side, topicId]);
 
   // Escape HTML special characters to prevent XSS
   function escapeHtml(s: string): string {
@@ -500,6 +545,7 @@ export default function DebatePage() {
   const pendingPhaseRef = useRef<string | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
   const mockAbortRef = useRef(false);
+  const userNavigatedRef = useRef(false);
 
   // ── Pause / Continue ──
   const waitResolveRef = useRef<(() => void) | null>(null);
@@ -512,6 +558,7 @@ export default function DebatePage() {
 
   const handleContinue = () => {
     setWaitingForUser(false);
+    userNavigatedRef.current = false;
     // Flush pending phase gate (live mode)
     if (pendingPhaseRef.current) {
       setActivePhase(pendingPhaseRef.current);
@@ -528,6 +575,11 @@ export default function DebatePage() {
     mockAbortRef.current = false;
     setConnectionError(null);
     setPersonas(MOCK_PERSONAS.pro, MOCK_PERSONAS.con);
+    setStreaming(false);
+
+    // Pause for persona reveal overlay — user clicks "Start Debate →" to continue
+    await waitForUser();
+    if (mockAbortRef.current) return;
     setStreaming(true);
 
     const wait = (ms: number) => new Promise<void>((resolve) => {
@@ -740,12 +792,14 @@ export default function DebatePage() {
     setPersonas({ name: "Proponent Agent", role: "AI Debater" }, { name: "Opponent Agent", role: "AI Debater" });
     setStreaming(true);
     const modeParam = serverMode ? `?mode=${serverMode}` : "";
-    const es = new EventSource(`${API_BASE_URL}/debates/${id}/stream${modeParam}`);
+    const es = new EventSource(`${API_BASE_URL}/api/debates/${id}/stream${modeParam}`);
     eventSourceRef.current = es;
 
     // Track current and previous phase transitions for completion marking
     let lastPhaseTransition = "";
     let prevPhaseTransition = "";
+    // Track the last mapped phase seen in content events for gating
+    let lastContentPhase = "";
 
     es.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -805,17 +859,21 @@ export default function DebatePage() {
 
         // Phase gating: for user-facing content phases, don't auto-advance
         const USER_PHASES = ["opening", "rebuttal", "closing"];
-        const prevMp = prevPhaseTransition ? mapPhase(prevPhaseTransition) : "";
         // Gate the opening phase if personas haven't been acknowledged yet,
-        // or gate any subsequent user phase when transitioning from another user phase.
+        // or gate rebuttal/closing so user must click Continue.
+        // NOTE: We gate ALL user phases after opening regardless of what the
+        // previous phase was, because internal phases (eval_openings, etc.)
+        // would otherwise break the prev-phase chain and skip the gate.
         const gateForPersona = mp === "opening" && !personaRevealedRef.current;
-        const gateForContinue = USER_PHASES.includes(mp) && prevMp && prevMp !== mp && USER_PHASES.includes(prevMp);
+        const gateForContinue = USER_PHASES.includes(mp) && mp !== "opening";
         if (gateForPersona || gateForContinue) {
           // Previous phase just ended, new one starting — gate it
           setPendingPhase(mp);
           pendingPhaseRef.current = mp;
           setWaitingForUser(true);
         } else {
+          // Clear manual nav override for phase transitions (e.g. judging, eval)
+          userNavigatedRef.current = false;
           setActivePhase(mp);
         }
 
@@ -828,11 +886,26 @@ export default function DebatePage() {
         setPhaseTransitionMsg(null);
         const mp = mapPhase(data.phase);
         const side: "pro" | "con" = data.speaker === "pro" ? "pro" : "con";
-        // Always append content to the store (buffered); only advance displayed phase if not gated
+        // Always append content to the store (buffered)
         appendStreamToken(side, mp, data.chunk || "");
-        if (!pendingPhaseRef.current) {
+
+        // Phase gating for content events (backend doesn't send phase_transition for content phases)
+        const USER_PHASES = ["opening", "rebuttal", "closing"];
+        if (mp !== lastContentPhase && lastContentPhase !== "" && USER_PHASES.includes(mp) && mp !== "opening") {
+          // New user phase detected in content stream — gate it
+          if (!pendingPhaseRef.current) {
+            // Mark old content phase complete
+            markPhaseComplete(lastContentPhase);
+            setPendingPhase(mp);
+            pendingPhaseRef.current = mp;
+            setWaitingForUser(true);
+          }
+        } else if (!pendingPhaseRef.current && !userNavigatedRef.current) {
+          // Normal flow: advance displayed phase if not gated and user hasn't manually navigated
           setActivePhase(mp);
         }
+        lastContentPhase = mp;
+
         // Mark the previous phase complete if we've moved on to a different phase
         if (prevPhaseTransition && mapPhase(prevPhaseTransition) !== mp) {
           markPhaseComplete(mapPhase(prevPhaseTransition));
@@ -872,7 +945,7 @@ export default function DebatePage() {
       es.close();
       setStreaming(false);
       setConnectionError(
-        "Could not connect. Make sure FastAPI is running on " + API_BASE_URL.replace("/api", "") + ".",
+        "Could not connect. Make sure FastAPI is running on " + API_BASE_URL + ".",
       );
     };
   }, [id, serverMode]);
@@ -882,8 +955,11 @@ export default function DebatePage() {
     if (!id) return;
     let cancelled = false;
 
+    // Custom topics always run live — they have real uploaded evidence
+    const isCustomTopic = id.startsWith("custom-");
+
     // If user already triggered demo (via URL param or fallback), skip mode fetch
-    if (isDemoMode) {
+    if (isDemoMode && !isCustomTopic) {
       setServerMode("demo");
       runMockDebate();
       return () => {
@@ -899,7 +975,7 @@ export default function DebatePage() {
       if (cancelled) return;
       setServerMode(mode);
 
-      if (mode === "demo") {
+      if (mode === "demo" && !isCustomTopic) {
         // Server says demo — run mock engine directly
         setIsDemoMode(true);
         return;
@@ -963,16 +1039,18 @@ export default function DebatePage() {
   const proSideTurns = debateTurns.filter((t) => t.side === "pro" && t.phase === activePhase);
   const conSideTurns = debateTurns.filter((t) => t.side === "con" && t.phase === activePhase);
 
-  // Use real judging data if available, otherwise fall back to mock
-  const scores = judgingResults?.scores ?? MOCK_SCORES;
-  const proScores = scores.pro || MOCK_SCORES.pro;
-  const conScores = scores.con || MOCK_SCORES.con;
+  // Use real judging data if available; NO mock fallback (show loading UI instead)
+  const judgingReady = !!judgingResults?.scores;
+  const emptyScores = { logic: 0, evidence: 0, refutation: 0, steelman: 0, weighted_total: 0 };
+  const scores = judgingResults?.scores ?? { pro: emptyScores, con: emptyScores };
+  const proScores = scores.pro || emptyScores;
+  const conScores = scores.con || emptyScores;
   const proTotal = proScores.weighted_total ?? ((proScores.logic || 0) * .3 + (proScores.evidence || 0) * .25 + (proScores.refutation || 0) * .25 + (proScores.steelman || 0) * .2);
   const conTotal = conScores.weighted_total ?? ((conScores.logic || 0) * .3 + (conScores.evidence || 0) * .25 + (conScores.refutation || 0) * .25 + (conScores.steelman || 0) * .2);
   const judgeVerdict = judgingResults?.summary
     ? { summary: judgingResults.summary, reasoning: judgingResults.judges?.map(j => j.reasoning ?? "").join("\n\n") || "" }
-    : MOCK_JUDGE_VERDICT;
-  const rawWinner = judgingResults?.winner || (finalProTotal > finalConTotal ? "pro" : finalConTotal > finalProTotal ? "con" : "tie");
+    : null;
+  const rawWinner = judgingResults?.winner || (proTotal > conTotal ? "pro" : conTotal > proTotal ? "con" : "tie");
   const debateWinner = rawWinner === "pro" ? "Pro" : rawWinner === "con" ? "Con" : "Tie";
   const judges = judgingResults?.judges || [];
 
@@ -1032,7 +1110,7 @@ export default function DebatePage() {
       </header>
 
       {/* ─── Persona Reveal Overlay ─── */}
-      {proPersona && conPersona && !personaRevealed && !isDemoMode && !isFromCache && activePhase === "research" && (
+      {proPersona && conPersona && !personaRevealed && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md">
           <div className="max-w-5xl w-full mx-4 animate-[fadeIn_0.5s_ease-out]">
             <div className="text-center mb-8">
@@ -1114,7 +1192,7 @@ export default function DebatePage() {
         </div>
       )}
 
-      <PhaseNav />
+      <PhaseNav onManualNav={() => { userNavigatedRef.current = true; }} />
 
       {/* ─── Error ─── */}
       {connectionError && (
@@ -1255,69 +1333,92 @@ export default function DebatePage() {
         {activePhase === "judging" && (
           <div className="flex-1 overflow-y-auto p-8 lg:p-12 bg-black/20">
             <div className="max-w-5xl mx-auto">
-              {/* Winner Banner */}
-              <div className="text-center mb-8">
-                <div className="text-5xl mb-4">📊</div>
-                <h2 className="text-2xl font-black text-white mb-2">Judging Results</h2>
-                <div className={`inline-block px-6 py-2 rounded-full text-sm font-black uppercase tracking-widest mt-2 ${rawWinner === "pro" ? "bg-cyan-600/30 text-cyan-300 border border-cyan-500/30" : rawWinner === "con" ? "bg-fuchsia-600/30 text-fuchsia-300 border border-fuchsia-500/30" : "bg-gray-600/30 text-gray-300 border border-gray-500/30"}`}>
-                  {debateWinner} wins — {proTotal.toFixed(2)} vs {conTotal.toFixed(2)}
-                </div>
-              </div>
 
-              {/* Score Overview */}
-              <div className="p-8 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg mb-8">
-                <div className="flex justify-between text-xs text-gray-500 mb-6">
-                  <span className="text-cyan-400 font-black uppercase tracking-widest">← Pro ({proPersona?.name})</span>
-                  <span className="text-fuchsia-400 font-black uppercase tracking-widest">Con ({conPersona?.name}) →</span>
-                </div>
-                <ScoreBar label="Logical Validity" weight="30%" proScore={proScores.logic ?? 0} conScore={conScores.logic ?? 0} />
-                <ScoreBar label="Evidence Quality" weight="25%" proScore={proScores.evidence ?? 0} conScore={conScores.evidence ?? 0} />
-                <ScoreBar label="Refutation Strength" weight="25%" proScore={proScores.refutation ?? 0} conScore={conScores.refutation ?? 0} />
-                <ScoreBar label="Steelmanning Quality" weight="20%" proScore={proScores.steelman ?? 0} conScore={conScores.steelman ?? 0} />
-                <div className="mt-6 pt-6 border-t border-white/10">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-gray-400 font-bold uppercase tracking-widest text-xs">Weighted Total</span>
-                    <span className="font-mono font-black text-lg">
-                      <span className="text-cyan-400">{proTotal.toFixed(2)}</span>
-                      <span className="text-gray-600 mx-2">vs</span>
-                      <span className="text-fuchsia-400">{conTotal.toFixed(2)}</span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Verdict Summary */}
-              <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg mb-8">
-                <div className="text-xs text-gray-500 mb-3 uppercase tracking-widest font-black">AI Judges Verdict</div>
-                <p className="text-sm text-gray-300 leading-relaxed"><strong className="text-yellow-400">{debateWinner} wins.</strong> {judgeVerdict.summary}</p>
-              </div>
-
-              {/* Per-Judge Breakdown */}
-              {judges.length > 0 && (
-                <div className="mb-8">
-                  <h3 className="text-lg font-black text-white mb-4">Individual Judge Analysis</h3>
-                  <div className="space-y-4">
-                    {judges.map((judge, idx: number) => (
-                      <JudgeCard key={idx} judge={judge} />
-                    ))}
+              {/* Deliberating state — shown while judges haven't returned */}
+              {!judgingReady && (
+                <div className="flex flex-col items-center justify-center py-24 animate-[fadeIn_0.5s_ease-out]">
+                  <div className="text-6xl mb-6">⚖️</div>
+                  <h2 className="text-2xl font-black text-white mb-3">Judges Are Deliberating</h2>
+                  <p className="text-sm text-gray-400 font-medium mb-8 max-w-md text-center">
+                    Three AI judges — Logic, Evidence, and Engagement — are independently evaluating the full debate transcript.
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
+                    <span className="text-xs font-black uppercase tracking-widest text-purple-400 animate-pulse">Scoring in progress...</span>
                   </div>
                 </div>
               )}
 
-              {/* Your Vote */}
-              <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg">
-                <div className="text-xs text-gray-500 mb-4 uppercase tracking-widest font-black">Your Vote</div>
-                <div className="flex gap-3 mb-4">
-                  <button onClick={() => setUserVote("pro")} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "pro" ? "bg-cyan-600 text-white ring-2 ring-cyan-400/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"}`}>👍 Pro Wins</button>
-                  <button onClick={() => setUserVote("con")} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "con" ? "bg-fuchsia-600 text-white ring-2 ring-fuchsia-400/40 shadow-[0_0_20px_rgba(217,70,239,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"}`}>👍 Con Wins</button>
-                </div>
-                {userVote && (
-                  <div className="text-xs text-gray-400 p-4 bg-white/5 rounded-xl border border-white/10">
-                    <div className="font-black text-emerald-400 mb-1">Vote recorded!</div>
-                    Human votes: 47% Pro · 53% Con (23 total)<br />Weighting: 60% AI judges · 40% human votes
+              {/* Results — shown once judgingReady */}
+              {judgingReady && (
+                <>
+                  {/* Winner Banner */}
+                  <div className="text-center mb-8">
+                    <div className="text-5xl mb-4">📊</div>
+                    <h2 className="text-2xl font-black text-white mb-2">Judging Results</h2>
+                    <div className={`inline-block px-6 py-2 rounded-full text-sm font-black uppercase tracking-widest mt-2 ${rawWinner === "pro" ? "bg-cyan-600/30 text-cyan-300 border border-cyan-500/30" : rawWinner === "con" ? "bg-fuchsia-600/30 text-fuchsia-300 border border-fuchsia-500/30" : "bg-gray-600/30 text-gray-300 border border-gray-500/30"}`}>
+                      {debateWinner} wins — {proTotal.toFixed(2)} vs {conTotal.toFixed(2)}
+                    </div>
                   </div>
-                )}
-              </div>
+
+                  {/* Score Overview */}
+                  <div className="p-8 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg mb-8">
+                    <div className="flex justify-between text-xs text-gray-500 mb-6">
+                      <span className="text-cyan-400 font-black uppercase tracking-widest">← Pro ({proPersona?.name})</span>
+                      <span className="text-fuchsia-400 font-black uppercase tracking-widest">Con ({conPersona?.name}) →</span>
+                    </div>
+                    <ScoreBar label="Logical Validity" weight="30%" proScore={proScores.logic ?? 0} conScore={conScores.logic ?? 0} />
+                    <ScoreBar label="Evidence Quality" weight="25%" proScore={proScores.evidence ?? 0} conScore={conScores.evidence ?? 0} />
+                    <ScoreBar label="Refutation Strength" weight="25%" proScore={proScores.refutation ?? 0} conScore={conScores.refutation ?? 0} />
+                    <ScoreBar label="Steelmanning Quality" weight="20%" proScore={proScores.steelman ?? 0} conScore={conScores.steelman ?? 0} />
+                    <div className="mt-6 pt-6 border-t border-white/10">
+                      <div className="flex justify-between items-center text-sm">
+                        <span className="text-gray-400 font-bold uppercase tracking-widest text-xs">Weighted Total</span>
+                        <span className="font-mono font-black text-lg">
+                          <span className="text-cyan-400">{proTotal.toFixed(2)}</span>
+                          <span className="text-gray-600 mx-2">vs</span>
+                          <span className="text-fuchsia-400">{conTotal.toFixed(2)}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Verdict Summary */}
+                  {judgeVerdict && (
+                    <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg mb-8">
+                      <div className="text-xs text-gray-500 mb-3 uppercase tracking-widest font-black">AI Judges Verdict</div>
+                      <p className="text-sm text-gray-300 leading-relaxed"><strong className="text-yellow-400">{debateWinner} wins.</strong> {judgeVerdict.summary}</p>
+                    </div>
+                  )}
+
+                  {/* Per-Judge Breakdown */}
+                  {judges.length > 0 && (
+                    <div className="mb-8">
+                      <h3 className="text-lg font-black text-white mb-4">Individual Judge Analysis</h3>
+                      <div className="space-y-4">
+                        {judges.map((judge, idx: number) => (
+                          <JudgeCard key={idx} judge={judge} />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Your Vote */}
+                  <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg">
+                    <div className="text-xs text-gray-500 mb-4 uppercase tracking-widest font-black">Your Vote</div>
+                    <div className="flex gap-3 mb-4">
+                      <button onClick={() => setUserVote("pro")} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "pro" ? "bg-cyan-600 text-white ring-2 ring-cyan-400/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"}`}>👍 Pro Wins</button>
+                      <button onClick={() => setUserVote("con")} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "con" ? "bg-fuchsia-600 text-white ring-2 ring-fuchsia-400/40 shadow-[0_0_20px_rgba(217,70,239,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"}`}>👍 Con Wins</button>
+                    </div>
+                    {userVote && (
+                      <div className="text-xs text-gray-400 p-4 bg-white/5 rounded-xl border border-white/10">
+                        <div className="font-black text-emerald-400 mb-1">Vote recorded! Thank you for your feedback.</div>
+                        Community vote tallies coming soon.
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -1379,7 +1480,7 @@ export default function DebatePage() {
       </main>
 
       {/* ─── Full Document Modal (root level for proper z-index) ─── */}
-      {docModal && <ResearchDocModal side={docModal} onClose={() => setDocModal(null)} />}
+      {docModal && <ResearchDocModal side={docModal} topicId={id} onClose={() => setDocModal(null)} />}
     </div>
   );
 }

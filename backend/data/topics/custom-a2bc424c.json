@@ -1,0 +1,44 @@
+{
+  "topic_id": "custom-a2bc424c",
+  "analysis": {
+    "resolution": "test",
+    "pro_position": "Testing is a necessary and beneficial practice that improves quality, identifies problems, and validates effectiveness across systems, products, and ideas. Rigorous testing protocols should be widely implemented and prioritized.",
+    "con_position": "Testing can be inefficient, costly, and counterproductive, often delaying innovation and creating false confidence while failing to catch real-world problems. Alternative approaches to validation may be more effective.",
+    "pro_dimensions": [
+      "Risk mitigation and safety assurance through systematic testing protocols",
+      "Quality improvement and defect identification before deployment or release",
+      "Cost-benefit analysis: upfront testing costs versus downstream failure expenses",
+      "Validation of claims, performance metrics, and functional requirements",
+      "Standardization and reproducibility across different contexts and users"
+    ],
+    "con_dimensions": [
+      "Opportunity costs and innovation delays from extended testing phases",
+      "Resource allocation inefficiency and diminishing returns on marginal testing",
+      "False sense of security from testing that cannot predict all real-world scenarios",
+      "Adaptive learning through iterative deployment versus pre-deployment validation",
+      "Context-specificity: when testing is unnecessary or counterproductive"
+    ],
+    "pro_values": [
+      "Safety and risk prevention",
+      "Reliability and trustworthiness",
+      "Accountability and due diligence"
+    ],
+    "con_values": [
+      "Efficiency and speed to market",
+      "Adaptive learning and real-world feedback",
+      "Resource optimization and pragmatism"
+    ],
+    "key_contested_facts": [
+      "What percentage of real-world failures are actually prevented by pre-deployment testing versus caught through other mechanisms?",
+      "How do testing costs compare to the actual expenses of failures in different domains?",
+      "Can testing adequately simulate complex real-world conditions, or is live deployment necessary for true validation?"
+    ],
+    "pro_persona_suggestion": "Quality Assurance Director or Safety Engineer with experience in high-stakes industries (aerospace, healthcare, infrastructure) where testing prevents catastrophic failures",
+    "con_persona_suggestion": "Startup founder or innovation strategist with experience in rapid iteration methodologies (Agile, lean startup) who can demonstrate success through minimal viable products and continuous deployment"
+  },
+  "prompts": {
+    "pro_prompt": "# Research Prompt: PRO Position on \"test\"\n\nI need deep, well-sourced research to build the strongest possible PRO case in a structured debate.\n\n**Resolution:** test\n\n## What I Need\n\nResearch the following argument dimensions in depth:\n1. Risk mitigation and safety assurance through systematic testing protocols\n2. Quality improvement and defect identification before deployment or release\n3. Cost-benefit analysis: upfront testing costs versus downstream failure expenses\n4. Validation of claims, performance metrics, and functional requirements\n5. Standardization and reproducibility across different contexts and users\n\nFor each dimension:\n- The core claim and the strongest evidence supporting it\n- Specific, citable sources (studies, data, reporting) with key findings\n- Evidence that anticipates and undermines the opposing side's likely counterarguments\n- An honest assessment of where this argument is weakest\n\n\n\n## Important\nIf the user has requested specific lines of argumentation above, you MUST include them — but do NOT limit your research to only those lines. They are starting points, not boundaries. Investigate those AND any other strong arguments, values, frameworks, or evidence that would strengthen the PRO case. The goal is the most comprehensive and compelling body of advocacy research possible.\n\n## Source Standards\n- Prioritize sources with strong methodology, specific data, and verifiable claims\n- Include both institutional and independent sources — judge on accuracy and   citation quality, not credentials\n- For each source, include: title, author/institution, date, and key finding\n\n## Style\nThis is advocacy research — go deep for the PRO position. Find the most compelling evidence available. Be thorough — no artificial limits on length or number of sources.\n\n## Values and Frameworks\nThe PRO position often appeals to:\nSafety and risk prevention, Reliability and trustworthiness, Accountability and due diligence\n\nUse these as framing guidance, but let the evidence drive the argument structure.\n\n## Output Format — CRITICAL\nOutput MUST be in structured Markdown. This will be parsed by AI debate agents.\n\nUse this structure:\n- Clear `## Argument N: Title` headers for each dimension\n- Under each argument: `### Core Claim`, `### Supporting Evidence`,   `### Anticipated Counter-Arguments`, `### Evidence Against Counter`,   `### Vulnerability Assessment`\n- ALL source citations as Markdown hyperlinks: `**[Source Title](URL)** (Author, Year): Finding`\n- End with a `## Source Bibliography` listing all sources as `[Title](URL) — Author, Year`\n\nEvery source MUST include a clickable URL so claims can be verified.\n",
+    "con_prompt": "# Research Prompt: CON Position on \"test\"\n\nI need deep, well-sourced research to build the strongest possible CON case in a structured debate.\n\n**Resolution:** test\n\n## What I Need\n\nResearch the following argument dimensions in depth:\n1. Opportunity costs and innovation delays from extended testing phases\n2. Resource allocation inefficiency and diminishing returns on marginal testing\n3. False sense of security from testing that cannot predict all real-world scenarios\n4. Adaptive learning through iterative deployment versus pre-deployment validation\n5. Context-specificity: when testing is unnecessary or counterproductive\n\nFor each dimension:\n- The core claim and the strongest evidence supporting it\n- Specific, citable sources (studies, data, reporting) with key findings\n- Evidence that anticipates and undermines the opposing side's likely counterarguments\n- An honest assessment of where this argument is weakest\n\n\n\n## Important\nIf the user has requested specific lines of argumentation above, you MUST include them — but do NOT limit your research to only those lines. They are starting points, not boundaries. Investigate those AND any other strong arguments, values, frameworks, or evidence that would strengthen the CON case. The goal is the most comprehensive and compelling body of advocacy research possible.\n\n## Source Standards\n- Prioritize sources with strong methodology, specific data, and verifiable claims\n- Include both institutional and independent sources — judge on accuracy and   citation quality, not credentials\n- For each source, include: title, author/institution, date, and key finding\n\n## Style\nThis is advocacy research — go deep for the CON position. Find the most compelling evidence available. Be thorough — no artificial limits on length or number of sources.\n\n## Values and Frameworks\nThe CON position often appeals to:\nEfficiency and speed to market, Adaptive learning and real-world feedback, Resource optimization and pragmatism\n\nUse these as framing guidance, but let the evidence drive the argument structure.\n\n## Output Format — CRITICAL\nOutput MUST be in structured Markdown. This will be parsed by AI debate agents.\n\nUse this structure:\n- Clear `## Argument N: Title` headers for each dimension\n- Under each argument: `### Core Claim`, `### Supporting Evidence`,   `### Anticipated Counter-Arguments`, `### Evidence Against Counter`,   `### Vulnerability Assessment`\n- ALL source citations as Markdown hyperlinks: `**[Source Title](URL)** (Author, Year): Finding`\n- End with a `## Source Bibliography` listing all sources as `[Title](URL) — Author, Year`\n\nEvery source MUST include a clickable URL so claims can be verified.\n"
+  },
+  "created_at": "2026-03-13T07:18:51.549048+00:00"
+}
