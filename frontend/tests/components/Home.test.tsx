@@ -1,8 +1,9 @@
 import "@testing-library/jest-dom";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import Home from "@/app/page";
 import { useRouter, useSearchParams } from "next/navigation";
 import { fetchPresetTopics } from "@/lib/api";
+import { useDebateStore } from "@/lib/store";
 
 // Mock next/navigation
 jest.mock("next/navigation", () => ({
@@ -24,8 +25,16 @@ jest.mock("@/lib/api", () => ({
   fetchPresetTopics: jest.fn(),
 }));
 
+// Mock Zustand store
+jest.mock("@/lib/store", () => ({
+  useDebateStore: jest.fn(),
+}));
+
+type MockStoreState = { topicTitle: string; setTopic: jest.Mock };
+
 const mockPush = jest.fn();
 const mockReplace = jest.fn();
+const mockSetTopic = jest.fn();
 
 describe("Landing Page", () => {
   beforeEach(() => {
@@ -34,6 +43,9 @@ describe("Landing Page", () => {
     (fetchPresetTopics as jest.Mock).mockResolvedValue([
       { id: "test-topic", title: "Test Topic", description: "", pro_position: "", con_position: "" },
     ]);
+    (useDebateStore as jest.Mock).mockImplementation((selector: (s: MockStoreState) => unknown) =>
+      selector({ topicTitle: "", setTopic: mockSetTopic })
+    );
     localStorage.clear();
   });
 
@@ -66,7 +78,9 @@ describe("Landing Page", () => {
     fireEvent.change(input, { target: { value: "Should pineapple go on pizza?" } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
 
-    const expectedReturnTo = encodeURIComponent("/?topic=Should%20pineapple%20go%20on%20pizza%3F");
+    const topicParams = new URLSearchParams();
+    topicParams.set("topic", "Should pineapple go on pizza?");
+    const expectedReturnTo = encodeURIComponent(`/?${topicParams.toString()}`);
     expect(mockPush).toHaveBeenCalledWith(`/auth?returnTo=${expectedReturnTo}`);
   });
 
@@ -93,5 +107,28 @@ describe("Landing Page", () => {
     fireEvent.keyDown(input, { key: "Enter", code: "Enter" });
 
     expect(mockPush).toHaveBeenCalledWith("/debates/new?topic=Who%20would%20win%2C%20Goku%20or%20Superman%3F");
+  });
+
+  it("syncs typed topic to URL via router.replace", () => {
+    render(<Home />);
+
+    const input = screen.getByPlaceholderText("Enter any debate topic or statement...");
+    fireEvent.change(input, { target: { value: "Is AI dangerous?" } });
+
+    const params = new URLSearchParams();
+    params.set("topic", "Is AI dangerous?");
+    expect(mockReplace).toHaveBeenCalledWith(`/?${params.toString()}`);
+  });
+
+  it("hydrates input from ?topic= URL parameter on mount", async () => {
+    const topicSearchParams = new URLSearchParams();
+    topicSearchParams.set("topic", "Is climate change real?");
+    (useSearchParams as jest.Mock).mockReturnValue(topicSearchParams);
+
+    render(<Home />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Enter any debate topic or statement...")).toHaveValue("Is climate change real?");
+    });
   });
 });
