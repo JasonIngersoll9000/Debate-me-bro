@@ -143,7 +143,7 @@ export async function fetchVoteTally(debateId: string, token: string | null): Pr
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}/votes/${debateId}`, {
+    const response = await fetch(`${API_BASE_URL}/api/votes/${debateId}`, {
       headers,
       cache: "no-store",
     });
@@ -159,7 +159,7 @@ export async function fetchVoteTally(debateId: string, token: string | null): Pr
 }
 
 export async function castVote(debateId: string, side: "pro" | "con", token: string): Promise<VoteTally> {
-  const response = await fetch(`${API_BASE_URL}/votes/`, {
+  const response = await fetch(`${API_BASE_URL}/api/votes/`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

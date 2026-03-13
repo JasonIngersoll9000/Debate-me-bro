@@ -19,7 +19,10 @@ app = FastAPI(
 async def global_exception_handler(request: Request, exc: Exception):
     """Catch-all so unhandled errors return JSON (with CORS headers) instead of bare 500."""
     logger.error("Unhandled exception on %s %s: %s\n%s", request.method, request.url.path, exc, traceback.format_exc())
-    return JSONResponse(status_code=500, content={"detail": str(exc)})
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "An internal server error occurred."},
+    )
 
 app.add_middleware(
     CORSMiddleware,
