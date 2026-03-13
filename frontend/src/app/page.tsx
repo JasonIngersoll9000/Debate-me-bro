@@ -51,7 +51,7 @@ export default function Home() {
       router.push(`/debates/new?topic=${encodeURIComponent(selectedTopic)}`);
     } else if (selectedTopic) {
       setStoreTopic(selectedTopic.id, selectedTopic.title);
-      router.push(`/debates/${selectedTopic.id}?demo=true`);
+      router.push(`/debates/${selectedTopic.id}`);
     } else {
       if (!topic.trim()) return;
       setStoreTopic("custom", topic);

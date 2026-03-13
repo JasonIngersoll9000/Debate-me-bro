@@ -9,6 +9,7 @@ import logging
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import HumanMessage
 
+from app.config import settings
 from app.models.schemas import Persona
 
 logger = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ async def generate_persona(
     Calls Claude Haiku to generate a dynamic persona tailored to this debate.
     Returns a structured Persona object.
     """
-    llm = ChatAnthropic(model_name="claude-3-haiku-20240307", temperature=0.7)
+    llm = ChatAnthropic(model_name=settings.persona_model, temperature=0.7, anthropic_api_key=settings.anthropic_api_key)
 
     prompt_text = PERSONA_GENERATION_PROMPT.format(
         resolution=resolution,

@@ -146,6 +146,13 @@ async def _replay_debate(cached: Dict[str, Any]) -> AsyncGenerator[str, None]:
         if is_internal:
             # Emit phase transition for internal phases
             yield f"data: {json.dumps({'type': 'phase_transition', 'phase': phase, 'phase_type': 'internal', 'speaker': side, 'message': f'Agents evaluating ({phase})...'})}\n\n"
+            # Also emit the internal content so frontend can show it
+            if text:
+                chunk_size = 200
+                for i in range(0, len(text), chunk_size):
+                    chunk = text[i:i + chunk_size]
+                    yield f"data: {json.dumps({'type': 'internal_content', 'phase': phase, 'speaker': side, 'chunk': chunk})}\n\n"
+                    await asyncio.sleep(0.005)
         else:
             # Emit phase transition
             yield f"data: {json.dumps({'type': 'phase_transition', 'phase': phase, 'phase_type': 'streamed', 'speaker': get_speaker(phase), 'message': f'Phase: {phase}'})}\n\n"
@@ -177,15 +184,24 @@ async def _replay_debate(cached: Dict[str, Any]) -> AsyncGenerator[str, None]:
 # LIVE: Generate a new debate via LangGraph and save to store
 # ═══════════════════════════════════════════════════════════════════════
 
-async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
+async def stream_debate_events(
+    debate_id: str, mode: str = "demo"
+) -> AsyncGenerator[str, None]:
     """
     Main entrypoint: checks cache first, replays if available, otherwise runs live.
+    If mode is "demo" and the debate is not cached, signals the frontend to use
+    its built-in mock engine instead of calling LLMs.
     """
-    # ── Check cache ──
+    # ── Check cache (always replays regardless of mode) ──
     cached = load_debate(debate_id)
     if cached and cached.get("status") == "completed":
         async for event in _replay_debate(cached):
             yield event
+        return
+
+    # ── Demo mode: tell frontend to run mock, no LLM calls ──
+    if mode == "demo":
+        yield f"data: {json.dumps({'type': 'mode', 'mode': 'demo'})}\n\n"
         return
 
     # ── Not cached — resolve topic info ──
@@ -217,7 +233,22 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
         logger.warning("No evidence files found for topic '%s'", debate_id)
         evidence_bundle_data = {"raw_content": "No pre-loaded evidence available.", "citations": {}}
 
-    yield f"data: {json.dumps({'type': 'evidence_loaded', 'topic': topic_title, 'resolution': resolution, 'pro_position': pro_position, 'con_position': con_position, 'citation_count': len(evidence_bundle_data.get('citations', {}))})}\n\n"
+    # Build serializable evidence payload for frontend
+    evidence_payload: Dict[str, Any] = {
+        "type": "evidence_loaded",
+        "topic": topic_title,
+        "resolution": resolution,
+        "pro_position": pro_position,
+        "con_position": con_position,
+        "citation_count": len(evidence_bundle_data.get("citations", {})),
+        "pro_arguments": evidence_bundle_data.get("pro_arguments", []),
+        "con_arguments": evidence_bundle_data.get("con_arguments", []),
+        "citations": {
+            k: (v.model_dump() if hasattr(v, "model_dump") else v)
+            for k, v in evidence_bundle_data.get("citations", {}).items()
+        },
+    }
+    yield f"data: {json.dumps(evidence_payload)}\n\n"
 
     # ── Generate personas ──
     try:
@@ -234,7 +265,7 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
         personas_data = {"pro": pro_persona.model_dump(), "con": con_persona.model_dump()}
         logger.info("Generated personas: Pro=%s, Con=%s", pro_persona.name, con_persona.name)
     except Exception as e:
-        logger.warning("Persona generation failed: %s", e)
+        logger.warning("Persona generation failed (%s): %s", type(e).__name__, e, exc_info=True)
         personas_data = {
             "pro": {"name": "Dr. A. Proctor", "identity": "An expert advocate.", "expertise_areas": [], "core_values": [], "rhetorical_approach": "Evidence-driven argumentation."},
             "con": {"name": "Dr. R. Counter", "identity": "An expert advocate.", "expertise_areas": [], "core_values": [], "rhetorical_approach": "Evidence-driven argumentation."},
@@ -306,26 +337,54 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
                         yield f"data: {json.dumps(payload)}\n\n"
 
             elif kind == "on_chat_model_stream":
-                if (
-                    current_node
-                    and current_node not in INTERNAL_PHASES
-                    and current_node != "judging"
-                ):
-                    chunk = event["data"]["chunk"].content
+                if current_node and current_node != "judging":
+                    raw_content = event["data"]["chunk"].content
+                    # Normalize to string: content may be a list of
+                    # structured blocks (e.g. Anthropic tool-use format)
+                    if isinstance(raw_content, str):
+                        chunk = raw_content
+                    elif isinstance(raw_content, list):
+                        chunk = "".join(
+                            block.get("text", "")
+                            if isinstance(block, dict)
+                            else (str(block) if block else "")
+                            for block in raw_content
+                        )
+                    else:
+                        chunk = str(raw_content) if raw_content else ""
                     if chunk:
-                        # Accumulate text for saving
-                        if current_node not in streamed_phases:
-                            streamed_phases[current_node] = ""
-                        streamed_phases[current_node] += chunk
+                        if current_node in INTERNAL_PHASES:
+                            # Stream internal phase content so frontend
+                            # can display agent thought processes.
+                            payload = {
+                                "type": "internal_content",
+                                "phase": current_node,
+                                "speaker": get_speaker(
+                                    current_node
+                                ),
+                                "chunk": chunk,
+                            }
+                            yield (
+                                f"data: {json.dumps(payload)}\n\n"
+                            )
+                        else:
+                            # Accumulate text for saving
+                            if current_node not in streamed_phases:
+                                streamed_phases[current_node] = ""
+                            streamed_phases[current_node] += chunk
 
-                        payload = {
-                            "type": "content",
-                            "phase": current_node,
-                            "phase_type": "streamed",
-                            "speaker": get_speaker(current_node),
-                            "chunk": chunk,
-                        }
-                        yield f"data: {json.dumps(payload)}\n\n"
+                            payload = {
+                                "type": "content",
+                                "phase": current_node,
+                                "phase_type": "streamed",
+                                "speaker": get_speaker(
+                                    current_node
+                                ),
+                                "chunk": chunk,
+                            }
+                            yield (
+                                f"data: {json.dumps(payload)}\n\n"
+                            )
 
             elif kind == "on_chain_end":
                 node_name = (
@@ -526,4 +585,9 @@ async def stream_debate_events(debate_id: str) -> AsyncGenerator[str, None]:
 
     except Exception:
         logger.exception("Error streaming debate %s", debate_id)
-        yield f"data: {json.dumps({'type': 'error', 'code': 'INTERNAL_ERROR', 'message': 'An unexpected error occurred while streaming the debate.'})}\n\n"
+        payload = {
+            "type": "error",
+            "code": "INTERNAL_ERROR",
+            "message": "An internal error occurred. Please try again.",
+        }
+        yield f"data: {json.dumps(payload)}\n\n"

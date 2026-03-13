@@ -237,8 +237,8 @@ Reform should be urgent. Reform should be universal. But reform should also be r
 ];
 
 export const MOCK_SCORES = {
-  pro: { logic: 4, evidence: 5, refutation: 4, steelman: 5 },
-  con: { logic: 5, evidence: 4, refutation: 5, steelman: 4 },
+  pro: { logic: 4, evidence: 5, refutation: 4, steelman: 5, weighted_total: 4.45 },
+  con: { logic: 5, evidence: 4, refutation: 5, steelman: 4, weighted_total: 4.55 },
 };
 
 // Phases the mock will walk through with timing (ms)

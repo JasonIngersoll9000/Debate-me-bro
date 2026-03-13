@@ -10,6 +10,7 @@ from typing import Dict, Any
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage
 
+from app.config import settings
 from app.models.schemas import DebateState, Persona
 from app.debate.prompts.system_prompt import build_agent_system_prompt
 from app.debate.prompts.research_consultation import RESEARCH_CONSULTATION_PROMPT
@@ -93,7 +94,11 @@ async def call_agent(state: DebateState, phase: str, role: str) -> str:
         phase: Current phase name (e.g. "opening_pro", "rebuttal_con")
         role: "pro" or "con"
     """
-    llm = ChatAnthropic(model_name="claude-sonnet-4-20250514", temperature=0.7)
+    llm = ChatAnthropic(
+        model_name=settings.debate_model,
+        temperature=0.7,
+        anthropic_api_key=settings.anthropic_api_key,
+    )
 
     # Build system prompt from structured Persona
     persona = get_persona(state, role)
@@ -108,48 +113,48 @@ async def call_agent(state: DebateState, phase: str, role: str) -> str:
     evidence_text = format_evidence(state)
     opponent_side = "con" if role == "pro" else "pro"
 
-    # Select the correct phase prompt
-    human_msg_content = ""
+    # Select the correct phase prompt (small, varies per phase)
+    phase_prompt = ""
     if phase == "research_consultation":
-        human_msg_content = (
-            RESEARCH_CONSULTATION_PROMPT
-            + "\n\n## Evidence Bundle\n\n" + evidence_text
-        )
+        phase_prompt = RESEARCH_CONSULTATION_PROMPT
     elif phase.startswith("opening"):
-        human_msg_content = (
-            OPENING_PROMPT
-            + "\n\n## Evidence Available\n\n" + evidence_text
-        )
+        phase_prompt = OPENING_PROMPT
     elif phase == "eval_openings":
         opponent_opening = get_last_opponent_turn(state, opponent_side)
-        human_msg_content = (
+        phase_prompt = (
             EVAL_OPENINGS_PROMPT
             + "\n\n## Opponent's Opening Statement\n\n" + opponent_opening
-            + "\n\n## Full Evidence Bundle\n\n" + evidence_text
         )
     elif phase.startswith("rebuttal"):
         opponent_turn = get_last_opponent_turn(state, opponent_side)
-        human_msg_content = (
+        phase_prompt = (
             REBUTTAL_PROMPT
             + "\n\n## Opponent's Previous Turn\n\n" + opponent_turn
-            + "\n\n## Evidence Available\n\n" + evidence_text
         )
     elif phase == "eval_full_debate":
-        human_msg_content = (
+        phase_prompt = (
             EVAL_FULL_DEBATE_PROMPT
             + "\n\n## Full Debate Transcript\n\n" + format_history(state)
         )
     elif phase.startswith("closing"):
-        human_msg_content = (
+        phase_prompt = (
             CLOSING_PROMPT
             + "\n\n## Full Debate Transcript\n\n" + format_history(state)
         )
     else:
-        human_msg_content = "Please provide your input for this phase."
+        phase_prompt = "Please provide your input for this phase."
 
+    # ── Prompt caching: cache the stable system prompt and large evidence
+    # bundle so subsequent calls for the same agent reuse cached tokens
+    # (cached reads don't count toward ITPM rate limits).
     messages = [
-        SystemMessage(content=sys_msg),
-        HumanMessage(content=human_msg_content),
+        SystemMessage(content=[
+            {"type": "text", "text": sys_msg, "cache_control": {"type": "ephemeral"}},
+        ]),
+        HumanMessage(content=[
+            {"type": "text", "text": "## Evidence Bundle\n\n" + evidence_text, "cache_control": {"type": "ephemeral"}},
+            {"type": "text", "text": phase_prompt},
+        ]),
     ]
 
     response = await llm.ainvoke(messages)

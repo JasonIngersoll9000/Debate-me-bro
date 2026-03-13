@@ -246,18 +246,21 @@ Every completed debate is saved so it can be replayed without re-running AI call
 **Labels:** `feature`, `priority: high`  
 **Milestone:** Sprint 2  
 **Assignee:** Jason  
-**Depends on:** #16
+**Depends on:** #16  
+**Status:** ✅ Complete
 
 #### Description
 Currently the debate view defaults to demo/mock mode. We need a clear toggle so the app can run real API calls when ready, while keeping demo mode available for showcasing without burning tokens.
 
 #### Acceptance Criteria
-- [ ] Environment variable `DEBATE_MODE=demo|live` controls whether debates run demo data or real LLM calls
-- [ ] When `DEBATE_MODE=live`, preset debates call the real LangGraph pipeline with Claude Sonnet
-- [ ] When `DEBATE_MODE=demo`, preset debates use the existing mock/demo stream (current behavior)
-- [ ] The stream endpoint accepts an optional `?mode=demo` query param to override per-request
-- [ ] Frontend shows a small indicator ("DEMO" badge or "LIVE" badge) so users know which mode they're in
-- [ ] If a debate is already cached (from a previous live run), it replays from cache regardless of mode
+- [x] Environment variable `DEBATE_MODE=demo|live` controls whether debates run demo data or real LLM calls
+- [x] When `DEBATE_MODE=live`, preset debates call the real LangGraph pipeline with Claude Sonnet
+- [x] When `DEBATE_MODE=demo`, preset debates use the existing mock/demo stream (current behavior)
+- [x] The stream endpoint accepts an optional `?mode=demo` query param to override per-request
+- [x] Frontend shows a small indicator ("DEMO" badge or "LIVE" badge) so users know which mode they're in
+- [x] If a debate is already cached (from a previous live run), it replays from cache regardless of mode
+- [x] Configurable model names via `DEBATE_MODEL` and `PERSONA_MODEL` env vars
+- [x] Anthropic prompt caching implemented to reduce ITPM on system prompts and evidence bundles
 
 ---
 
@@ -357,6 +360,57 @@ Protect API token spend by limiting how many new debates each user can generate.
 
 ---
 
+### Issue #23: Frontend debate UX overhaul (NEW)
+**Labels:** `feature`, `priority: high`  
+**Milestone:** Sprint 2  
+**Assignee:** Jason  
+**Depends on:** #17
+
+#### Description
+After running the first live debates, several UX gaps became apparent: phases auto-advance too quickly, markdown doesn't render in arguments, internal phases are invisible, evidence bundle uses mock data, personas appear silently, and judging lacks transparency. This issue addresses all 7 gaps in one cohesive overhaul.
+
+#### Sub-issues
+
+**23a. Pause between phases — Continue button in live mode**
+- [ ] Opening, rebuttal, and closing phases wait for user to click "Continue" before advancing
+- [ ] SSE events continue buffering in the background; only the displayed phase is gated
+- [ ] Internal phases (eval, research_consultation) auto-advance without user action
+
+**23b. Markdown rendering in argument cards**
+- [ ] Headings (`#`, `##`, `###`), lists (`-`), and horizontal rules (`---`) render as styled HTML
+- [ ] Existing citation badge and bold rendering preserved
+- [ ] StreamingText component updated
+
+**23c. Evaluation phases — show agent thought process**
+- [ ] Backend streams internal phase LLM chunks as `internal_content` SSE events
+- [ ] Frontend stores internal analysis and displays in StrategicAnalysisPanel
+- [ ] Users can toggle-view the strategic analysis for eval_openings and eval_full_debate
+
+**23d. Evidence bundle based on actual research**
+- [ ] Backend sends real evidence data (pro_arguments, con_arguments, citations) in `evidence_loaded` SSE event
+- [ ] Frontend displays real evidence in research phase instead of hardcoded mock data
+- [ ] Falls back to mock data only in demo mode
+
+**23e. Research consultation viewable via toggle**
+- [ ] Research consultation phase output viewable in the research phase UI
+- [ ] Toggle panel shows pro/con strategic analysis from the research consultation
+- [ ] Uses same `internal_content` SSE mechanism as evaluation phases
+
+**23f. Persona reveal animation + "Start Debate" button**
+- [ ] Persona interface expanded to include expertise_areas, core_values, rhetorical_approach
+- [ ] Animated persona reveal UI shown after personas are generated
+- [ ] Full persona details displayed: name, identity, expertise, values, approach
+- [ ] "Start Debate →" button gates progression to the debate phases
+
+**23g. Judging phase — transparency and per-judge breakdowns**
+- [ ] Backend synthesizes a summary from the 3 judges' individual reasoning
+- [ ] Frontend shows per-judge expandable cards with scores, reasoning, strongest/weakest moves
+- [ ] Uses backend `weighted_total` instead of re-computing on frontend
+- [ ] Score bars include per-judge contribution labels
+- [ ] Verdict explanation shows why the winner was chosen with supporting judge analysis
+
+---
+
 ## Sprint 3 Issues — AI-Powered Research + Custom Topics (Stretch)
 
 > **Goal:** Allow users to debate any topic by having the AI generate research automatically, or by bringing their own research. Requires the user to provide their own API key or pay.
@@ -436,6 +490,38 @@ When a user enters a custom debate topic, the system should help them refine it.
 - [ ] User can accept a suggestion, edit it, or keep their original
 - [ ] AI can suggest additional context or background that would improve the debate
 - [ ] Optional: suggest related but distinct debate angles the user might not have considered
+
+---
+
+### Issue #24: Persuasion / Argument Strength Judge (NEW)
+
+**Labels:** `feature`, `priority: medium`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+
+#### Description
+
+The current judging panel (Logic, Evidence, Engagement) evaluates **debating technique** — logical validity, source quality, refutation skill. None of the judges ask the fundamental question: **"Who actually made the more convincing case?"**
+
+Add a fourth judge — the **Persuasion Judge** — that reads both sides' complete arguments with no prior context or bias on the topic, and determines which side was more convincing based purely on the substance of their arguments.
+
+This judge differs from the existing three:
+- **Logic Judge** → formal validity and soundness of reasoning
+- **Evidence Judge** → source quality and citation practices
+- **Engagement Judge** → refutation strength and steelmanning technique
+- **Persuasion Judge (new)** → which side would convince a neutral, informed person
+
+#### Acceptance Criteria
+
+- [ ] New `persuasion_judge.py` prompt in `backend/app/judging/prompts/`
+- [ ] Judge receives the full debate transcript with NO topic background or pre-existing bias
+- [ ] Evaluates: strength of core thesis, persuasiveness of supporting arguments, how well each side addressed the other's points substantively (not technically)
+- [ ] Outputs structured JSON matching existing judge format (pro_score, con_score, winner, reasoning, strongest/weakest moves)
+- [ ] Position-swapped verification like existing judges (run twice with sides flipped, check consistency)
+- [ ] Integrated into `run_judging_panel` with appropriate weight (suggested: 20-25%, reducing others proportionally)
+- [ ] Frontend `JudgeCard` displays this judge alongside the existing three
+- [ ] Weighted total recalculated with 4-judge weights
+- [ ] Unit tests for the new judge prompt and scoring integration
 
 ---
 

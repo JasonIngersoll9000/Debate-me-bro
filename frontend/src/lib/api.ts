@@ -78,6 +78,21 @@ export interface DebateData {
   created_at: string;
 }
 
+export async function fetchDebateMode(): Promise<"demo" | "live"> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/debates/mode`, {
+      cache: "no-store",
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.mode === "live") return "live";
+    }
+  } catch {
+    // Fall back to demo if backend is unreachable
+  }
+  return "demo";
+}
+
 export async function fetchDebate(debateId: string): Promise<DebateData | null> {
   try {
     const response = await fetch(`${API_BASE_URL}/debates/${debateId}`, {

@@ -10,6 +10,7 @@ from typing import Dict, Any
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage
 
+from app.config import settings
 from app.judging.prompts.logic_judge import LOGIC_JUDGE_PROMPT
 from app.judging.prompts.evidence_judge import EVIDENCE_JUDGE_PROMPT
 from app.judging.prompts.engagement_judge import ENGAGEMENT_JUDGE_PROMPT
@@ -19,11 +20,21 @@ logger = logging.getLogger(__name__)
 
 async def _run_judge(judge_name: str, prompt: str, transcript: str) -> Dict[str, Any]:
     """Run a single judge and parse their JSON output."""
-    llm = ChatAnthropic(model_name="claude-sonnet-4-20250514", temperature=0.3)
+    llm = ChatAnthropic(
+        model_name=settings.debate_model,
+        temperature=0.3,
+        anthropic_api_key=settings.anthropic_api_key,
+    )
 
+    # Prompt caching: the transcript is identical across all 3 judges,
+    # so cache it to avoid counting those tokens toward ITPM 3 times.
     messages = [
-        SystemMessage(content=prompt),
-        HumanMessage(content=f"## Complete Debate Transcript\n\n{transcript}"),
+        SystemMessage(content=[
+            {"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}},
+        ]),
+        HumanMessage(content=[
+            {"type": "text", "text": f"## Complete Debate Transcript\n\n{transcript}", "cache_control": {"type": "ephemeral"}},
+        ]),
     ]
 
     response = await llm.ainvoke(messages)
@@ -94,6 +105,12 @@ async def run_judging_panel(transcript: str) -> Dict[str, Any]:
 
     winner = "pro" if pro_total > con_total else "con" if con_total > pro_total else "tie"
 
+    # Synthesize a summary from the 3 judges' individual reasoning
+    summary = _synthesize_summary(
+        winner, pro_total, con_total,
+        logic_result, evidence_result, engagement_result,
+    )
+
     return {
         "judges": [logic_result, evidence_result, engagement_result],
         "scores": {
@@ -113,4 +130,57 @@ async def run_judging_panel(transcript: str) -> Dict[str, Any]:
             },
         },
         "winner": winner,
+        "summary": summary,
     }
+
+
+def _synthesize_summary(
+    winner: str,
+    pro_total: float,
+    con_total: float,
+    logic_result: Dict[str, Any],
+    evidence_result: Dict[str, Any],
+    engagement_result: Dict[str, Any],
+) -> str:
+    """Build a coherent verdict summary from the 3 judges' individual results."""
+    w = "Pro" if winner == "pro" else "Con" if winner == "con" else "Neither side"
+    margin = abs(pro_total - con_total)
+    closeness = (
+        "by a razor-thin margin"
+        if margin < 0.3
+        else "by a moderate margin"
+        if margin < 0.8
+        else "decisively"
+    )
+
+    # Gather per-judge winners
+    logic_winner = logic_result.get("winner", "")
+    evidence_winner = evidence_result.get("winner", "")
+    engagement_winner = engagement_result.get("overall_winner", "")
+    judge_wins = {"pro": 0, "con": 0}
+    for jw in [logic_winner, evidence_winner, engagement_winner]:
+        if jw in judge_wins:
+            judge_wins[jw] += 1
+    consistency = judge_wins.get(winner, 0)
+    consistency_note = (
+        f"All 3 judges agreed."
+        if consistency == 3
+        else f"{consistency}/3 judges favored {w}."
+    )
+
+    # Per-criterion highlights
+    parts = [f"{w} wins {closeness} ({pro_total:.2f} vs {con_total:.2f}). {consistency_note}"]
+
+    logic_expl = logic_result.get("winner_explanation", "")
+    if logic_expl:
+        parts.append(f"Logic (30%): {logic_expl}")
+
+    evidence_expl = evidence_result.get("winner_explanation", "")
+    if evidence_expl:
+        parts.append(f"Evidence (25%): {evidence_expl}")
+
+    engagement_expl = engagement_result.get("winner_explanation", "")
+    if engagement_expl:
+        parts.append(f"Engagement (45%): {engagement_expl}")
+
+    return " ".join(parts)

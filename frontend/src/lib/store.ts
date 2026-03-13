@@ -16,6 +16,21 @@ export interface DebateTurn {
 export interface Persona {
   name: string;
   role: string;
+  expertise_areas?: string[];
+  core_values?: string[];
+  rhetorical_approach?: string;
+}
+
+export interface EvidenceArgument {
+  title: string;
+  key_stats?: string[];
+  sources?: string[];
+}
+
+export interface EvidenceBundle {
+  proArguments: EvidenceArgument[];
+  conArguments: EvidenceArgument[];
+  citations: Record<string, { title: string; url?: string; author?: string; year?: string; finding?: string }>;
 }
 
 export const DEBATE_PHASES = [
@@ -33,10 +48,24 @@ export interface JudgingScores {
   con: { logic: number; evidence: number; refutation: number; steelman: number; weighted_total?: number };
 }
 
+export interface JudgeResult {
+  judge_name?: string;
+  pro_score?: number;
+  con_score?: number;
+  winner?: string;
+  overall_winner?: string;
+  winner_explanation?: string;
+  reasoning?: string;
+  pro_strongest_move?: string;
+  con_strongest_move?: string;
+  pro_weakest_move?: string;
+  con_weakest_move?: string;
+}
+
 export interface JudgingResults {
   winner: string;
   scores: JudgingScores;
-  judges?: Array<{ name: string; reasoning: string }>;
+  judges?: JudgeResult[];
   summary?: string;
 }
 
@@ -58,6 +87,7 @@ export interface DebateState {
   proPersona: Persona | null;
   conPersona: Persona | null;
   judgingResults: JudgingResults | null;
+  evidenceBundle: EvidenceBundle | null;
   isFromCache: boolean;
   
   setTopic: (id: string, title: string) => void;
@@ -70,6 +100,7 @@ export interface DebateState {
   markPhaseComplete: (phase: string) => void;
   setStreaming: (isStreaming: boolean) => void;
   setJudgingResults: (results: JudgingResults) => void;
+  setEvidenceBundle: (bundle: EvidenceBundle) => void;
   setIsFromCache: (cached: boolean) => void;
   reset: () => void;
 }
@@ -86,6 +117,7 @@ export const useDebateStore = create<DebateState>((set) => ({
   proPersona: null,
   conPersona: null,
   judgingResults: null,
+  evidenceBundle: null,
   isFromCache: false,
   
   setTopic: (id, title) => set({ topicId: id, topicTitle: title }),
@@ -130,6 +162,8 @@ export const useDebateStore = create<DebateState>((set) => ({
   
   setJudgingResults: (results) => set({ judgingResults: results }),
   
+  setEvidenceBundle: (bundle) => set({ evidenceBundle: bundle }),
+  
   setIsFromCache: (cached) => set({ isFromCache: cached }),
   
   reset: () => set({
@@ -144,6 +178,7 @@ export const useDebateStore = create<DebateState>((set) => ({
     proPersona: null,
     conPersona: null,
     judgingResults: null,
+    evidenceBundle: null,
     isFromCache: false,
   }),
 }));
