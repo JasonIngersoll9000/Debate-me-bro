@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: debatemebro-api
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DEBATE_MODE
+        value: live
+      - key: DEBATE_MODEL
+        value: claude-sonnet-4-20250514
+      - key: PERSONA_MODEL
+        value: claude-haiku-4-20250514
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.12.0"

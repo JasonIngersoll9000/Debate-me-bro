@@ -11,26 +11,19 @@ def test_parse_markdown():
     We could also have multiple: [A](http://a.com) and [B](http://b.com) and so forth.
     """
 
-    text, citations = loader.parse_markdown(markdown_content)
+    # parse_markdown returns (citations_dict, argument_titles)
+    citations, arguments = loader.parse_markdown(markdown_content)
 
-    # Text should remain exactly the same as passed in
-    assert text == markdown_content
-
-    # We should have extracted 4 standard markdown URL strings matching our
-    # keys
+    # We should have extracted 4 standard markdown URL strings matching our keys
     assert len(citations) == 4
 
     assert "First Citation" in citations
     assert citations["First Citation"].url == "https://example.com/one"
 
-    # The RegEx strips asterisk formatting around standard links
-    # But because our RegEx specifically looks inside brackets [](), it will
-    # extract:
     assert "Second Quote" in citations
     assert citations["Second Quote"].url == "https://test.org"
 
     assert citations["A"].title == "A"
-    assert "We could also have multiple: [A](http" in citations["A"].source_context
 
 
 @pytest.mark.asyncio

@@ -8,8 +8,9 @@ from app.main import app
 
 
 @pytest.mark.asyncio
+@patch("app.judging.panel.run_judging_panel")
 @patch("app.debate.graph.call_agent")
-async def test_sse_streaming_endpoint(mock_call_agent):
+async def test_sse_streaming_endpoint(mock_call_agent, mock_judging):
     """
     Tests the /api/debates/{id}/stream endpoint for correct SSE format
     and phase transition events.

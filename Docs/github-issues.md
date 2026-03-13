@@ -28,11 +28,14 @@
 ✅ #16 Debate Persistence + Caching
 ✅ #17 Demo Mode Toggle + Live API Integration
 ✅ #23 Frontend Debate UX Overhaul (7 sub-issues)
+✅ #18 Topic Input Bug Fix (topic persists via URL param + Zustand store)
+✅ #19 Public Debate Browsing + Likes (browse page + like API + frontend all implemented)
+✅ #14 Human Voting System (backend + frontend wired to API)
 ⚠️ #15 Dashboard (partial — needs vote display, polish)
-❌ #18 Topic Input Bug Fix
-❌ #19 Public Debate Browsing + Likes
-❌ #14 Human Voting System
 ❌ #20 API Usage Cap
+✅ #29 Phase gating fixed (Continue button on all user phases including research)
+✅ #30 Browse page likes functional (toggle like API + optimistic UI)
+⚠️ #31 Judging metrics display (ScoreBar clamped, votes wired; 0/0 explanation pending)
 ```
 
 ### Sprint 3 — Recommended Priority Order
@@ -278,16 +281,17 @@ Currently the debate view defaults to demo/mock mode. We need a clear toggle so 
 **Labels:** `bug`, `priority: high`  
 **Milestone:** Sprint 2  
 **Assignee:** Shuai  
-**Depends on:** #8
+**Depends on:** #8  
+**Status:** ✅ Complete
 
 #### Description
 When a user types a custom topic in the input field on the landing page and clicks "Debate It →", the text doesn't persist through navigation. They arrive at the next page with an empty input and must retype their topic.
 
 #### Acceptance Criteria
-- [ ] Custom topic text entered on landing page persists through navigation to `/debates/new`
-- [ ] Topic is passed via URL query param AND stored in Zustand store
-- [ ] The `/debates/new` page reads the topic from the query param and pre-fills the resolution field
-- [ ] Pressing Enter in the landing page input also preserves the text
+- [x] Custom topic text entered on landing page persists through navigation to `/debates/new`
+- [x] Topic is passed via URL query param AND stored in Zustand store
+- [x] The `/debates/new` page reads the topic from the query param and pre-fills the resolution field
+- [x] Pressing Enter in the landing page input also preserves the text
 
 ---
 
@@ -295,19 +299,20 @@ When a user types a custom topic in the input field on the landing page and clic
 **Labels:** `feature`, `priority: medium`  
 **Milestone:** Sprint 2  
 **Assignee:** Shuai  
-**Depends on:** #16
+**Depends on:** #16  
+**Status:** ✅ Complete
 
 #### Description
 All completed debates are publicly browseable. Users can "like" debates they find interesting, surfacing the best debates for the community.
 
 #### Acceptance Criteria
-- [ ] Landing page or `/browse` shows all completed debates as cards (topic, resolution, winner, scores)
-- [ ] Cards sorted by most recent, with option to sort by most liked
-- [ ] Authenticated users can "like" a debate (one like per user per debate)
-- [ ] `POST /api/debates/{id}/like` — toggle like (auth required)
-- [ ] `GET /api/debates/` returns `like_count` in each debate summary
-- [ ] Like count displayed on debate cards and detail view
-- [ ] Unauthenticated users can browse but not like
+- [x] Landing page or `/browse` shows all completed debates as cards (topic, resolution, winner, scores)
+- [x] Cards sorted by most recent, with option to sort by most liked
+- [x] Authenticated users can "like" a debate (one like per user per debate)
+- [x] `POST /api/debates/{id}/like` — toggle like (auth required)
+- [x] `GET /api/debates/` returns `like_count` in each debate summary
+- [x] Like count displayed on debate cards and detail view
+- [x] Unauthenticated users can browse but not like
 
 ---
 
@@ -315,16 +320,17 @@ All completed debates are publicly browseable. Users can "like" debates they fin
 **Labels:** `feature`, `priority: medium`  
 **Milestone:** Sprint 2  
 **Assignee:** Shuai  
-**Depends on:** #3, #10
+**Depends on:** #3, #10  
+**Status:** ⚠️ Partial — backend + frontend voting works; dynamic weighting and combined winner not yet implemented
 
 #### Description
 Authenticated users vote on debate winners, displayed alongside AI judge scores with dynamic weighting.
 
 #### Acceptance Criteria
-- [ ] `POST /votes` — authenticated users cast Pro or Con vote
-- [ ] One vote per user per debate
-- [ ] `GET /votes/{debate_id}` returns tallies
-- [ ] Vote buttons in judging results panel
+- [x] `POST /votes` — authenticated users cast Pro or Con vote
+- [x] One vote per user per debate
+- [x] `GET /votes/{debate_id}` returns tallies
+- [x] Vote buttons in judging results panel
 - [ ] Dynamic weighting: AI-heavy (70/30) with few votes → human-heavy (40/60) at 20+ votes
 - [ ] Combined winner displayed
 - [ ] Integration tests (auth required, one vote per user)
@@ -732,3 +738,69 @@ Create a dedicated, in-depth explanation page (accessible from the landing page 
 - [ ] Link from landing page (prominent CTA or nav link)
 - [ ] Content is written in engaging, accessible prose — not dry technical documentation
 - [ ] SEO-friendly: proper meta tags, headings, and page title
+
+---
+
+### Issue #29: Phase Gating Incomplete — Continue Button Missing on Most Phases
+
+**Labels:** `bug`, `priority: high`, `frontend`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+**Status:** ✅ Fixed
+
+#### Description
+
+The phase gating system (Continue button between phases) currently only gates correctly on evaluation phases. The research, opening statement, and rebuttal phases still auto-advance before the user has time to read them. Every phase transition should present a Continue button so the user controls the pacing of the debate.
+
+#### Acceptance Criteria
+
+- [x] Continue button appears after **every** phase completes (research, opening_pro, opening_con, rebuttal_pro, rebuttal_con, closing_pro, closing_con)
+- [x] Internal phases (eval_openings, eval_full_debate, research_consultation) auto-advance without a Continue button
+- [x] SSE content continues buffering in background while user reads current phase
+- [x] Phase gating works consistently for both live and cached debate replay
+- [x] No phase content is lost or skipped when the user clicks Continue
+
+---
+
+### Issue #30: Browse Debates Page — Likes Not Functional
+
+**Labels:** `bug`, `priority: medium`, `frontend`, `backend`
+**Milestone:** Sprint 3
+**Assignee:** Shuai
+**Status:** ✅ Fixed — was actually already implemented; verified during audit
+
+#### Description
+
+The `/browse` page exists and displays completed debate cards, but the like functionality does not work. Like buttons are present in the UI but clicking them has no effect — the backend `POST /api/debates/{id}/like` endpoint is not implemented, and the frontend click handler is not wired to any API call.
+
+#### Acceptance Criteria
+
+- [x] `POST /api/debates/{id}/like` endpoint implemented (auth required, toggles like)
+- [x] `GET /api/debates/` returns `like_count` for each debate
+- [x] Frontend like button calls the API and updates the count optimistically
+- [x] Unauthenticated users see like counts but cannot click to like (button disabled or prompts login)
+- [x] Like state persists across page refreshes
+- [x] Duplicate likes by the same user are prevented (toggle behavior)
+
+---
+
+### Issue #31: Judging Metrics Display Issues
+
+**Labels:** `bug`, `priority: medium`, `frontend`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+**Status:** ⚠️ Partially fixed — ScoreBar width clamped, vote buttons wired to API; 0/0 explanation still pending
+
+#### Description
+
+The judging results panel has several visual and data display issues that reduce the clarity and trustworthiness of the AI judging output. Score bars sometimes don't align with actual scores, per-judge breakdowns can show inconsistent data, and the overall presentation needs polish to match the quality of the rest of the debate UI.
+
+#### Acceptance Criteria
+
+- [x] Score bars accurately reflect weighted_total values for both pro and con
+- [x] Per-judge expandable cards show consistent scores that sum to the displayed totals
+- [ ] No 0/0 scores displayed without explanation
+- [x] Winner banner correctly reflects the actual score comparison
+- [x] Verdict summary text is coherent and references the actual judge reasoning
+- [x] Loading state ("Judges Are Deliberating") works reliably until all judge data arrives
+- [x] Score bar gradients, widths, and labels are visually correct on all screen sizes

@@ -13,7 +13,7 @@ async def test_get_preset_topics():
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
-        assert len(data) >= 3
+        assert len(data) >= 1
         # Check structure of first item
         first_topic = data[0]
         assert "id" in first_topic

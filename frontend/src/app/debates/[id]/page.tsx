@@ -26,10 +26,10 @@ function ScoreBar({ label, weight, proScore, conScore }: { label: string; weight
       </div>
       <div className="flex gap-1 h-3 rounded-full overflow-hidden">
         <div className="flex-1 bg-slate-800 rounded-l-full overflow-hidden flex justify-end">
-          <div className="bg-gradient-to-l from-cyan-400 to-cyan-600 transition-all duration-1000 rounded-l-full" style={{ width: `${proScore * 20}%` }} />
+          <div className="bg-gradient-to-l from-cyan-400 to-cyan-600 transition-all duration-1000 rounded-l-full" style={{ width: `${Math.min(proScore * 20, 100)}%` }} />
         </div>
         <div className="flex-1 bg-slate-800 rounded-r-full overflow-hidden">
-          <div className="bg-gradient-to-r from-fuchsia-400 to-fuchsia-600 transition-all duration-1000 rounded-r-full" style={{ width: `${conScore * 20}%` }} />
+          <div className="bg-gradient-to-r from-fuchsia-400 to-fuchsia-600 transition-all duration-1000 rounded-r-full" style={{ width: `${Math.min(conScore * 20, 100)}%` }} />
         </div>
       </div>
     </div>
@@ -858,12 +858,9 @@ export default function DebatePage() {
         setStreaming(true);
 
         // Phase gating: for user-facing content phases, don't auto-advance
-        const USER_PHASES = ["opening", "rebuttal", "closing"];
-        // Gate the opening phase if personas haven't been acknowledged yet,
-        // or gate rebuttal/closing so user must click Continue.
-        // NOTE: We gate ALL user phases after opening regardless of what the
-        // previous phase was, because internal phases (eval_openings, etc.)
-        // would otherwise break the prev-phase chain and skip the gate.
+        const USER_PHASES = ["research", "opening", "rebuttal", "closing"];
+        // Gate ALL user-facing phases so the user controls pacing.
+        // Opening gates for persona reveal; all others gate with Continue.
         const gateForPersona = mp === "opening" && !personaRevealedRef.current;
         const gateForContinue = USER_PHASES.includes(mp) && mp !== "opening";
         if (gateForPersona || gateForContinue) {
@@ -891,7 +888,7 @@ export default function DebatePage() {
 
         // Phase gating for content events (backend doesn't send phase_transition for content phases)
         const USER_PHASES = ["opening", "rebuttal", "closing"];
-        if (mp !== lastContentPhase && lastContentPhase !== "" && USER_PHASES.includes(mp) && mp !== "opening") {
+        if (mp !== lastContentPhase && lastContentPhase !== "" && USER_PHASES.includes(mp)) {
           // New user phase detected in content stream — gate it
           if (!pendingPhaseRef.current) {
             // Mark old content phase complete
@@ -958,37 +955,34 @@ export default function DebatePage() {
     // Custom topics always run live — they have real uploaded evidence
     const isCustomTopic = id.startsWith("custom-");
 
-    // If user already triggered demo (via URL param or fallback), skip mode fetch
-    if (isDemoMode && !isCustomTopic) {
-      setServerMode("demo");
-      runMockDebate();
-      return () => {
-        cancelled = true;
-        mockAbortRef.current = true;
-        eventSourceRef.current?.close();
-        useDebateStore.getState().reset();
-      };
-    }
-
-    // Fetch server mode, then check cache, then connect
-    fetchDebateMode().then((mode) => {
+    // Always check cache first — a previously completed live debate should
+    // be shown even if the user arrived via a demo link or the server is in
+    // demo mode.  Only fall back to demo/SSE when no cache exists.
+    fetchDebate(id).then((cached) => {
       if (cancelled) return;
-      setServerMode(mode);
-
-      if (mode === "demo" && !isCustomTopic) {
-        // Server says demo — run mock engine directly
-        setIsDemoMode(true);
+      if (cached && cached.status === "completed") {
+        loadCachedDebate(cached);
         return;
       }
 
-      // Live mode: check cache first, then SSE
-      fetchDebate(id).then((cached) => {
+      // No cache — check server mode
+      if (isDemoMode && !isCustomTopic) {
+        setServerMode("demo");
+        runMockDebate();
+        return;
+      }
+
+      fetchDebateMode().then((mode) => {
         if (cancelled) return;
-        if (cached && cached.status === "completed") {
-          loadCachedDebate(cached);
-        } else {
-          connectSSE();
+        setServerMode(mode);
+
+        if (mode === "demo" && !isCustomTopic) {
+          setIsDemoMode(true);
+          return;
         }
+
+        // Live mode — connect SSE
+        connectSSE();
       });
     });
 
@@ -1013,7 +1007,7 @@ export default function DebatePage() {
             setUserVote(tally.user_vote as "pro" | "con");
           }
         }
-      });
+      }).catch(() => {});
     }
   }, [activePhase, id]);
 
@@ -1407,13 +1401,13 @@ export default function DebatePage() {
                   <div className="p-6 rounded-[2rem] bg-white/[0.03] backdrop-blur-3xl border border-white/10 shadow-lg">
                     <div className="text-xs text-gray-500 mb-4 uppercase tracking-widest font-black">Your Vote</div>
                     <div className="flex gap-3 mb-4">
-                      <button onClick={() => setUserVote("pro")} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "pro" ? "bg-cyan-600 text-white ring-2 ring-cyan-400/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"}`}>👍 Pro Wins</button>
-                      <button onClick={() => setUserVote("con")} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "con" ? "bg-fuchsia-600 text-white ring-2 ring-fuchsia-400/40 shadow-[0_0_20px_rgba(217,70,239,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"}`}>👍 Con Wins</button>
+                      <button onClick={() => handleVote("pro")} disabled={isVoting || !!userVote} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "pro" ? "bg-cyan-600 text-white ring-2 ring-cyan-400/40 shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"} ${(isVoting || !!userVote) ? "opacity-60 cursor-not-allowed" : ""}`}>👍 Pro Wins</button>
+                      <button onClick={() => handleVote("con")} disabled={isVoting || !!userVote} className={`flex-1 py-3 rounded-xl text-sm font-black transition-all ${userVote === "con" ? "bg-fuchsia-600 text-white ring-2 ring-fuchsia-400/40 shadow-[0_0_20px_rgba(217,70,239,0.3)]" : "bg-white/5 text-gray-400 hover:bg-white/10 border border-white/10"} ${(isVoting || !!userVote) ? "opacity-60 cursor-not-allowed" : ""}`}>👍 Con Wins</button>
                     </div>
                     {userVote && (
                       <div className="text-xs text-gray-400 p-4 bg-white/5 rounded-xl border border-white/10">
                         <div className="font-black text-emerald-400 mb-1">Vote recorded! Thank you for your feedback.</div>
-                        Community vote tallies coming soon.
+                        {voteTally && <span>Community: {voteTally.pro_votes} Pro · {voteTally.con_votes} Con ({voteTally.total_votes} total)</span>}
                       </div>
                     )}
                   </div>
