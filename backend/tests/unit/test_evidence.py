@@ -12,7 +12,7 @@ def test_parse_markdown():
     """
 
     # parse_markdown returns (citations_dict, argument_titles)
-    citations, arguments = loader.parse_markdown(markdown_content)
+    citations, _arguments = loader.parse_markdown(markdown_content)
 
     # We should have extracted 4 standard markdown URL strings matching our keys
     assert len(citations) == 4

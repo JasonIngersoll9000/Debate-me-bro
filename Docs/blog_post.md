@@ -142,7 +142,7 @@ The meta-experience of using AI to build an AI debate platform gave us unique in
 
 Jason and Shuai divided the work along architectural lines. Jason owned the backend debate pipeline (LangGraph state machine, agent prompts, SSE streaming, judging panel) and the frontend debate view (the 1,500+ line page that renders the entire debate experience). Shuai built the authentication system (register, login, JWT, protected routes), the voting system (backend + frontend), the dashboard, and the browse page.
 
-We used GitHub Issues with detailed acceptance criteria for every feature, organized into two sprints with documented planning, execution, and retrospectives. Sprint 1 delivered the core infrastructure (10 issues, all completed). Sprint 2 focused on live API integration and UX polish (8 issues, 3 completed including a massive 7-sub-issue UX overhaul). We also useproper PR methods, checking out to a new branch per issue, and merging only after review.
+We used GitHub Issues with detailed acceptance criteria for every feature, organized into two sprints with documented planning, execution, and retrospectives. Sprint 1 delivered the core infrastructure (10 issues, all completed). Sprint 2 focused on live API integration and UX polish (8 issues, 3 completed including a massive 7-sub-issue UX overhaul). We also use proper PR methods, checking out to a new branch per issue, and merging only after review.
 
 Our retrospective process was genuinely useful — not just ceremony. After Sprint 1, we identified that starting with demo/mock mode had masked real integration issues. After Sprint 2, we documented that the monolithic UX overhaul (Issue #23) should have been split into smaller PRs. These insights directly informed how we approached subsequent work.
 

@@ -407,6 +407,10 @@ function ResearchCard({ side, sections }: { side: "pro" | "con"; sections: typeo
 }
 
 /* ─── Utilities ─── */
+
+/** Phases that require user interaction before advancing (user-facing content phases). */
+const USER_PHASES = ["research", "opening", "rebuttal", "closing"];
+
 function mapPhase(bp: string): string {
   if (!bp) return "research";
   if (bp.startsWith("opening")) return "opening";
@@ -857,12 +861,14 @@ export default function DebatePage() {
         setPhaseTransitionMsg(data.message);
         setStreaming(true);
 
-        // Phase gating: for user-facing content phases, don't auto-advance
-        const USER_PHASES = ["research", "opening", "rebuttal", "closing"];
+        // Phase gating: for user-facing content phases, don't auto-advance.
+        // Exclude internal phases (e.g. research_consultation maps to "research"
+        // but must auto-advance without user interaction).
         // Gate ALL user-facing phases so the user controls pacing.
         // Opening gates for persona reveal; all others gate with Continue.
         const gateForPersona = mp === "opening" && !personaRevealedRef.current;
-        const gateForContinue = USER_PHASES.includes(mp) && mp !== "opening";
+        const gateForContinue =
+          USER_PHASES.includes(mp) && mp !== "opening" && data.phase_type !== "internal";
         if (gateForPersona || gateForContinue) {
           // Previous phase just ended, new one starting — gate it
           setPendingPhase(mp);
@@ -887,7 +893,6 @@ export default function DebatePage() {
         appendStreamToken(side, mp, data.chunk || "");
 
         // Phase gating for content events (backend doesn't send phase_transition for content phases)
-        const USER_PHASES = ["opening", "rebuttal", "closing"];
         if (mp !== lastContentPhase && lastContentPhase !== "" && USER_PHASES.includes(mp)) {
           // New user phase detected in content stream — gate it
           if (!pendingPhaseRef.current) {
@@ -974,7 +979,9 @@ export default function DebatePage() {
 
       fetchDebateMode().then((mode) => {
         if (cancelled) return;
-        setServerMode(mode);
+        // Custom topics always run live — never pass demo mode to SSE
+        const effectiveMode = isCustomTopic ? "live" : mode;
+        setServerMode(effectiveMode);
 
         if (mode === "demo" && !isCustomTopic) {
           setIsDemoMode(true);
