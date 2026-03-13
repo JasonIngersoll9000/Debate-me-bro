@@ -44,7 +44,7 @@ Project idea must be approved by the professor on the **#projects** Slack channe
 
 1. GitHub repository
 2. Deployed app (production URL)
-3. Eval dashboard (live or screenshots) - professor:"For eval dashboard what I would submit is a document (preferrably pdf maybe md, HTML) that shows the results of running your test suite (npm run test)"
+3. Eval dashboard (live or screenshots) - professor:"For eval dashboard what I would submit is a document (preferably pdf maybe md, HTML) that shows the results of running your test suite (npm run test)"
 4. Complete documentation package
 5. 10-minute demo video
 6. 1500-word technical blog post
