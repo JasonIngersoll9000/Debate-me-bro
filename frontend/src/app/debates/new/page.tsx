@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useDebateStore } from "@/lib/store";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -19,7 +20,7 @@ interface TopicAnalysis {
 
 type Step = "input" | "research" | "upload";
 
-export default function NewDebatePage() {
+function NewDebatePageInner() {
   const [step, setStep] = useState<Step>("input");
   const [resolution, setResolution] = useState("");
   const [context, setContext] = useState("");
@@ -34,6 +35,18 @@ export default function NewDebatePage() {
   const proFileRef = useRef<HTMLInputElement>(null);
   const conFileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const setStoreTopic = useDebateStore((state) => state.setTopic);
+
+  useEffect(() => {
+    const t = (searchParams.get("topic") || "").trim();
+    if (!t) return;
+    if (!resolution.trim()) {
+      setResolution(t);
+    }
+    setStoreTopic("custom", t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleAnalyze = async () => {
     if (!resolution.trim()) return;
@@ -379,5 +392,13 @@ export default function NewDebatePage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function NewDebatePage() {
+  return (
+    <Suspense>
+      <NewDebatePageInner />
+    </Suspense>
   );
 }

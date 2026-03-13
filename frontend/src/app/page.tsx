@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { fetchPresetTopics, PresetTopic } from "@/lib/api";
 import { useDebateStore } from "@/lib/store";
 
-export default function Home() {
+function HomeInner() {
   const [topic, setTopic] = useState("");
   const [presets, setPresets] = useState<PresetTopic[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,7 +15,23 @@ export default function Home() {
   const topicInputRef = useRef<HTMLInputElement>(null);
 
   const router = useRouter();
+  const searchParams = useSearchParams();
   const setStoreTopic = useDebateStore((state) => state.setTopic);
+  const storeTopicTitle = useDebateStore((state) => state.topicTitle);
+
+  const queryTopic = useMemo(() => searchParams.get("topic") || "", [searchParams]);
+
+  const buildHomeUrlWithTopic = (t: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    const trimmed = t.trim();
+    if (trimmed) params.set("topic", trimmed);
+    else params.delete("topic");
+    const qs = params.toString();
+    return qs ? `/?${qs}` : "/";
+  };
+
+  const buildAuthReturnToUrl = (returnTo: string) =>
+    `/auth?returnTo=${encodeURIComponent(returnTo)}`;
 
   useEffect(() => {
     // Check auth state
@@ -31,6 +47,21 @@ export default function Home() {
       .catch(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    // Initialize from URL (?topic=...) first, then fall back to store.
+    if (queryTopic) {
+      setTopic(queryTopic);
+      setStoreTopic("custom", queryTopic);
+      return;
+    }
+    if (storeTopicTitle && storeTopicTitle !== topic) {
+      setTopic(storeTopicTitle);
+      const nextUrl = buildHomeUrlWithTopic(storeTopicTitle);
+      router.replace(nextUrl);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [queryTopic, storeTopicTitle]);
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user_email");
@@ -41,7 +72,22 @@ export default function Home() {
   const handleStartDebate = (selectedTopic?: PresetTopic | string) => {
     // Require sign-in to debate
     if (!isLoggedIn) {
-      router.push("/auth");
+      if (typeof selectedTopic === "string") {
+        const t = selectedTopic.trim();
+        if (!t) return;
+        const returnTo = buildHomeUrlWithTopic(t);
+        router.push(buildAuthReturnToUrl(returnTo));
+        return;
+      }
+      if (selectedTopic) {
+        const returnTo = `/debates/${selectedTopic.id}?demo=true`;
+        router.push(buildAuthReturnToUrl(returnTo));
+        return;
+      }
+      const t = topic.trim();
+      if (!t) return;
+      const returnTo = buildHomeUrlWithTopic(t);
+      router.push(buildAuthReturnToUrl(returnTo));
       return;
     }
 
@@ -51,7 +97,7 @@ export default function Home() {
       router.push(`/debates/new?topic=${encodeURIComponent(selectedTopic)}`);
     } else if (selectedTopic) {
       setStoreTopic(selectedTopic.id, selectedTopic.title);
-      router.push(`/debates/${selectedTopic.id}`);
+      router.push(`/debates/${selectedTopic.id}?demo=true`);
     } else {
       if (!topic.trim()) return;
       setStoreTopic("custom", topic);
@@ -134,7 +180,12 @@ export default function Home() {
                   ref={topicInputRef}
                   type="text"
                   value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setTopic(next);
+                    setStoreTopic("custom", next);
+                    router.replace(buildHomeUrlWithTopic(next));
+                  }}
                   onKeyDown={(e) => e.key === "Enter" && handleStartDebate()}
                   placeholder="Enter any debate topic or statement..."
                   className="w-full bg-transparent pl-4 pr-44 py-6 text-xl text-white placeholder-gray-400 focus:outline-none transition-all font-medium"
@@ -323,5 +374,13 @@ export default function Home() {
         &copy; {new Date().getFullYear()} DebateMeBro. Open Source AI Debate Engine.
       </footer>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense>
+      <HomeInner />
+    </Suspense>
   );
 }

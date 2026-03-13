@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-export default function AuthPage() {
+function AuthPageInner() {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -14,6 +14,13 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const returnToRaw = searchParams.get("returnTo") || searchParams.get("next");
+  const safeReturnTo =
+    returnToRaw && returnToRaw.startsWith("/") && !returnToRaw.startsWith("//")
+      ? returnToRaw
+      : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +70,7 @@ export default function AuthPage() {
       const data = await res.json();
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user_email", email);
-      router.push("/");
+      router.push(safeReturnTo ?? "/");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "An error occurred.");
     } finally {
@@ -239,5 +246,13 @@ export default function AuthPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense>
+      <AuthPageInner />
+    </Suspense>
   );
 }
