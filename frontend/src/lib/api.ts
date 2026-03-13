@@ -19,6 +19,31 @@ export async function fetchPresetTopics(): Promise<PresetTopic[]> {
   return response.json();
 }
 
+export interface DebateSummary {
+  id: string;
+  topic: string;
+  resolution: string;
+  pro_position: string;
+  con_position: string;
+  status: string;
+  created_at: string;
+  created_by: string;
+  winner: string;
+  pro_score: number;
+  con_score: number;
+  turn_count: number;
+}
+
+export async function fetchDebates(): Promise<DebateSummary[]> {
+  const response = await fetch(`${API_BASE_URL}/debates/`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Failed to fetch debates: ${response.status}`);
+  }
+  return response.json();
+}
+
 export interface DebateData {
   id: string;
   topic: string;

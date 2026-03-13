@@ -1,13 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { fetchDebates, DebateSummary } from "@/lib/api";
+import HistoryCard from "@/components/dashboard/HistoryCard";
 
 export default function DashboardPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  
+  const [debates, setDebates] = useState<DebateSummary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const router = useRouter();
+
+  const loadDebates = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchDebates();
+      setDebates(data);
+    } catch {
+      setError("Failed to load debate history. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -18,18 +38,15 @@ export default function DashboardPage() {
     }
     setIsLoggedIn(true);
     setUserEmail(email);
-  }, [router]);
+
+    loadDebates();
+  }, [router, loadDebates]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user_email");
     router.push("/");
   };
-
-  // Placeholder debate history — will be populated from API later
-  const pastDebates = [
-    { id: "healthcare", topic: "Should the US adopt universal healthcare?", date: "2025-03-12", proScore: 4.3, conScore: 3.8, yourVote: "pro" as const },
-  ];
 
   if (!isLoggedIn) return null;
 
@@ -80,12 +97,12 @@ export default function DashboardPage() {
           </Link>
           <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
             <div className="text-2xl mb-3">📊</div>
-            <div className="text-sm font-black text-white mb-1">{pastDebates.length}</div>
+            <div className="text-sm font-black text-white mb-1">{isLoading ? "..." : debates.length}</div>
             <div className="text-xs text-gray-500">Debates Watched</div>
           </div>
           <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
             <div className="text-2xl mb-3">🗳️</div>
-            <div className="text-sm font-black text-white mb-1">{pastDebates.filter(d => d.yourVote).length}</div>
+            <div className="text-sm font-black text-white mb-1">0</div>
             <div className="text-xs text-gray-500">Votes Cast</div>
           </div>
         </div>
@@ -93,7 +110,24 @@ export default function DashboardPage() {
         {/* Debate History */}
         <div>
           <h2 className="text-lg font-black text-white mb-6 uppercase tracking-widest">Recent Debates</h2>
-          {pastDebates.length === 0 ? (
+
+          {isLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="animate-pulse bg-white/[0.03] border border-white/10 rounded-2xl p-6 h-32" />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="text-center py-20 bg-red-500/10 border border-red-500/20 rounded-2xl">
+              <p className="text-red-400 mb-4">{error}</p>
+              <button 
+                onClick={loadDebates}
+                className="px-6 py-2 bg-red-500/20 text-red-300 rounded-xl hover:bg-red-500/30 transition-colors"
+              >
+                Retry
+              </button>
+            </div>
+          ) : debates.length === 0 ? (
             <div className="text-center py-20">
               <div className="text-5xl mb-4 opacity-30">🎯</div>
               <p className="text-gray-500 text-lg mb-6">No debates yet. Start your first one!</p>
@@ -103,41 +137,8 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {pastDebates.map((debate) => (
-                <Link
-                  key={debate.id}
-                  href={`/debates/${debate.id}?demo=true`}
-                  className="block group p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] hover:border-white/20 transition-all"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors mb-2">
-                        {debate.topic}
-                      </h3>
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span>{debate.date}</span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-cyan-400" />
-                          Pro: {debate.proScore}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <span className="w-2 h-2 rounded-full bg-fuchsia-400" />
-                          Con: {debate.conScore}
-                        </span>
-                        {debate.yourVote && (
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                            debate.yourVote === "pro"
-                              ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                              : "bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30"
-                          }`}>
-                            Voted {debate.yourVote}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className="text-gray-600 group-hover:text-gray-400 transition-colors text-sm">→</span>
-                  </div>
-                </Link>
+              {debates.map((debate) => (
+                <HistoryCard key={debate.id} debate={debate} />
               ))}
             </div>
           )}
