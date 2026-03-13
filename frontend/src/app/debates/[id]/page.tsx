@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useDebateStore, JudgeResult } from "@/lib/store";
+import { useDebateStore, Persona, JudgeResult } from "@/lib/store";
 import { useShallow } from "zustand/shallow";
 import { fetchDebate, fetchDebateMode, DebateData } from "@/lib/api";
 import {
@@ -52,69 +52,104 @@ function JudgeCard({ judge }: { judge: JudgeResult }) {
 
   const iconMap: Record<string, string> = { "Logic Judge": "🧠", "Evidence Judge": "📚", "Engagement Judge": "⚔️" };
   const icon = iconMap[name] || "📋";
+  const descMap: Record<string, string> = {
+    "Logic Judge": "Evaluates logical validity, soundness of reasoning, and identification of fallacies",
+    "Evidence Judge": "Evaluates quality of evidence, citation practices, and source credibility",
+    "Engagement Judge": "Evaluates refutation strength, steelmanning quality, and direct engagement with opposing points",
+  };
+  const description = descMap[name] || "";
+  const winnerColor = winner === "pro" ? "text-cyan-400" : winner === "con" ? "text-fuchsia-400" : "text-gray-400";
+  const winnerBg = winner === "pro" ? "bg-cyan-900/30 border-cyan-500/30" : winner === "con" ? "bg-fuchsia-900/30 border-fuchsia-500/30" : "bg-gray-800/30 border-gray-500/30";
 
   return (
-    <div className="rounded-2xl bg-white/[0.03] backdrop-blur-3xl border border-white/10 overflow-hidden transition-all">
-      <button onClick={() => setExpanded(!expanded)} className="w-full text-left px-6 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors">
-        <span className="text-2xl">{icon}</span>
+    <div className="rounded-2xl bg-white/[0.04] backdrop-blur-3xl border border-white/10 overflow-hidden transition-all hover:border-white/20">
+      <button onClick={() => setExpanded(!expanded)} className="w-full text-left px-6 py-5 flex items-center gap-5 hover:bg-white/[0.02] transition-colors">
+        <div className="w-12 h-12 rounded-xl bg-white/[0.06] flex items-center justify-center text-2xl shrink-0">{icon}</div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-black text-white">{name}</div>
-          <div className="text-xs text-gray-500">{winnerExpl ? winnerExpl.slice(0, 80) + (winnerExpl.length > 80 ? "..." : "") : `Pro: ${proScore}/5 · Con: ${conScore}/5`}</div>
+          <div className="text-base font-black text-white mb-0.5">{name}</div>
+          {description && <div className="text-xs text-gray-400 leading-snug">{description}</div>}
         </div>
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-xs font-bold"><span className="text-cyan-400">{proScore}</span> <span className="text-gray-600">vs</span> <span className="text-fuchsia-400">{conScore}</span></span>
-          {winner && (
-            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${winner === "pro" ? "bg-cyan-900/40 text-cyan-400 border border-cyan-500/30" : "bg-fuchsia-900/40 text-fuchsia-400 border border-fuchsia-500/30"}`}>
-              {winner === "pro" ? "Pro" : "Con"}
-            </span>
-          )}
-          <span className={`text-xs transition-transform ${expanded ? "rotate-180" : ""}`}>▼</span>
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="text-right">
+            <div className="font-mono text-sm font-black">
+              <span className="text-cyan-400">{proScore}</span>
+              <span className="text-gray-600 mx-1.5">vs</span>
+              <span className="text-fuchsia-400">{conScore}</span>
+            </div>
+            {winner && (
+              <span className={`text-xs font-black uppercase px-2.5 py-0.5 rounded-full border inline-block mt-1 ${winnerBg} ${winnerColor}`}>
+                {winner === "pro" ? "Pro wins" : "Con wins"}
+              </span>
+            )}
+          </div>
+          <span className={`text-sm text-gray-500 transition-transform ${expanded ? "rotate-180" : ""}`}>▼</span>
         </div>
       </button>
       {expanded && (
-        <div className="px-6 pb-5 space-y-4 border-t border-white/[0.06]">
+        <div className="px-6 pb-6 space-y-5 border-t border-white/[0.08]">
           {winnerExpl && (
-            <div className="pt-4">
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Winner Explanation</div>
-              <p className="text-xs text-gray-300 leading-relaxed">{winnerExpl}</p>
+            <div className="pt-5 p-4 rounded-xl bg-white/[0.03] border border-white/[0.06]">
+              <div className="text-xs font-black uppercase tracking-widest text-yellow-500/80 mb-2">Winner Explanation</div>
+              <p className="text-sm text-gray-200 leading-relaxed">{winnerExpl}</p>
             </div>
           )}
+
           {(proStrongest || conStrongest) && (
-            <div className="grid md:grid-cols-2 gap-4">
-              {proStrongest && (
-                <div className="p-3 rounded-xl bg-cyan-500/5 border border-cyan-500/10">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-cyan-500 mb-1">Pro Strongest Move</div>
-                  <p className="text-xs text-gray-400 leading-relaxed">{proStrongest}</p>
-                </div>
-              )}
-              {conStrongest && (
-                <div className="p-3 rounded-xl bg-fuchsia-500/5 border border-fuchsia-500/10">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-fuchsia-500 mb-1">Con Strongest Move</div>
-                  <p className="text-xs text-gray-400 leading-relaxed">{conStrongest}</p>
-                </div>
-              )}
-            </div>
-          )}
-          {(proWeakest || conWeakest) && (
-            <div className="grid md:grid-cols-2 gap-4">
-              {proWeakest && (
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-1">Pro Weakest Move</div>
-                  <p className="text-xs text-gray-500 leading-relaxed">{proWeakest}</p>
-                </div>
-              )}
-              {conWeakest && (
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-gray-600 mb-1">Con Weakest Move</div>
-                  <p className="text-xs text-gray-500 leading-relaxed">{conWeakest}</p>
-                </div>
-              )}
-            </div>
-          )}
-          {reasoning && (
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Full Reasoning</div>
-              <p className="text-xs text-gray-400 leading-relaxed whitespace-pre-line">{reasoning}</p>
+              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">Strongest Moves</div>
+              <div className="grid md:grid-cols-2 gap-4">
+                {proStrongest && (
+                  <div className="p-4 rounded-xl bg-cyan-500/[0.06] border border-cyan-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-lg bg-cyan-500/20 flex items-center justify-center text-xs font-black text-cyan-400">P</div>
+                      <span className="text-xs font-black uppercase tracking-widest text-cyan-400">Pro</span>
+                    </div>
+                    <p className="text-sm text-gray-300 leading-relaxed">{proStrongest}</p>
+                  </div>
+                )}
+                {conStrongest && (
+                  <div className="p-4 rounded-xl bg-fuchsia-500/[0.06] border border-fuchsia-500/20">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-lg bg-fuchsia-500/20 flex items-center justify-center text-xs font-black text-fuchsia-400">C</div>
+                      <span className="text-xs font-black uppercase tracking-widest text-fuchsia-400">Con</span>
+                    </div>
+                    <p className="text-sm text-gray-300 leading-relaxed">{conStrongest}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {(proWeakest || conWeakest) && (
+            <div>
+              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">Weakest Moves</div>
+              <div className="grid md:grid-cols-2 gap-4">
+                {proWeakest && (
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-lg bg-cyan-500/10 flex items-center justify-center text-xs font-black text-cyan-500/60">P</div>
+                      <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Pro</span>
+                    </div>
+                    <p className="text-sm text-gray-400 leading-relaxed">{proWeakest}</p>
+                  </div>
+                )}
+                {conWeakest && (
+                  <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.08]">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 rounded-lg bg-fuchsia-500/10 flex items-center justify-center text-xs font-black text-fuchsia-500/60">C</div>
+                      <span className="text-xs font-bold uppercase tracking-widest text-gray-500">Con</span>
+                    </div>
+                    <p className="text-sm text-gray-400 leading-relaxed">{conWeakest}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {reasoning && (
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06]">
+              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-2">Full Reasoning</div>
+              <p className="text-sm text-gray-300 leading-relaxed whitespace-pre-line">{reasoning}</p>
             </div>
           )}
         </div>
@@ -559,6 +594,7 @@ export default function DebatePage() {
     const {
       setIsFromCache, setTopic, setTopicMeta, setPersonas, addTurn,
       markPhaseComplete, setJudgingResults, setActivePhase, setStreaming,
+      appendInternalAnalysis, setEvidenceBundle,
     } = useDebateStore.getState();
 
     setIsFromCache(true);
@@ -569,19 +605,44 @@ export default function DebatePage() {
       conPosition: cached.con_position,
     });
 
-    // Set personas
+    // Set personas (include full details)
     const proP = cached.personas?.pro;
     const conP = cached.personas?.con;
     setPersonas(
-      { name: proP?.name || "Pro Agent", role: proP?.identity || "AI Debater" },
-      { name: conP?.name || "Con Agent", role: conP?.identity || "AI Debater" },
+      {
+        name: proP?.name || "Pro Agent",
+        role: proP?.identity || "AI Debater",
+        expertise_areas: proP?.expertise_areas || [],
+        core_values: proP?.core_values || [],
+        rhetorical_approach: proP?.rhetorical_approach || "",
+      },
+      {
+        name: conP?.name || "Con Agent",
+        role: conP?.identity || "AI Debater",
+        expertise_areas: conP?.expertise_areas || [],
+        core_values: conP?.core_values || [],
+        rhetorical_approach: conP?.rhetorical_approach || "",
+      },
     );
+
+    // Load evidence bundle if present
+    if (cached.evidence) {
+      setEvidenceBundle({
+        proArguments: ((cached.evidence.pro_arguments || []) as string[]).map(a => ({ title: a })),
+        conArguments: ((cached.evidence.con_arguments || []) as string[]).map(a => ({ title: a })),
+        citations: (cached.evidence.citations || {}) as Record<string, { title: string; url?: string; author?: string; year?: string; finding?: string }>,
+      });
+    }
 
     // Load all turns into the store
     const phaseMap: Record<string, string> = {};
     for (const turn of cached.turns || []) {
       const mp = mapPhase(turn.phase);
-      if (!turn.is_internal) {
+      if (turn.is_internal) {
+        // Load internal turns into internalAnalysis so eval panels display
+        const side = (turn.side === "pro" || turn.side === "con") ? turn.side : "pro";
+        appendInternalAnalysis(turn.phase, side, turn.text);
+      } else {
         const side = turn.side as "pro" | "con";
         addTurn({ side, phase: mp, text: turn.text, citations: [] });
       }
@@ -604,11 +665,10 @@ export default function DebatePage() {
         summary: jr.summary,
       });
       markPhaseComplete("judging");
-      setActivePhase("judging");
-    } else {
-      // Default to the last argument phase
-      setActivePhase("closing");
     }
+
+    // Start at research so user can browse through all phases via PhaseNav
+    setActivePhase("research");
 
     setResearchReady(true);
     setResearchStepIdx(MOCK_RESEARCH_STEPS.length);
@@ -866,33 +926,73 @@ export default function DebatePage() {
         </div>
 
         {/* ─── Persona Cards ─── */}
-        {proPersona && conPersona && (
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 px-6 py-4 bg-gradient-to-r from-cyan-950/20 via-transparent to-fuchsia-950/20">
-            {/* Pro persona */}
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-lg font-black text-white shadow-[0_0_20px_rgba(6,182,212,0.3)] shrink-0">P</div>
-              <div className="min-w-0">
-                <div className="text-xs font-black uppercase tracking-widest text-cyan-400 mb-0.5">Pro</div>
-                <div className="font-bold text-white text-sm truncate">{proPersona.name}</div>
-                <div className="text-xs text-gray-500 truncate">{proPersona.role}</div>
-                <p className="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed hidden lg:block">{topicMeta?.proPosition || (isDemoMode ? MOCK_POSITIONS.pro : "")}</p>
+        {proPersona && conPersona && (() => {
+          const PersonaCard = ({ persona, side, position }: { persona: Persona; side: "pro" | "con"; position: string }) => {
+            const [open, setOpen] = useState(false);
+            const isPro = side === "pro";
+            const iconBg = isPro ? "bg-gradient-to-br from-cyan-400 to-blue-600" : "bg-gradient-to-br from-fuchsia-400 to-purple-600";
+            const iconShadow = isPro ? "shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "shadow-[0_0_20px_rgba(217,70,239,0.3)]";
+            const borderColor = isPro ? "border-cyan-500/20" : "border-fuchsia-500/20";
+            const bgColor = isPro ? "bg-cyan-950/20" : "bg-fuchsia-950/20";
+            const labelColor = isPro ? "text-cyan-400" : "text-fuchsia-400";
+            const tagBg = isPro ? "bg-cyan-500/10 text-cyan-300 border-cyan-500/20" : "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20";
+            const align = isPro ? "text-left" : "text-right";
+            return (
+              <div className={`rounded-2xl border ${borderColor} ${bgColor} overflow-hidden transition-all`}>
+                <button onClick={() => setOpen(!open)} className={`w-full px-5 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors ${!isPro ? "flex-row-reverse" : ""}`}>
+                  <div className={`w-12 h-12 rounded-2xl ${iconBg} ${iconShadow} flex items-center justify-center text-lg font-black text-white shrink-0`}>{isPro ? "P" : "C"}</div>
+                  <div className={`min-w-0 flex-1 ${align}`}>
+                    <div className={`text-xs font-black uppercase tracking-widest ${labelColor} mb-0.5`}>{isPro ? "Pro" : "Con"}</div>
+                    <div className="font-black text-white text-base truncate">{persona.name}</div>
+                    <div className="text-sm text-gray-400 truncate">{persona.role}</div>
+                  </div>
+                  <span className={`text-xs text-gray-500 transition-transform shrink-0 ${open ? "rotate-180" : ""}`}>▼</span>
+                </button>
+                {open && (
+                  <div className={`px-5 pb-5 pt-3 border-t border-white/[0.06] space-y-3 ${align}`}>
+                    {position && (
+                      <div>
+                        <div className={`text-xs font-black uppercase tracking-widest text-gray-500 mb-1`}>Position</div>
+                        <p className="text-sm text-gray-300 leading-relaxed">{position}</p>
+                      </div>
+                    )}
+                    {persona.expertise_areas && persona.expertise_areas.length > 0 && (
+                      <div>
+                        <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1.5">Expertise</div>
+                        <div className={`flex flex-wrap gap-1.5 ${!isPro ? "justify-end" : ""}`}>{persona.expertise_areas.map((e, i) => <span key={i} className={`text-xs px-2.5 py-1 rounded-full border ${tagBg}`}>{e}</span>)}</div>
+                      </div>
+                    )}
+                    {persona.core_values && persona.core_values.length > 0 && (
+                      <div>
+                        <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1.5">Core Values</div>
+                        <div className={`flex flex-wrap gap-1.5 ${!isPro ? "justify-end" : ""}`}>{persona.core_values.map((v, i) => <span key={i} className={`text-xs px-2.5 py-1 rounded-full border ${tagBg}`}>{v}</span>)}</div>
+                      </div>
+                    )}
+                    {persona.rhetorical_approach && (
+                      <div>
+                        <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Approach</div>
+                        <p className="text-sm text-gray-400 leading-relaxed">{persona.rhetorical_approach}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          };
+          return (
+            <div className="flex items-start gap-3 px-6 py-4 bg-gradient-to-r from-cyan-950/20 via-transparent to-fuchsia-950/20">
+              <div className="flex-1 min-w-0">
+                <PersonaCard persona={proPersona} side="pro" position={topicMeta?.proPosition || (isDemoMode ? MOCK_POSITIONS.pro : "")} />
+              </div>
+              <div className="flex items-center justify-center w-10 pt-6 shrink-0">
+                <span className="text-gray-600 font-black text-2xl select-none">⚡</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <PersonaCard persona={conPersona} side="con" position={topicMeta?.conPosition || (isDemoMode ? MOCK_POSITIONS.con : "")} />
               </div>
             </div>
-
-            <div className="text-gray-600 font-black text-2xl select-none">⚡</div>
-
-            {/* Con persona */}
-            <div className="flex items-center gap-4 justify-end text-right">
-              <div className="min-w-0">
-                <div className="text-xs font-black uppercase tracking-widest text-fuchsia-400 mb-0.5">Con</div>
-                <div className="font-bold text-white text-sm truncate">{conPersona.name}</div>
-                <div className="text-xs text-gray-500 truncate">{conPersona.role}</div>
-                <p className="text-xs text-gray-600 mt-1 line-clamp-2 leading-relaxed hidden lg:block">{topicMeta?.conPosition || (isDemoMode ? MOCK_POSITIONS.con : "")}</p>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-purple-600 flex items-center justify-center text-lg font-black text-white shadow-[0_0_20px_rgba(217,70,239,0.3)] shrink-0">C</div>
-            </div>
-          </div>
-        )}
+          );
+        })()}
       </header>
 
       {/* ─── Persona Reveal Overlay ─── */}

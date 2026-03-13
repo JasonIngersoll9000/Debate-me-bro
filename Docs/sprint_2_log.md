@@ -116,31 +116,53 @@
 
 ### Issue #23: Frontend Debate UX Overhaul
 
-**Status:** 🔄 In Progress
+**Status:** ✅ Complete
 **Branch:** `feature/23-frontend-ux-overhaul`
 
-**Context:** After running the first live debates with real Claude API calls, 7 UX gaps were identified:
+**Context:** After running the first live debates with real Claude API calls, 7 UX gaps were identified and all 7 were resolved.
 
-1. Phases auto-advance without giving users time to read arguments
-2. Markdown headings/lists render as raw text in argument cards
-3. Evaluation phases are invisible — show "Computing strategy..." forever
-4. Evidence bundle shows hardcoded mock data instead of real research
-5. Research consultation output is hidden
-6. Personas appear silently with no reveal or detail
-7. Judging lacks transparency — no per-judge breakdown, summary can contradict scores
+**What Went Well:**
 
-**Implementation Plan:**
+- **Phase gating (23a):** Continue button pauses between phases in both live and demo mode. SSE events buffer in the background while the displayed phase is gated. Internal phases auto-advance without user action.
+- **Markdown rendering (23b):** `StreamingText` component now renders headings, bold, lists, numbered lists, horizontal rules, and citation badges. `StrategicAnalysisPanel` also rewritten with full markdown parsing.
+- **Evaluation phases (23c):** Backend streams `internal_content` SSE events with LLM chunks from eval phases. Frontend stores in `internalAnalysis` Zustand state and renders in standalone eval phase views.
+- **Evidence bundle (23d):** Backend sends real evidence data in `evidence_loaded` SSE event. Frontend displays real evidence in research phase, falls back to mock data only in demo mode.
+- **Research consultation (23e):** Research consultation phase output viewable in the research phase UI via toggle panels, using the same `internal_content` SSE mechanism.
+- **Persona reveal (23f):** Persona interface expanded with `expertise_areas`, `core_values`, `rhetorical_approach`. Animated overlay with "Start Debate →" button gates progression. Header persona cards are now expandable dropdowns with full detail.
+- **Judging transparency (23g):** Per-judge expandable `JudgeCard` components with scores, winner explanation, strongest/weakest moves, and full reasoning. Winner banner, score overview with weighted totals, verdict summary.
 
-| Step | Sub-issue | Scope |
-|------|-----------|-------|
-| 1 | 23c+23e | Backend: stream internal phase content (eval + research consultation) |
-| 2 | 23d | Backend: send real evidence data in SSE |
-| 3 | 23g | Backend: add judging summary synthesis |
-| 4 | 23b | Frontend: markdown rendering in StreamingText |
-| 5 | 23f | Frontend: persona reveal + expanded Persona type |
-| 6 | 23a | Frontend: phase gate with Continue button in live mode |
-| 7 | 23c+23e | Frontend: show internal phases (eval + research consultation) |
-| 8 | 23d | Frontend: use real evidence data in research UI |
-| 9 | 23g | Frontend: judging UI redesign with per-judge cards |
+**Challenges & Insights:**
+
+- **Eval content duplication:** Initial implementation embedded eval panels inline at the bottom of argument phases AND in the standalone eval phase view, causing content to appear twice. Fixed by keeping eval content only in the standalone eval phase view.
+- **Cached debate replay:** `loadCachedDebate()` originally jumped straight to the judging phase. Changed to start at research phase so users can navigate through all phases via PhaseNav.
+- **Persona card centering:** The `⚡` lightning bolt between persona cards was off-center due to CSS grid `auto` column sizing. Switched to flex layout with fixed-width divider for proper centering.
+
+**Key Changes:**
+
+- `frontend/src/lib/store.ts` — Added `Persona` (full details), `EvidenceBundle`, expanded `JudgingResults` with flexible judge records
+- `frontend/src/app/debates/[id]/page.tsx` — Complete rewrite of persona cards (expandable), JudgeCard (richer detail), phase gating, SSE handler (all event types), `loadCachedDebate` (starts at research)
+- `frontend/src/components/debate/StrategicAnalysisPanel.tsx` — Rewritten with full markdown parsing (headings, bold, lists, HRs)
+- `frontend/src/components/debate/StreamingText.tsx` — Markdown rendering for headings, lists, HRs, bold, citations
+- `frontend/src/app/globals.css` — Added `fadeIn` and `slideUp` keyframe animations
+- `frontend/src/lib/mockDebateData.ts` — Added `weighted_total` to mock scores
+- `backend/app/routes/topics.py` — Trimmed presets to healthcare only for focused demo
+
+---
+
+## Sprint 2 — Current Status Summary
+
+| Issue | Title | Status |
+|-------|-------|--------|
+| #16 | Debate Persistence & Caching | ✅ Complete |
+| #17 | Demo Mode Toggle + Live API | ✅ Complete |
+| #23 | Frontend UX Overhaul (7 sub-issues) | ✅ Complete |
+| #15 | Dashboard (real data) | ⚠️ Partial — page + API + cards done; needs vote display, polish |
+| #18 | Topic Input Bug Fix | ❌ Not started |
+| #19 | Public Debate Browsing + Likes | ❌ Not started |
+| #14 | Human Voting System | ❌ Not started |
+| #20 | API Usage Cap | ❌ Not started |
+
+**Completed:** 3 of 8 issues (including the massive 7-sub-issue #23 overhaul)
+**Remaining:** 5 issues — #15 needs polish, #18/#19/#14/#20 not started
 
 ---
