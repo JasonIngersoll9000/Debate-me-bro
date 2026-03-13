@@ -47,6 +47,7 @@ describe("Landing Page", () => {
       selector({ topicTitle: "", setTopic: mockSetTopic })
     );
     localStorage.clear();
+    useDebateStore.getState().reset();
   });
 
   afterEach(() => {
@@ -109,26 +110,28 @@ describe("Landing Page", () => {
     expect(mockPush).toHaveBeenCalledWith("/debates/new?topic=Who%20would%20win%2C%20Goku%20or%20Superman%3F");
   });
 
-  it("syncs typed topic to URL via router.replace", () => {
+  it("syncs custom topic to URL when typing", () => {
     render(<Home />);
 
     const input = screen.getByPlaceholderText("Enter any debate topic or statement...");
-    fireEvent.change(input, { target: { value: "Is AI dangerous?" } });
+    fireEvent.change(input, { target: { value: "Climate change solutions" } });
 
     const params = new URLSearchParams();
-    params.set("topic", "Is AI dangerous?");
+    params.set("topic", "Climate change solutions");
     expect(mockReplace).toHaveBeenCalledWith(`/?${params.toString()}`);
   });
 
-  it("hydrates input from ?topic= URL parameter on mount", async () => {
-    const topicSearchParams = new URLSearchParams();
-    topicSearchParams.set("topic", "Is climate change real?");
-    (useSearchParams as jest.Mock).mockReturnValue(topicSearchParams);
+  it("initializes input from ?topic= URL parameter", async () => {
+    const params = new URLSearchParams();
+    params.set("topic", "Universal basic income");
+    (useSearchParams as jest.Mock).mockReturnValue(params);
 
     render(<Home />);
 
     await waitFor(() => {
-      expect(screen.getByPlaceholderText("Enter any debate topic or statement...")).toHaveValue("Is climate change real?");
+      expect(
+        screen.getByPlaceholderText("Enter any debate topic or statement...")
+      ).toHaveValue("Universal basic income");
     });
   });
 });
