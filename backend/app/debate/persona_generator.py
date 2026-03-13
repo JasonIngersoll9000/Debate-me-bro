@@ -94,7 +94,8 @@ async def generate_persona(
         # Fallback: create a basic persona from the raw text
         return Persona(
             name=f"{'Dr. A. Proctor' if side == 'pro' else 'Dr. R. Counter'}",
-            identity=raw[:200] if raw else f"An expert debater arguing the {side} position.",
+            identity=raw[:
+                         200] if raw else f"An expert debater arguing the {side} position.",
             expertise_areas=[],
             core_values=[],
             rhetorical_approach="Data-driven argumentation grounded in evidence.",

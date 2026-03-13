@@ -109,3 +109,50 @@ export async function fetchDebate(debateId: string): Promise<DebateData | null> 
     return null;
   }
 }
+
+export interface VoteTally {
+  pro_votes: number;
+  con_votes: number;
+  total_votes: number;
+  user_vote: string | null;
+}
+
+export async function fetchVoteTally(debateId: string, token: string | null): Promise<VoteTally | null> {
+  try {
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/votes/${debateId}`, {
+      headers,
+      cache: "no-store",
+    });
+    
+    if (!response.ok) {
+      return null;
+    }
+    return response.json();
+  } catch (error) {
+    console.error("Error fetching vote tally:", error);
+    return null;
+  }
+}
+
+export async function castVote(debateId: string, side: "pro" | "con", token: string): Promise<VoteTally> {
+  const response = await fetch(`${API_BASE_URL}/votes/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ debate_id: debateId, side }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || "Failed to cast vote");
+  }
+
+  return response.json();
+}

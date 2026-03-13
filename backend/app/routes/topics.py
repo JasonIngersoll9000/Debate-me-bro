@@ -15,6 +15,7 @@ PRESET_TOPICS = [
     },
 ]
 
+
 @router.get("/presets", response_model=List[PresetTopicResponse])
 async def get_preset_topics():
     """

@@ -17,7 +17,12 @@ logger = logging.getLogger(__name__)
 # Allowlist: only lowercase letters, digits, hyphens, and underscores
 _VALID_ID_RE = re.compile(r"^[a-z0-9_-]+$")
 
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "debates")
+DATA_DIR = os.path.join(
+    os.path.dirname(
+        os.path.dirname(
+            os.path.dirname(__file__))),
+    "data",
+    "debates")
 
 
 def _validate_debate_id(debate_id: str) -> None:
@@ -32,7 +37,9 @@ def _safe_path(debate_id: str) -> str:
     resolved = os.path.realpath(os.path.join(DATA_DIR, f"{debate_id}.json"))
     real_data_dir = os.path.realpath(DATA_DIR)
     if not resolved.startswith(real_data_dir + os.sep):
-        raise ValueError(f"Path traversal detected for debate_id: {debate_id!r}")
+        raise ValueError(
+            f"Path traversal detected for debate_id: {debate_id!r}"
+        )
     return resolved
 
 

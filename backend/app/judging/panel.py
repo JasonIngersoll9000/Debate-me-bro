@@ -18,7 +18,8 @@ from app.judging.prompts.engagement_judge import ENGAGEMENT_JUDGE_PROMPT
 logger = logging.getLogger(__name__)
 
 
-async def _run_judge(judge_name: str, prompt: str, transcript: str) -> Dict[str, Any]:
+async def _run_judge(judge_name: str, prompt: str,
+                     transcript: str) -> Dict[str, Any]:
     """Run a single judge and parse their JSON output."""
     llm = ChatAnthropic(
         model_name=settings.debate_model,

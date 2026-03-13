@@ -38,7 +38,8 @@ editorialize regardless of topic.
 """
 
 
-async def analyze_topic(resolution: str, user_context: str = "") -> TopicAnalysis:
+async def analyze_topic(resolution: str,
+                        user_context: str = "") -> TopicAnalysis:
     """
     Analyze a custom topic using Claude Haiku and return structured TopicAnalysis.
     """
