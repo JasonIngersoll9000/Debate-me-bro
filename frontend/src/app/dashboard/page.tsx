@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { fetchDebates, DebateSummary } from "@/lib/api";
@@ -16,6 +16,19 @@ export default function DashboardPage() {
 
   const router = useRouter();
 
+  const loadDebates = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchDebates();
+      setDebates(data);
+    } catch {
+      setError("Failed to load debate history. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem("token");
     const email = localStorage.getItem("user_email");
@@ -26,21 +39,8 @@ export default function DashboardPage() {
     setIsLoggedIn(true);
     setUserEmail(email);
 
-    async function loadDebates() {
-      try {
-        setIsLoading(true);
-        const data = await fetchDebates();
-        setDebates(data);
-        setError(null);
-      } catch (err) {
-        setError("Failed to load debate history. Please try again.");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
     loadDebates();
-  }, [router]);
+  }, [router, loadDebates]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -121,7 +121,7 @@ export default function DashboardPage() {
             <div className="text-center py-20 bg-red-500/10 border border-red-500/20 rounded-2xl">
               <p className="text-red-400 mb-4">{error}</p>
               <button 
-                onClick={() => window.location.reload()}
+                onClick={loadDebates}
                 className="px-6 py-2 bg-red-500/20 text-red-300 rounded-xl hover:bg-red-500/30 transition-colors"
               >
                 Retry
