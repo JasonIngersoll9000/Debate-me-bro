@@ -5,9 +5,11 @@
 > *CS 7180 — AI-Assisted Coding, Spring 2026*
 > **Team:** Jason Ingersoll & Shuai Ren
 
-**Live Demo:** [https://debatemebro.vercel.app](https://debatemebro.vercel.app)
+**Live Demo:** [https://debate-me-bro.vercel.app](https://debate-me-bro.vercel.app) *(backend spins down on idle — first load may take 1–2 minutes)*
+**Video Demo:** [Watch on YouTube](https://youtu.be/39QJqgSeYTk?si=Yrz9dwDvDo9SDamV)
+**Blog Post:** [Read on Substack](https://open.substack.com/pub/attonbitusclamo202566/p/debatemebro-an-ai-debate-platform?utm_campaign=post-expanded-share&utm_medium=web)
 **Backend API:** [https://debatemebro-api.onrender.com](https://debatemebro-api.onrender.com)
-**Blog Post:** [Docs/blog_post.md](Docs/blog_post.md) | **Video Script:** [Docs/script.md](Docs/script.md)
+**Additional Deliverables:** Evaluation dashboard, sprint logs, and all project documentation are in the [Docs/](Docs/) folder.
 
 ---
 
@@ -331,7 +333,7 @@ npm run dev  # runs on port 3000
 
 | Service | Platform | URL |
 |---------|----------|-----|
-| Frontend | Vercel | [https://debatemebro.vercel.app](https://debatemebro.vercel.app) |
+| Frontend | Vercel | [https://debate-me-bro.vercel.app](https://debate-me-bro.vercel.app) |
 | Backend | Render.com | [https://debatemebro-api.onrender.com](https://debatemebro-api.onrender.com) |
 
 **Why two platforms:** Vercel excels at Next.js but its serverless functions have a 10-second execution limit. Debate SSE streams run 2-5 minutes, requiring a persistent server — Render provides this on the free tier.
