@@ -33,6 +33,8 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3005",
         "http://127.0.0.1:3030",
+        "https://debate-me-bro.vercel.app",
+        "https://debate-me-bro-jasoningersoll9000s-projects.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
