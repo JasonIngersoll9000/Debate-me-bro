@@ -1,17 +1,36 @@
 import logging
 import traceback
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from app.routes import auth, topics, debates, research, votes
+from app.db.database import _get_engine, Base
+from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Create DB tables on startup if a database is configured."""
+    try:
+        engine = _get_engine()
+        async with engine.begin() as conn:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("Database tables created/verified.")
+    except Exception as e:
+        logger.warning("Could not initialize database (auth/votes will be unavailable): %s", e)
+    yield
+
 
 app = FastAPI(
     title="DebateMeBro API",
     description="AI-Powered Structured Debates That Steelman Both Sides",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 
