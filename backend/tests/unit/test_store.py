@@ -3,7 +3,6 @@ Tests for debate persistence store — store.py.
 Uses mock async sessions to test PostgreSQL-backed storage logic
 without requiring a live database connection.
 """
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -155,6 +154,8 @@ async def test_delete_debate_success(patch_session_factory):
     session.execute.return_value = mock_result
 
     assert await store.delete_debate("del-me") is True
+    # execute called twice: once for likes delete, once for debate delete
+    assert session.execute.call_count == 2
     session.commit.assert_called_once()
 
 
@@ -175,27 +176,27 @@ async def test_delete_invalid_id():
 
 async def test_like_toggle_on(patch_session_factory):
     session = patch_session_factory
-    # No existing like → should add one
+    # INSERT ... ON CONFLICT DO NOTHING inserts a new row (rowcount == 1) → liked
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = None
+    mock_result.rowcount = 1
     session.execute.return_value = mock_result
 
     result = await store.like_debate("likeable", "user@test.com")
     assert result is True
-    session.add.assert_called_once()
+    session.execute.assert_called_once()
     session.commit.assert_called_once()
 
 
 async def test_like_toggle_off(patch_session_factory):
     session = patch_session_factory
-    # Existing like → should remove it
+    # INSERT ... ON CONFLICT DO NOTHING does nothing (rowcount == 0) → already liked, so unlike
     mock_result = MagicMock()
-    mock_result.scalar_one_or_none.return_value = 42  # existing like id
+    mock_result.rowcount = 0
     session.execute.return_value = mock_result
 
     result = await store.like_debate("likeable", "user@test.com")
     assert result is False
-    # execute called twice: once for select, once for delete
+    # execute called twice: once for atomic insert attempt, once for delete
     assert session.execute.call_count == 2
     session.commit.assert_called_once()
 
@@ -219,6 +220,43 @@ async def test_get_likes(patch_session_factory):
     likes = await store.get_likes("popular")
     assert "a@test.com" in likes
     assert "b@test.com" in likes
+
+
+# ── bulk like helpers ────────────────────────────────────────────────────
+
+async def test_get_bulk_like_counts(patch_session_factory):
+    session = patch_session_factory
+    mock_result = MagicMock()
+    mock_result.all.return_value = [("debate-a", 5), ("debate-b", 2)]
+    session.execute.return_value = mock_result
+
+    counts = await store.get_bulk_like_counts(["debate-a", "debate-b", "debate-c"])
+    assert counts["debate-a"] == 5
+    assert counts["debate-b"] == 2
+    assert "debate-c" not in counts  # zero-like debates are omitted
+
+
+async def test_get_bulk_like_counts_empty_input(patch_session_factory):
+    counts = await store.get_bulk_like_counts([])
+    assert counts == {}
+
+
+async def test_get_bulk_user_liked(patch_session_factory):
+    session = patch_session_factory
+    mock_result = MagicMock()
+    mock_result.all.return_value = [("debate-a",)]
+    session.execute.return_value = mock_result
+
+    result = await store.get_bulk_user_liked(
+        ["debate-a", "debate-b"], "user@test.com"
+    )
+    assert result["debate-a"] is True
+    assert result["debate-b"] is False
+
+
+async def test_get_bulk_user_liked_empty_input(patch_session_factory):
+    result = await store.get_bulk_user_liked([], "user@test.com")
+    assert result == {}
 
 
 # ── validation / security ──────────────────────────────────────────────
