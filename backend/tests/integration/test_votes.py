@@ -2,7 +2,7 @@ import pytest
 import uuid
 from httpx import AsyncClient, ASGITransport
 from asgi_lifespan import LifespanManager
-from app.db.database import AsyncSessionLocal
+from app.db.database import _get_session_factory
 from app.db.models import Topic, Debate
 from app.main import app
 
@@ -17,7 +17,7 @@ async def test_cast_vote_and_get_tally():
 
     async with LifespanManager(app):
         # Pre-populate DB with the topic/debate constraints while app runs
-        async with AsyncSessionLocal() as session:
+        async with _get_session_factory()() as session:
             mock_topic = Topic(id=test_topic_id, title="Test Topic")
             mock_debate = Debate(id=test_debate_id, topic_id=test_topic_id, status="pending")
             session.add(mock_topic)

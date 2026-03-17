@@ -804,3 +804,57 @@ The judging results panel has several visual and data display issues that reduce
 - [x] Verdict summary text is coherent and references the actual judge reasoning
 - [x] Loading state ("Judges Are Deliberating") works reliably until all judge data arrives
 - [x] Score bar gradients, widths, and labels are visually correct on all screen sizes
+
+---
+
+### Issue #32: Spacebar doesn't work in custom topic input on landing page
+
+**Labels:** `bug`, `priority: high`, `frontend`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+**Status:** ✅ Fixed
+
+#### Description
+
+On the landing page, typing a space in the "Enter any debate topic or statement" input field is silently eaten. The user cannot type multi-word topics. Clicking "Debate It" and editing on the next page works, but the initial input swallows spaces.
+
+**Root cause:** The `onChange` handler calls `router.replace(buildHomeUrlWithTopic(next))` on every keystroke. `buildHomeUrlWithTopic` was trimming the value before setting it in the URL query param, then a `useEffect` synced the (trimmed) URL value back to local state — overwriting the trailing space before the next character could be typed.
+
+**Fix:** (1) Stop trimming the value in `buildHomeUrlWithTopic` when syncing to URL, (2) add an `isTypingRef` guard so the URL→state `useEffect` skips while the user is actively typing.
+
+#### Acceptance Criteria
+
+- [x] Users can type spaces in the custom topic input on the landing page
+- [x] Multi-word topics like "Should pineapple go on pizza?" work on first type
+- [x] URL still syncs the topic for bookmarkability
+- [x] Existing tests still pass
+
+---
+
+### Issue #33: Debates not persisting on Render — browse page empty, presets re-run every time
+
+**Labels:** `bug`, `priority: high`, `backend`, `infrastructure`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+**Status:** 🔴 Open
+
+#### Description
+
+On the deployed Render backend, completed debates are not appearing on the Browse All page, and preset debates (e.g., healthcare) re-run from scratch every time — consuming API tokens on each view.
+
+**Root cause:** The debate cache uses JSON files stored at `backend/data/debates/`. Render's free tier has an **ephemeral filesystem** — all files not in the Git repo are wiped on every deploy, restart, or spin-down. Since cached debate JSON files are generated at runtime and not committed to the repo, they are lost.
+
+**Impact:** Every debate costs full API tokens on every view. No debates appear in the browse page after a Render restart. This defeats the cache-first architecture designed to minimize token spend.
+
+**Potential solutions:**
+1. **Short-term:** Move debate storage to the Render PostgreSQL database (already provisioned) instead of JSON files. Add a `debates` table and update `store.py` to read/write from DB.
+2. **Medium-term:** Use Render's persistent disk ($7/mo) or an external object store (S3, Cloudflare R2) for file-based caching.
+3. **Workaround:** Commit pre-generated debate files for preset topics to the repo so they survive deploys (only helps presets, not custom debates).
+
+#### Acceptance Criteria
+
+- [ ] Completed debates persist across Render restarts/deploys
+- [ ] Browse page shows all previously completed debates
+- [ ] Preset debates (healthcare, remote work, AI copyright) load from cache without re-running
+- [ ] Custom debates are also cached and browseable
+- [ ] Like counts persist alongside debate data

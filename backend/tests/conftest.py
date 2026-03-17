@@ -4,20 +4,16 @@ Shared test fixtures for DebateMeBro backend tests.
 Provides:
 - Async test client for FastAPI integration tests
 - Mock Anthropic client to prevent real API calls
-- Temporary data directory for test isolation
 - Sample debate state and data factories
 """
 import os
 import json
-import shutil
-import tempfile
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import AsyncClient, ASGITransport
 
 from app.main import app
-from app.debate import store as debate_store
 
 
 # ── Async test client ──
@@ -30,20 +26,6 @@ async def async_client():
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         yield client
-
-
-# ── Temp data directory (isolates file-based debate store) ──
-
-
-@pytest.fixture
-def temp_data_dir(monkeypatch):
-    """Redirect debate store to a temporary directory for test isolation."""
-    tmpdir = tempfile.mkdtemp()
-    data_dir = os.path.join(tmpdir, "debates")
-    os.makedirs(data_dir, exist_ok=True)
-    monkeypatch.setattr(debate_store, "DATA_DIR", data_dir)
-    yield data_dir
-    shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 # ── Mock Anthropic / LLM ──

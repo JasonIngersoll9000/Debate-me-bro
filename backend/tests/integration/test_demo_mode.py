@@ -9,9 +9,6 @@ Tests:
 5. Default mode from config is used when no query param
 """
 import json
-import os
-import shutil
-import tempfile
 
 import pytest
 from httpx import AsyncClient, ASGITransport
@@ -20,17 +17,43 @@ from unittest.mock import patch
 from app.main import app
 from app.config import settings
 from app.debate import store as debate_store
+from app.debate import stream as debate_stream
+from app.routes import debates as debates_router
 
 
 @pytest.fixture(autouse=True)
-def temp_data_dir(monkeypatch):
-    """Redirect the debate store to a temporary directory for test isolation."""
-    tmpdir = tempfile.mkdtemp()
-    data_dir = os.path.join(tmpdir, "debates")
-    os.makedirs(data_dir, exist_ok=True)
-    monkeypatch.setattr(debate_store, "DATA_DIR", data_dir)
-    yield data_dir
-    shutil.rmtree(tmpdir, ignore_errors=True)
+def mock_db_store(monkeypatch):
+    """In-memory store that replaces async DB calls for test isolation."""
+    _debates = {}
+
+    async def _save(debate_id, data):
+        data.setdefault("id", debate_id)
+        data.setdefault("status", "completed")
+        _debates[debate_id] = data
+
+    async def _load(debate_id):
+        return _debates.get(debate_id)
+
+    async def _get_like_count(debate_id):
+        return 0
+
+    async def _get_likes(debate_id):
+        return []
+
+    async def _list():
+        return []
+
+    # Patch everywhere the functions are imported
+    for mod in (debate_store, debate_stream, debates_router):
+        for attr, fn in [("save_debate", _save), ("load_debate", _load)]:
+            if hasattr(mod, attr):
+                monkeypatch.setattr(mod, attr, fn)
+    for attr, fn in [("list_debates", _list), ("get_like_count", _get_like_count),
+                     ("get_likes", _get_likes)]:
+        for mod in (debate_store, debates_router):
+            if hasattr(mod, attr):
+                monkeypatch.setattr(mod, attr, fn)
+    yield _debates
 
 
 SAMPLE_DEBATE = {
@@ -145,7 +168,7 @@ async def test_sse_cached_debate_replays_regardless_of_demo_mode():
     """
     If a debate is cached, it replays from cache even when mode is 'demo'.
     """
-    debate_store.save_debate("test-healthcare", SAMPLE_DEBATE.copy())
+    await debate_store.save_debate("test-healthcare", SAMPLE_DEBATE.copy())
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -172,7 +195,7 @@ async def test_sse_cached_debate_replays_regardless_of_live_mode():
     """
     If a debate is cached, it replays from cache even when mode is 'live'.
     """
-    debate_store.save_debate("test-healthcare", SAMPLE_DEBATE.copy())
+    await debate_store.save_debate("test-healthcare", SAMPLE_DEBATE.copy())
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"

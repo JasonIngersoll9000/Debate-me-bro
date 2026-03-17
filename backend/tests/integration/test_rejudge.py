@@ -7,9 +7,6 @@ Tests:
 3. Rejudge returns 401 without auth
 4. Rejudge returns 400 for debate with no public turns
 """
-import os
-import shutil
-import tempfile
 from copy import deepcopy
 from unittest.mock import AsyncMock, patch
 
@@ -18,17 +15,35 @@ from httpx import AsyncClient, ASGITransport
 
 from app.main import app
 from app.debate import store as debate_store
+from app.routes import debates as debates_router
 
 
 @pytest.fixture(autouse=True)
-def temp_data_dir(monkeypatch):
-    """Redirect the debate store to a temporary directory for isolation."""
-    tmpdir = tempfile.mkdtemp()
-    data_dir = os.path.join(tmpdir, "debates")
-    os.makedirs(data_dir, exist_ok=True)
-    monkeypatch.setattr(debate_store, "DATA_DIR", data_dir)
-    yield data_dir
-    shutil.rmtree(tmpdir, ignore_errors=True)
+def mock_db_store(monkeypatch):
+    """In-memory store that replaces async DB calls for test isolation."""
+    _debates = {}
+
+    async def _save(debate_id, data):
+        data.setdefault("id", debate_id)
+        data.setdefault("status", "completed")
+        _debates[debate_id] = data
+
+    async def _load(debate_id):
+        return _debates.get(debate_id)
+
+    async def _get_like_count(debate_id):
+        return 0
+
+    async def _get_likes(debate_id):
+        return []
+
+    # Patch everywhere the functions are imported
+    for mod in (debate_store, debates_router):
+        for attr, fn in [("save_debate", _save), ("load_debate", _load),
+                         ("get_like_count", _get_like_count), ("get_likes", _get_likes)]:
+            if hasattr(mod, attr):
+                monkeypatch.setattr(mod, attr, fn)
+    yield _debates
 
 
 SAMPLE_DEBATE = {
@@ -113,7 +128,7 @@ def _make_auth_header() -> dict:
 async def test_rejudge_updates_results(mock_panel):
     """POST /api/debates/{id}/rejudge re-runs panel and updates stored data."""
     mock_panel.return_value = MOCK_PANEL_RESULT
-    debate_store.save_debate("test-rejudge", deepcopy(SAMPLE_DEBATE))
+    await debate_store.save_debate("test-rejudge", deepcopy(SAMPLE_DEBATE))
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -129,7 +144,7 @@ async def test_rejudge_updates_results(mock_panel):
         assert body["judging_results"]["scores"]["pro"]["weighted_total"] == 4.06
 
     # Verify stored data was updated
-    loaded = debate_store.load_debate("test-rejudge")
+    loaded = await debate_store.load_debate("test-rejudge")
     assert loaded is not None
     assert loaded["judging_results"]["summary"] == "Pro wins decisively."
     # Turns should be unchanged
@@ -158,7 +173,7 @@ async def test_rejudge_returns_404_for_missing():
 @pytest.mark.asyncio
 async def test_rejudge_returns_401_without_auth():
     """POST /api/debates/{id}/rejudge returns 401 without JWT."""
-    debate_store.save_debate("test-rejudge", deepcopy(SAMPLE_DEBATE))
+    await debate_store.save_debate("test-rejudge", deepcopy(SAMPLE_DEBATE))
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
@@ -175,7 +190,7 @@ async def test_rejudge_returns_400_no_public_turns(mock_panel):
     debate_only_internal["turns"] = [
         {"phase": "eval_openings", "side": "pro", "text": "Internal only.", "is_internal": True},
     ]
-    debate_store.save_debate("test-rejudge", debate_only_internal)
+    await debate_store.save_debate("test-rejudge", debate_only_internal)
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"

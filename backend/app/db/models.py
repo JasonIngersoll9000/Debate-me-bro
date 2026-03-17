@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Text, DateTime, Boolean, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Text, DateTime, Boolean, ForeignKey, Integer, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import relationship
 from pgvector.sqlalchemy import Vector
 from app.db.database import Base
@@ -122,3 +122,23 @@ class Document(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     topic = relationship("Topic", back_populates="documents")
+
+
+class CachedDebate(Base):
+    __tablename__ = "cached_debates"
+    debate_id = Column(String(255), primary_key=True)
+    data = Column(JSONB, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class DebateLike(Base):
+    __tablename__ = "debate_likes"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    debate_id = Column(String(255), nullable=False, index=True)
+    user_email = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("debate_id", "user_email", name="uq_debate_like"),
+    )

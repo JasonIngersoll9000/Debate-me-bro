@@ -13,6 +13,7 @@ function HomeInner() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const topicInputRef = useRef<HTMLInputElement>(null);
+  const isTypingRef = useRef(false);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -23,8 +24,7 @@ function HomeInner() {
 
   const buildHomeUrlWithTopic = (t: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    const trimmed = t.trim();
-    if (trimmed) params.set("topic", trimmed);
+    if (t.trim()) params.set("topic", t);
     else params.delete("topic");
     const qs = params.toString();
     return qs ? `/?${qs}` : "/";
@@ -49,6 +49,9 @@ function HomeInner() {
 
   useEffect(() => {
     // Initialize from URL (?topic=...) first, then fall back to store.
+    // Skip if the user is actively typing — otherwise the trimmed URL
+    // value overwrites the local state and eats trailing spaces.
+    if (isTypingRef.current) return;
     if (queryTopic) {
       setTopic(queryTopic);
       setStoreTopic("custom", queryTopic);
@@ -185,9 +188,12 @@ function HomeInner() {
                   value={topic}
                   onChange={(e) => {
                     const next = e.target.value;
+                    isTypingRef.current = true;
                     setTopic(next);
                     setStoreTopic("custom", next);
                     router.replace(buildHomeUrlWithTopic(next));
+                    // Allow URL→state sync again after React settles
+                    requestAnimationFrame(() => { isTypingRef.current = false; });
                   }}
                   onKeyDown={(e) => e.key === "Enter" && handleStartDebate()}
                   placeholder="Enter any debate topic or statement..."

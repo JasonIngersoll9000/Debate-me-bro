@@ -40,11 +40,11 @@ async def get_all_debates(authorization: Optional[str] = Header(None)):
     Returns summary info for each debate (topic, scores, winner, like_count, etc.)
     """
     user_email = _get_user_email(authorization)
-    debates = list_debates()
+    debates = await list_debates()
     for d in debates:
-        d["like_count"] = get_like_count(d["id"])
+        d["like_count"] = await get_like_count(d["id"])
         if user_email:
-            d["user_liked"] = user_email in get_likes(d["id"])
+            d["user_liked"] = user_email in await get_likes(d["id"])
         else:
             d["user_liked"] = False
     return debates
@@ -56,7 +56,7 @@ async def get_debate(debate_id: str):
     Get full debate data by ID. Returns cached data if available,
     or 404 if the debate hasn't been generated yet.
     """
-    data = load_debate(debate_id)
+    data = await load_debate(debate_id)
     if data is None:
         return JSONResponse(
             status_code=404,
@@ -80,14 +80,14 @@ async def toggle_like(debate_id: str, authorization: Optional[str] = Header(None
     if not user_email:
         raise HTTPException(status_code=401, detail="Authentication required to like debates")
 
-    data = load_debate(debate_id)
+    data = await load_debate(debate_id)
     if data is None:
         raise HTTPException(status_code=404, detail=f"Debate '{debate_id}' not found")
 
-    liked = like_debate(debate_id, user_email)
+    liked = await like_debate(debate_id, user_email)
     return {
         "liked": liked,
-        "like_count": get_like_count(debate_id),
+        "like_count": await get_like_count(debate_id),
     }
 
 
@@ -102,7 +102,7 @@ async def rejudge_debate(debate_id: str, authorization: Optional[str] = Header(N
     if not user_email:
         raise HTTPException(status_code=401, detail="Authentication required to rejudge debates")
 
-    data = load_debate(debate_id)
+    data = await load_debate(debate_id)
     if data is None:
         raise HTTPException(status_code=404, detail=f"Debate '{debate_id}' not found")
 
@@ -126,7 +126,7 @@ async def rejudge_debate(debate_id: str, authorization: Optional[str] = Header(N
 
     # Merge into existing debate data and save
     data["judging_results"] = new_results
-    save_debate(debate_id, data)
+    await save_debate(debate_id, data)
 
     return {"detail": "Rejudging complete", "judging_results": new_results}
 

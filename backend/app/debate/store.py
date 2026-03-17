@@ -1,29 +1,24 @@
 """
-Debate persistence store — Issue #16.
-JSON file-based storage for development; interface designed for easy Postgres migration.
-
-Stores completed debates at backend/data/debates/{debate_id}.json
-so they can be replayed without re-running AI calls.
+Debate persistence store — Issue #16 / #33.
+PostgreSQL-backed storage using CachedDebate and DebateLike models.
+Stores complete debate JSON blobs in a JSONB column for persistence
+across Render deploys.
 """
-import json
-import os
-import re
 import logging
-import tempfile
+import re
 from datetime import datetime, timezone
 from typing import Dict, Any, List, Optional
+
+from sqlalchemy import select, delete as sa_delete, func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from app.db.database import _get_session_factory
+from app.db.models import CachedDebate, DebateLike
 
 logger = logging.getLogger(__name__)
 
 # Allowlist: only lowercase letters, digits, hyphens, and underscores
 _VALID_ID_RE = re.compile(r"^[a-z0-9_-]+$")
-
-DATA_DIR = os.path.join(
-    os.path.dirname(
-        os.path.dirname(
-            os.path.dirname(__file__))),
-    "data",
-    "debates")
 
 
 def _validate_debate_id(debate_id: str) -> None:
@@ -32,174 +27,225 @@ def _validate_debate_id(debate_id: str) -> None:
         raise ValueError(f"Invalid debate_id: {debate_id!r}")
 
 
-def _safe_path(debate_id: str) -> str:
-    """Return the resolved filepath and verify it stays within DATA_DIR."""
-    _validate_debate_id(debate_id)
-    resolved = os.path.realpath(os.path.join(DATA_DIR, f"{debate_id}.json"))
-    real_data_dir = os.path.realpath(DATA_DIR)
-    if not resolved.startswith(real_data_dir + os.sep):
-        raise ValueError(
-            f"Path traversal detected for debate_id: {debate_id!r}"
-        )
-    return resolved
-
-
-def _ensure_dir():
-    """Create the data directory if it doesn't exist."""
-    os.makedirs(DATA_DIR, exist_ok=True)
-
-
-def save_debate(debate_id: str, data: Dict[str, Any]) -> None:
+async def save_debate(debate_id: str, data: Dict[str, Any]) -> None:
     """
-    Save a completed debate to the JSON file store.
+    Save a completed debate to PostgreSQL.
 
     Args:
         debate_id: Unique debate identifier (e.g. "healthcare", or a UUID for custom)
         data: Complete debate data including turns, personas, judging results
     """
-    _ensure_dir()
+    _validate_debate_id(debate_id)
 
     # Ensure metadata
     data.setdefault("id", debate_id)
     data.setdefault("status", "completed")
     data.setdefault("created_at", datetime.now(timezone.utc).isoformat())
 
-    filepath = _safe_path(debate_id)
-    with open(filepath, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False, default=str)
+    try:
+        factory = _get_session_factory()
+        async with factory() as session:
+            # Upsert: insert or update on conflict
+            stmt = pg_insert(CachedDebate).values(
+                debate_id=debate_id,
+                data=data,
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["debate_id"],
+                set_={"data": data, "updated_at": datetime.utcnow()},
+            )
+            await session.execute(stmt)
+            await session.commit()
 
-    logger.info("Saved debate '%s' to %s", debate_id, filepath)
+        logger.info("Saved debate '%s' to database", debate_id)
+    except Exception as exc:
+        logger.warning("DB unavailable, could not save debate '%s': %s", debate_id, exc)
 
 
-def load_debate(debate_id: str) -> Optional[Dict[str, Any]]:
+async def load_debate(debate_id: str) -> Optional[Dict[str, Any]]:
     """
     Load a completed debate from the store.
 
     Returns:
         Full debate data dict, or None if not found.
     """
-    filepath = _safe_path(debate_id)
-    if not os.path.isfile(filepath):
-        return None
+    _validate_debate_id(debate_id)
 
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        factory = _get_session_factory()
+        async with factory() as session:
+            result = await session.execute(
+                select(CachedDebate.data).where(CachedDebate.debate_id == debate_id)
+            )
+            row = result.scalar_one_or_none()
+
+        if row is None:
+            return None
+
         logger.info("Loaded cached debate '%s'", debate_id)
-        return data
-    except (json.JSONDecodeError, IOError) as e:
-        logger.warning("Failed to load debate '%s': %s", debate_id, e)
+        return row
+    except Exception as exc:
+        logger.warning("DB unavailable, could not load debate '%s': %s", debate_id, exc)
         return None
 
 
-def debate_exists(debate_id: str) -> bool:
+async def debate_exists(debate_id: str) -> bool:
     """Check if a completed debate exists in the store."""
     try:
-        filepath = _safe_path(debate_id)
+        _validate_debate_id(debate_id)
     except ValueError:
         return False
-    return os.path.isfile(filepath)
+
+    try:
+        factory = _get_session_factory()
+        async with factory() as session:
+            result = await session.execute(
+                select(func.count()).select_from(CachedDebate).where(
+                    CachedDebate.debate_id == debate_id
+                )
+            )
+            return result.scalar_one() > 0
+    except Exception as exc:
+        logger.warning("DB unavailable, debate_exists('%s'): %s", debate_id, exc)
+        return False
 
 
-def list_debates() -> List[Dict[str, Any]]:
+async def list_debates() -> List[Dict[str, Any]]:
     """
     List all saved debates with summary info.
 
     Returns:
         List of dicts with: id, topic, resolution, status, created_at, winner
     """
-    _ensure_dir()
+    try:
+        factory = _get_session_factory()
+        async with factory() as session:
+            result = await session.execute(
+                select(CachedDebate.debate_id, CachedDebate.data)
+                .order_by(CachedDebate.created_at.desc())
+            )
+            rows = result.all()
+    except Exception as exc:
+        logger.warning("DB unavailable, list_debates returning []: %s", exc)
+        return []
+
     debates = []
+    for debate_id, data in rows:
+        judging = data.get("judging_results") or {}
+        scores = judging.get("scores", {})
 
-    for filename in sorted(os.listdir(DATA_DIR), reverse=True):
-        if not filename.endswith(".json"):
-            continue
-
-        filepath = os.path.join(DATA_DIR, filename)
-        try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            # Extract summary fields
-            judging = data.get("judging_results") or {}
-            scores = judging.get("scores", {})
-
-            debates.append({
-                "id": data.get("id", filename.replace(".json", "")),
-                "topic": data.get("topic", "Unknown"),
-                "resolution": data.get("resolution", ""),
-                "pro_position": data.get("pro_position", ""),
-                "con_position": data.get("con_position", ""),
-                "status": data.get("status", "unknown"),
-                "created_at": data.get("created_at", ""),
-                "created_by": data.get("created_by", ""),
-                "winner": judging.get("winner", ""),
-                "pro_score": scores.get("pro", {}).get("weighted_total", 0),
-                "con_score": scores.get("con", {}).get("weighted_total", 0),
-                "turn_count": len([
-                    t for t in data.get("turns", [])
-                    if not t.get("is_internal", False)
-                ]),
-            })
-        except (json.JSONDecodeError, IOError) as e:
-            logger.warning("Could not read %s: %s", filename, e)
+        debates.append({
+            "id": data.get("id", debate_id),
+            "topic": data.get("topic", "Unknown"),
+            "resolution": data.get("resolution", ""),
+            "pro_position": data.get("pro_position", ""),
+            "con_position": data.get("con_position", ""),
+            "status": data.get("status", "unknown"),
+            "created_at": data.get("created_at", ""),
+            "created_by": data.get("created_by", ""),
+            "winner": judging.get("winner", ""),
+            "pro_score": scores.get("pro", {}).get("weighted_total", 0),
+            "con_score": scores.get("con", {}).get("weighted_total", 0),
+            "turn_count": len([
+                t for t in data.get("turns", [])
+                if not t.get("is_internal", False)
+            ]),
+        })
 
     return debates
 
 
-def _likes_path(debate_id: str) -> str:
-    """Return the path to the likes file for a debate."""
-    _validate_debate_id(debate_id)
-    likes_dir = os.path.join(os.path.dirname(DATA_DIR), "likes")
-    os.makedirs(likes_dir, exist_ok=True)
-    return os.path.join(likes_dir, f"{debate_id}.json")
-
-
-def get_likes(debate_id: str) -> List[str]:
+async def get_likes(debate_id: str) -> List[str]:
     """Get all user emails who liked a debate."""
-    path = _likes_path(debate_id)
-    if not os.path.isfile(path):
-        return []
+    _validate_debate_id(debate_id)
+
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, IOError):
+        factory = _get_session_factory()
+        async with factory() as session:
+            result = await session.execute(
+                select(DebateLike.user_email).where(
+                    DebateLike.debate_id == debate_id
+                )
+            )
+            return [row[0] for row in result.all()]
+    except Exception as exc:
+        logger.warning("DB unavailable, get_likes('%s'): %s", debate_id, exc)
         return []
 
 
-def get_like_count(debate_id: str) -> int:
+async def get_like_count(debate_id: str) -> int:
     """Get the number of likes for a debate."""
-    return len(get_likes(debate_id))
+    _validate_debate_id(debate_id)
+
+    try:
+        factory = _get_session_factory()
+        async with factory() as session:
+            result = await session.execute(
+                select(func.count()).select_from(DebateLike).where(
+                    DebateLike.debate_id == debate_id
+                )
+            )
+            return result.scalar_one()
+    except Exception as exc:
+        logger.warning("DB unavailable, get_like_count('%s'): %s", debate_id, exc)
+        return 0
 
 
-def like_debate(debate_id: str, user_email: str) -> bool:
+async def like_debate(debate_id: str, user_email: str) -> bool:
     """Toggle like for a debate. Returns True if now liked, False if unliked."""
-    likes = get_likes(debate_id)
-    if user_email in likes:
-        likes.remove(user_email)
-        liked = False
-    else:
-        likes.append(user_email)
-        liked = True
-    path = _likes_path(debate_id)
-    dir_name = os.path.dirname(path)
-    with tempfile.NamedTemporaryFile(
-        mode="w", encoding="utf-8", dir=dir_name, delete=False, suffix=".tmp"
-    ) as tmp:
-        json.dump(likes, tmp)
-        tmp_path = tmp.name
-    os.replace(tmp_path, path)
-    return liked
+    _validate_debate_id(debate_id)
+
+    try:
+        factory = _get_session_factory()
+        async with factory() as session:
+            # Check if already liked
+            result = await session.execute(
+                select(DebateLike.id).where(
+                    DebateLike.debate_id == debate_id,
+                    DebateLike.user_email == user_email,
+                )
+            )
+            existing = result.scalar_one_or_none()
+
+            if existing is not None:
+                # Unlike
+                await session.execute(
+                    sa_delete(DebateLike).where(DebateLike.id == existing)
+                )
+                await session.commit()
+                return False
+            else:
+                # Like
+                session.add(DebateLike(
+                    debate_id=debate_id,
+                    user_email=user_email,
+                ))
+                await session.commit()
+                return True
+    except Exception as exc:
+        logger.warning("DB unavailable, like_debate('%s', '%s'): %s", debate_id, user_email, exc)
+        return False
 
 
-def delete_debate(debate_id: str) -> bool:
+async def delete_debate(debate_id: str) -> bool:
     """Delete a debate from the store. Returns True if deleted."""
     try:
-        filepath = _safe_path(debate_id)
+        _validate_debate_id(debate_id)
     except ValueError:
         return False
-    if os.path.isfile(filepath):
-        os.remove(filepath)
-        logger.info("Deleted debate '%s'", debate_id)
-        return True
-    return False
+
+    try:
+        factory = _get_session_factory()
+        async with factory() as session:
+            result = await session.execute(
+                sa_delete(CachedDebate).where(
+                    CachedDebate.debate_id == debate_id
+                )
+            )
+            await session.commit()
+            return result.rowcount > 0
+    except Exception as exc:
+        logger.warning("DB unavailable, delete_debate('%s'): %s", debate_id, exc)
+        return False

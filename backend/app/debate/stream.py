@@ -193,7 +193,7 @@ async def stream_debate_events(
     its built-in mock engine instead of calling LLMs.
     """
     # ── Check cache (always replays regardless of mode) ──
-    cached = load_debate(debate_id)
+    cached = await load_debate(debate_id)
     if cached and cached.get("status") == "completed":
         async for event in _replay_debate(cached):
             yield event
@@ -610,7 +610,7 @@ async def stream_debate_events(
             "status": "completed",
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        save_debate(debate_id, debate_data)
+        await save_debate(debate_id, debate_data)
 
         yield f"data: {json.dumps({'type': 'complete', 'cached': False})}\n\n"
 

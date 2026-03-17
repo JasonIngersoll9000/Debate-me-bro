@@ -4,8 +4,6 @@ Covers helper functions, cache replay, and demo-mode signal paths.
 """
 import json
 import os
-import shutil
-import tempfile
 
 import pytest
 from unittest.mock import patch, AsyncMock, MagicMock
@@ -17,14 +15,32 @@ from app.models.schemas import Persona, EvidenceBundle
 # ── Fixtures ────────────────────────────────────────────────────────────
 
 @pytest.fixture(autouse=True)
-def temp_data_dir(monkeypatch):
-    """Redirect store.DATA_DIR so save/load use a temp directory."""
-    tmpdir = tempfile.mkdtemp()
-    data_dir = os.path.join(tmpdir, "debates")
-    os.makedirs(data_dir, exist_ok=True)
-    monkeypatch.setattr(store, "DATA_DIR", data_dir)
-    yield data_dir
-    shutil.rmtree(tmpdir, ignore_errors=True)
+def mock_db_store(monkeypatch):
+    """In-memory store that replaces async DB calls for test isolation."""
+    _debates = {}
+
+    async def _save(debate_id, data):
+        data.setdefault("id", debate_id)
+        data.setdefault("status", "completed")
+        _debates[debate_id] = data
+
+    async def _load(debate_id):
+        return _debates.get(debate_id)
+
+    async def _exists(debate_id):
+        return debate_id in _debates
+
+    async def _list():
+        return list(_debates.values())
+
+    monkeypatch.setattr(store, "save_debate", _save)
+    monkeypatch.setattr(store, "load_debate", _load)
+    monkeypatch.setattr(store, "debate_exists", _exists)
+    monkeypatch.setattr(store, "list_debates", _list)
+    # Also patch the import in stream module
+    monkeypatch.setattr(stream, "save_debate", _save)
+    monkeypatch.setattr(stream, "load_debate", _load)
+    yield _debates
 
 
 SAMPLE_CACHED_DEBATE = {
@@ -178,7 +194,7 @@ async def test_replay_no_judging_when_absent():
 @pytest.mark.asyncio
 async def test_stream_replays_cached_debate():
     """When a completed debate is in the store, stream replays it."""
-    store.save_debate("test-cached", SAMPLE_CACHED_DEBATE)
+    await store.save_debate("test-cached", SAMPLE_CACHED_DEBATE)
 
     events = []
     async for event in stream.stream_debate_events("test-cached", mode="live"):
