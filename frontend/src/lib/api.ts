@@ -158,6 +158,28 @@ export async function fetchVoteTally(debateId: string, token: string | null): Pr
   }
 }
 
+export interface UsageInfo {
+  used: number;
+  limit: number;
+  remaining: number;
+  is_admin: boolean;
+}
+
+export async function fetchUsage(): Promise<UsageInfo | null> {
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  if (!token) return null;
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/debates/usage`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: "no-store",
+    });
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
+  }
+}
+
 export async function castVote(debateId: string, side: "pro" | "con", token: string): Promise<VoteTally> {
   const response = await fetch(`${API_BASE_URL}/api/votes/`, {
     method: "POST",

@@ -15,8 +15,9 @@ from typing import AsyncGenerator, Dict, Any, List
 from app.debate.graph import create_debate_graph
 from app.debate.evidence import EvidenceLoader
 from app.debate.persona_generator import generate_persona
-from app.debate.store import save_debate, load_debate
+from app.debate.store import save_debate, load_debate, count_user_debates
 from app.models.schemas import DebateState
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +186,7 @@ async def _replay_debate(cached: Dict[str, Any]) -> AsyncGenerator[str, None]:
 # ═══════════════════════════════════════════════════════════════════════
 
 async def stream_debate_events(
-    debate_id: str, mode: str = "demo"
+    debate_id: str, mode: str = "demo", user_email: str | None = None
 ) -> AsyncGenerator[str, None]:
     """
     Main entrypoint: checks cache first, replays if available, otherwise runs live.
@@ -203,6 +204,19 @@ async def stream_debate_events(
     if mode == "demo":
         yield f"data: {json.dumps({'type': 'mode', 'mode': 'demo'})}\n\n"
         return
+
+    # ── Usage cap check (live mode only, cached replays are free) ──
+    if not user_email:
+        yield f"data: {json.dumps({'type': 'error', 'code': 'AUTH_REQUIRED', 'message': 'You must be logged in to generate new debates.'})}\n\n"
+        return
+
+    is_admin = user_email.lower() in settings.admin_email_set
+    if not is_admin:
+        used = await count_user_debates(user_email)
+        cap = settings.max_debates_per_user
+        if used >= cap:
+            yield f"data: {json.dumps({'type': 'error', 'code': 'RATE_LIMITED', 'message': f'You have reached your debate limit ({used}/{cap}). Cached debates can still be replayed.'})}\n\n"
+            return
 
     # ── Not cached — resolve topic info ──
     # For custom topics, load the saved analysis; fall back to presets or
@@ -610,7 +624,7 @@ async def stream_debate_events(
             "status": "completed",
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        await save_debate(debate_id, debate_data)
+        await save_debate(debate_id, debate_data, created_by=user_email)
 
         yield f"data: {json.dumps({'type': 'complete', 'cached': False})}\n\n"
 

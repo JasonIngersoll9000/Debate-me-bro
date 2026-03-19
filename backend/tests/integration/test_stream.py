@@ -3,8 +3,15 @@ import json
 import pytest
 from httpx import AsyncClient, ASGITransport
 from unittest.mock import patch
+from jose import jwt
 
 from app.main import app
+from app.config import settings
+
+
+def _make_test_token(email: str = "test@test.com") -> str:
+    """Generate a valid JWT for test requests."""
+    return jwt.encode({"sub": email}, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
 
 @pytest.mark.asyncio
@@ -25,7 +32,7 @@ async def test_sse_streaming_endpoint(mock_call_agent, mock_judging):
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         async with client.stream(
-            "GET", "/api/debates/test-id-123/stream"
+            "GET", f"/api/debates/test-id-123/stream?token={_make_test_token()}"
         ) as response:
             assert response.status_code == 200
             assert response.headers["content-type"].lower().startswith(
@@ -85,7 +92,7 @@ async def test_sse_on_chain_end_dict_output_public_only(mock_call_agent):
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         async with client.stream(
-            "GET", "/api/debates/test-id-123/stream"
+            "GET", f"/api/debates/test-id-123/stream?token={_make_test_token()}"
         ) as response:
             assert response.status_code == 200
 

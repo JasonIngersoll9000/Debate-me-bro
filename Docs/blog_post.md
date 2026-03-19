@@ -30,27 +30,45 @@ Our design philosophy is deliberately provocative: **no topic is off limits.** W
 
 When a user opens DebateMeBro, they land on a dark-themed homepage with preset debate topics — each displayed as a card with the resolution, pro/con positions, and a "Debate It" button. Users can also type any custom topic into a search bar.
 
+![Landing page with preset debate topics and custom topic search bar](../assets/screenshot-homepage.png)
+
 ### Preset Topics: One Click to Launch
 
 Clicking a preset topic (like "Should the United States adopt universal healthcare?") kicks off the full pipeline. The backend generates two unique personas — not "Pro Bot" and "Con Bot," but characters like "Dr. Elena Vasquez, Health Policy Researcher" with specific expertise areas, core values, and rhetorical approaches. An animated overlay reveals these personas before the debate begins, letting users meet the debaters.
+
+![Persona reveal cards showing both AI debaters with their expertise, values, and rhetorical style](../assets/screenshot-personas.png)
 
 ### Custom Topics: Research Prompt Generation
 
 For custom topics, the user enters any resolution they want debated. Claude Haiku analyzes the topic and generates structured research prompts — one for the Pro side, one for the Con side. These prompts are designed to be run in any AI research tool (Claude Research Mode, ChatGPT Deep Research, Perplexity). The user copies the prompts, runs them externally, and uploads the resulting research documents. This approach leverages the user's own AI subscriptions while ensuring high-quality, balanced evidence.
 
+![Custom topic page with generated research prompts for Pro and Con sides](../assets/screenshot-research-prompts.png)
+
 ### The Debate Itself
 
 Once launched, the debate streams token-by-token in a split-screen layout: Pro arguments in blue on the left, Con in red on the right. A phase navigation bar at the top shows progress through all seven phases.
 
+![Split-screen debate view with Pro (blue) on the left and Con (red) on the right, phase navigation bar at top](../assets/screenshot-debate-split.png)
+
 The opening arguments are the first thing users see — each agent presents its case with cited evidence, structured reasoning, and clear claims. Then comes the magic: the evaluation phase, where each agent privately reads and analyzes the opponent's opening. Users can view this internal strategic analysis, seeing exactly how each AI planned its response.
 
 Rebuttals follow, and this is where steelmanning shines. Each agent must acknowledge the opponent's strongest point before attacking it, demonstrating genuine engagement rather than strawmanning. Closing statements synthesize everything, acknowledging where the opponent made strong points and identifying where real disagreement remains.
+
+![Rebuttal phase showing an agent steelmanning the opponent's argument before responding](../assets/screenshot-steelman.png)
 
 ### AI Judging
 
 Three specialized judges — Logic, Evidence, and Engagement — independently evaluate the complete debate transcript. Each judge provides per-side scores, chain-of-thought reasoning, analysis of strongest and weakest moves, and a winner determination. The results display as expandable judge cards with score bars and a synthesized verdict explaining why the winner won.
 
 Users can also cast their own vote on who they think won, with tallies displayed alongside the AI scores.
+
+![Judging results panel with score bars, expanded judge card, and synthesized verdict](../assets/screenshot-judging.png)
+
+### Browse Page
+
+Every completed debate is saved as a JSON file. Before opening an SSE connection, the frontend checks if the debate already exists via a REST call. If it does, all data loads instantly — no streaming, no API costs. This means a debate only costs tokens once; every subsequent view is free.
+
+![Browse page showing completed debate cards with like counts](../assets/screenshot-browse.png)
 
 ---
 
@@ -158,7 +176,7 @@ Our retrospective process was genuinely useful — not just ceremony. After Spri
 
 **The product is genuinely useful.** After building DebateMeBro, we've both started using it to explore topics we're curious about. There's something uniquely valuable about seeing the strongest case for both sides of an issue laid out with cited evidence and transparent scoring. It doesn't tell you what to think — it shows you what the best arguments are and lets you decide.
 
-DebateMeBro is live at [https://debatemebro.vercel.app](https://debatemebro.vercel.app). Try debating any topic and see what happens when AI is forced to argue in good faith.
+DebateMeBro is live at [https://debate-me-bro.vercel.app](https://debate-me-bro.vercel.app). Try debating any topic and see what happens when AI is forced to argue in good faith.
 
 ---
 

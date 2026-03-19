@@ -36,6 +36,7 @@
 ✅ #29 Phase gating fixed (Continue button on all user phases including research)
 ✅ #30 Browse page likes functional (toggle like API + optimistic UI)
 ⚠️ #31 Judging metrics display (ScoreBar clamped, votes wired; 0/0 explanation pending)
+❌ #34 Auto-generate keywords/tags for debate filtering and search
 ```
 
 ### Sprint 3 — Recommended Priority Order
@@ -46,6 +47,7 @@ HIGH PRIORITY (core quality):
   #27 Persona Reveal on Every Debate Load (frontend, quick fix)
 
 MEDIUM PRIORITY (features):
+  #36 Password Recovery — Forgot Password / Reset Flow (backend + frontend)
   #28 "How It Works" Explanation Page (frontend, standalone)
   #24 Persuasion / Argument Strength Judge (backend + frontend)
   #13 Position-Swapped Judging Bias Elimination (backend)
@@ -54,6 +56,9 @@ LOWER PRIORITY (custom topics pipeline):
   #11 Topic Analysis + Prompt Gen (partial) ──→ #12 Research Upload + Custom Flow (partial)
   #21 AI Resolution Curation & Improvement
   #22 AI-Powered Research (user provides API key or pays)
+
+STRETCH (multimedia):
+  #35 Voice & Video Debate Generation (TTS + AI avatars)
 ```
 
 ---
@@ -836,7 +841,8 @@ On the landing page, typing a space in the "Enter any debate topic or statement"
 **Labels:** `bug`, `priority: high`, `backend`, `infrastructure`
 **Milestone:** Sprint 3
 **Assignee:** Jason
-**Status:** 🔴 Open
+**Status:** ✅ Complete
+**Branch:** `feature/db-debate-persistence`
 
 #### Description
 
@@ -844,17 +850,315 @@ On the deployed Render backend, completed debates are not appearing on the Brows
 
 **Root cause:** The debate cache uses JSON files stored at `backend/data/debates/`. Render's free tier has an **ephemeral filesystem** — all files not in the Git repo are wiped on every deploy, restart, or spin-down. Since cached debate JSON files are generated at runtime and not committed to the repo, they are lost.
 
-**Impact:** Every debate costs full API tokens on every view. No debates appear in the browse page after a Render restart. This defeats the cache-first architecture designed to minimize token spend.
+**Solution implemented:** Migrated debate persistence from JSON files to PostgreSQL using the existing Render-provisioned database.
 
-**Potential solutions:**
-1. **Short-term:** Move debate storage to the Render PostgreSQL database (already provisioned) instead of JSON files. Add a `debates` table and update `store.py` to read/write from DB.
-2. **Medium-term:** Use Render's persistent disk ($7/mo) or an external object store (S3, Cloudflare R2) for file-based caching.
-3. **Workaround:** Commit pre-generated debate files for preset topics to the repo so they survive deploys (only helps presets, not custom debates).
+**Changes made:**
+1. Added `CachedDebate` and `DebateLike` SQLAlchemy models to `db/models.py` — stores full debate JSON in a JSONB column
+2. Rewrote `store.py` — all functions (`save_debate`, `load_debate`, `list_debates`, `debate_exists`, `get_likes`, `get_like_count`, `like_debate`, `delete_debate`) are now async and use PostgreSQL via SQLAlchemy
+3. Added graceful fallback: all store functions catch DB connection errors and return safe defaults (empty list, None, 0) so the app doesn't crash when PostgreSQL is unreachable locally
+4. Updated `stream.py` and `routes/debates.py` callers to `await` the now-async store functions
+5. Added debate seeding in `main.py` lifespan: on startup, seeds the DB from any local `backend/data/debates/*.json` files (one-time migration of existing cached debates)
+6. Updated all test files to use in-memory mock DB store fixtures instead of temp file directories, patching at all import sites (store, stream, routes modules)
 
 #### Acceptance Criteria
 
-- [ ] Completed debates persist across Render restarts/deploys
-- [ ] Browse page shows all previously completed debates
-- [ ] Preset debates (healthcare, remote work, AI copyright) load from cache without re-running
-- [ ] Custom debates are also cached and browseable
-- [ ] Like counts persist alongside debate data
+- [x] Completed debates persist across Render restarts/deploys
+- [x] Browse page shows all previously completed debates
+- [x] Preset debates (healthcare, remote work, AI copyright) load from cache without re-running
+- [x] Custom debates are also cached and browseable
+- [x] Like counts persist alongside debate data
+- [x] All 105 tests pass (57 store/integration tests + 48 others; 4 pre-existing DB-connection-required tests excluded)
+- [x] Graceful degradation when DB is unreachable (local dev without PostgreSQL still works)
+
+---
+
+### Issue #34: Auto-generate keywords/tags for debates to enable filtering and search
+
+**Labels:** `feature`, `priority: medium`, `backend`, `frontend`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+**Depends on:** #33
+
+#### Description
+
+As the number of completed debates grows into the hundreds, users need a way to filter and discover debates by topic area. Currently, the browse page shows a flat chronological list with no categorization — users must scroll through everything or rely on the topic title alone.
+
+The system should automatically generate a set of descriptive keywords/tags for each debate when it is saved, based on the topic, resolution, and argument content. These keywords enable filtering on the browse page (e.g., "healthcare", "economics", "ethics", "technology", "education") so users can quickly find debates in areas they care about.
+
+#### Keyword Generation
+
+- When a debate is saved (in `store.py` or as a post-save hook), use Claude Haiku to generate 3–6 descriptive keyword tags from the debate's topic, resolution, and optionally the first few turns
+- Keywords should be short, lowercase, single-word or hyphenated terms (e.g., `healthcare`, `ai-ethics`, `economics`, `free-speech`, `climate`, `education`)
+- Use a controlled vocabulary approach: maintain a canonical list of known tags and prefer existing tags over inventing new ones, to avoid fragmentation (e.g., don't create both "health" and "healthcare")
+- Store keywords in the `CachedDebate` model (e.g., a new `keywords` column as a PostgreSQL ARRAY or JSON list)
+- Backfill keywords for all existing cached debates (migration script or one-time seeding pass)
+
+#### Frontend Filtering
+
+- Browse page displays keyword tags as clickable filter chips above the debate list
+- Clicking a tag filters the list to only debates with that keyword
+- Multiple tags can be selected (AND or OR logic — start with OR for broader results)
+- Each debate card shows its keyword tags as small badges
+- Optional: search bar that filters by keyword match in addition to topic text
+
+#### API Changes
+
+- `GET /api/debates/` should accept an optional `?tags=healthcare,economics` query param to filter server-side
+- `GET /api/debates/tags` returns the list of all known tags with debate counts (for the filter chip UI)
+- Each debate summary in the list response includes a `keywords` field
+
+#### Acceptance Criteria
+
+- [ ] New `keywords` column added to `CachedDebate` model
+- [ ] Keywords auto-generated via Claude Haiku when a debate is saved
+- [ ] 3–6 descriptive tags per debate, drawn from a controlled vocabulary when possible
+- [ ] `GET /api/debates/` supports `?tags=` query param for server-side filtering
+- [ ] `GET /api/debates/tags` returns all known tags with counts
+- [ ] Browse page shows keyword filter chips
+- [ ] Clicking a chip filters the debate list
+- [ ] Each debate card displays its keyword tags
+- [ ] Existing debates backfilled with keywords
+- [ ] Unit tests for keyword generation and filtering logic
+
+---
+
+### Issue #35: Voice & Video Debate Generation — Dynamic Audio/Video Output
+
+**Labels:** `feature`, `priority: low`, `backend`, `frontend`, `stretch`
+**Milestone:** Sprint 3 (Stretch)
+**Assignee:** Jason
+**Depends on:** #16, #33
+
+#### Description
+
+Currently, debates are presented as text streams in a split-screen layout. While effective for reading, the experience could be dramatically more engaging if users could **listen to** or **watch** the debate as if it were a real spoken exchange between two advocates. This feature adds AI-generated voice (and optionally video) output to accompany the text debate, turning DebateMeBro into a multimedia debate platform.
+
+**Why this matters:**
+- Voice brings personality and emotion that text alone cannot convey — tone, emphasis, pacing, and rhetorical delivery become part of the experience
+- Video avatars make the AI personas feel tangible — users see the debaters they were introduced to in the persona reveal
+- Audio/video debates are shareable, embeddable, and more accessible to users who prefer listening over reading
+- This differentiates DebateMeBro from every other AI debate tool, which are all text-only
+
+#### Phase 1: Voice Generation (TTS)
+
+Generate spoken audio for each debate turn using a text-to-speech API, with distinct voices for the Pro and Con personas.
+
+**Technical approach:**
+- Use a TTS provider with high-quality, expressive voices (e.g., ElevenLabs, OpenAI TTS, Google Cloud TTS, or Amazon Polly Neural)
+- Assign a distinct voice to each persona — voice selection could be influenced by the persona's identity (e.g., gender, age, tone described in the persona profile)
+- Generate audio per-turn (not the entire debate at once) to support progressive playback and streaming
+- Store generated audio clips alongside the debate in object storage (S3, Cloudflare R2, or similar) — audio files are too large for PostgreSQL
+- Audio generation can be async/post-hoc: generate after the text debate completes, not during live streaming (to avoid blocking the debate flow)
+
+**Playback UX:**
+- "Listen" button on each debate card and in the debate view header
+- Audio player synced with the text: as audio plays, the corresponding text turn is highlighted/scrolled to
+- Play/pause, skip forward/back by turn, playback speed controls (1x, 1.25x, 1.5x, 2x)
+- Auto-advance through turns: when one turn's audio finishes, the next starts after a brief pause
+- Visual indicator showing which turn is currently being spoken
+
+#### Phase 2: Video Avatars (Stretch)
+
+Generate animated video avatars that lip-sync to the audio, creating a visual debate experience.
+
+**Technical approach:**
+- Use an AI avatar/video generation service (e.g., HeyGen, D-ID, Synthesia, or Hedra) to generate talking-head videos from the audio clips
+- Avatar appearance could be derived from the persona description (expertise area, identity traits)
+- Generate one video per turn, or composite a split-screen video of the full debate
+- Video stored in object storage with adaptive streaming (HLS or DASH) for smooth playback
+- This is significantly more expensive and slower to generate than audio alone — consider making it opt-in or premium-only
+
+**Video UX:**
+- "Watch" button alongside the "Listen" button
+- Split-screen video view: Pro avatar on the left, Con avatar on the right (matching the text layout)
+- Active speaker's video is highlighted/enlarged; inactive speaker shows a static or listening pose
+- Full-screen mode for video debates
+- Fallback to audio-only if video generation fails or is unavailable
+
+#### API & Infrastructure
+
+- `POST /api/debates/{id}/generate-audio` — triggers async audio generation for a completed debate (returns a job ID)
+- `GET /api/debates/{id}/audio-status` — check generation progress (per-turn status)
+- `GET /api/debates/{id}/audio/{turn_index}` — returns audio file URL for a specific turn
+- `POST /api/debates/{id}/generate-video` — triggers async video generation (stretch)
+- Audio/video files stored in external object storage (not the database)
+- Background worker (Celery, ARQ, or similar) for async generation jobs — TTS and especially video generation are too slow for request/response
+- Cost tracking: voice and video generation have per-character/per-minute costs that must be tracked and potentially gated (tie into #20 usage caps)
+
+#### Voice/Persona Mapping
+
+- Each generated persona should have a consistent voice ID assigned when the persona is created
+- Voice selection criteria: match the persona's described characteristics (formal vs. casual, authoritative vs. empathetic)
+- The same persona should always use the same voice across replays and re-generations
+- Store voice ID in the debate data alongside persona metadata
+
+#### Cost Considerations
+
+- **TTS costs:** ElevenLabs ~$0.30/1K chars, OpenAI TTS ~$0.015/1K chars — a full debate (~10K chars) costs $0.15–$3.00 per debate in audio
+- **Video costs:** HeyGen/D-ID ~$0.10–$0.50 per minute of video — a 10-minute debate video costs $1–$5
+- Audio generation should be opt-in (user clicks "Generate Audio") rather than automatic
+- Video generation should be gated behind user-provided API keys or a premium tier
+- Cache aggressively: once audio/video is generated for a debate, never regenerate
+
+#### Phase 3: YouTube Distribution Pipeline
+
+Automatically publish generated debate videos to YouTube, driving traffic back to the DebateMeBro website and offsetting generation costs through ad revenue.
+
+**Automated upload pipeline:**
+- After video generation completes, optionally auto-publish to a configured YouTube channel via the YouTube Data API v3
+- Auto-generate title: "AI Debate: [Topic] — Who Wins?" (SEO-optimized, clickable)
+- Auto-generate description including:
+  - Debate summary (topic, resolution, winner, key arguments)
+  - Link back to the full interactive debate on DebateMeBro website (e.g., `https://debatemebro.com/debates/{id}`)
+  - CTA: "Watch the full debate with transparent AI judging scores at [website URL]"
+  - Timestamps for each phase (opening, rebuttal, closing, judging)
+  - Tags/keywords from Issue #34 for YouTube SEO
+- Auto-generate thumbnail: split-screen with Pro/Con persona names, topic text overlay, winner badge
+- Set YouTube tags from the debate's auto-generated keywords (#34)
+- Schedule uploads for optimal posting times (configurable)
+
+**Website cross-promotion:**
+- YouTube video description always links to the interactive web version where users can:
+  - Read the full text with citations and evidence
+  - See transparent per-judge scoring breakdowns
+  - Vote on who they think won
+  - Like and share the debate
+  - Start their own debate on a related topic
+- End-screen card on YouTube video: "Disagree with the judges? Vote now at debatemebro.com"
+- Pinned comment with website link and invitation to debate the same topic
+
+**YouTube Shorts pipeline:**
+- Auto-extract the strongest 60-second argument from each side as YouTube Shorts
+- Shorts title: "AI argues [position] in 60 seconds #debate #[topic]"
+- Shorts description links to the full debate video and website
+- Shorts drive discovery → full video views → website visits
+
+**Revenue & cost offset:**
+- YouTube ad CPM on educational/intellectual content: ~$5–$12 per 1K views
+- Break-even per video: ~1,000–2,000 views at $5 CPM for a $5–$10 generation cost
+- Batch generation: 20–50 debates/month on trending and evergreen topics
+- Revenue reinvested into API costs, enabling more debates and higher-quality TTS/video
+
+**Compliance:**
+- All videos labeled as AI-generated per YouTube's disclosure requirements
+- Debate methodology explained in channel About page
+- No misleading claims — clearly framed as AI-generated structured debate, not human discourse
+
+#### Acceptance Criteria
+
+**Phase 1 — Voice (MVP):**
+- [ ] TTS provider integrated (ElevenLabs or OpenAI TTS recommended)
+- [ ] Distinct voices assigned to Pro and Con personas
+- [ ] Audio generated per-turn for completed debates
+- [ ] Audio files stored in object storage (not DB)
+- [ ] "Listen" button on debate view triggers audio playback
+- [ ] Audio playback synced with text — current turn highlighted as it plays
+- [ ] Play/pause, skip turn, and playback speed controls
+- [ ] Audio generation is async (background job, not blocking)
+- [ ] Generated audio cached — never regenerated for the same debate
+- [ ] Cost tracking for audio generation
+
+**Phase 2 — Video (Stretch):**
+- [ ] AI avatar service integrated (HeyGen, D-ID, or similar)
+- [ ] Talking-head video generated per-turn with lip-sync to audio
+- [ ] Split-screen video player in debate view
+- [ ] Active speaker visually emphasized
+- [ ] Video generation gated behind premium/user API key
+- [ ] Full-screen video mode
+- [ ] Fallback to audio-only if video unavailable
+
+**Phase 3 — YouTube Distribution:**
+- [ ] YouTube Data API v3 integrated for automated uploads
+- [ ] Auto-generated SEO titles, descriptions with website links, and tags from #34 keywords
+- [ ] Video description includes link back to interactive debate on DebateMeBro website
+- [ ] Auto-generated thumbnails (split-screen Pro/Con with topic overlay)
+- [ ] YouTube Shorts auto-extracted from strongest 60-second arguments
+- [ ] Shorts description links to full video and website
+- [ ] End-screen cards and pinned comments driving traffic to website
+- [ ] Configurable upload scheduling
+- [ ] AI-generated content disclosure per YouTube ToS
+- [ ] Revenue tracking dashboard (views, CPM, cost offset per debate)
+
+---
+
+### Issue #36: Password Recovery — Forgot Password / Reset Flow
+
+**Labels:** `feature`, `priority: high`, `backend`, `frontend`
+**Milestone:** Sprint 3
+**Assignee:** Jason
+**Depends on:** #3
+
+#### Description
+
+The current auth system (Issue #3) supports registration and login but has no way for users to recover their account if they forget their password. This is a critical gap — any production-facing app with password-based auth needs a password reset flow. Without it, users who forget their credentials are permanently locked out.
+
+#### Backend: Password Reset API
+
+**Token-based reset flow (industry standard):**
+
+1. **`POST /api/auth/forgot-password`** — accepts `{ email }`, generates a time-limited reset token
+   - Look up user by email; if not found, still return 200 (prevent email enumeration)
+   - Generate a cryptographically secure token (e.g., `secrets.token_urlsafe(32)`)
+   - Store the token hash + expiration (e.g., 1 hour) in a new `password_reset_tokens` table or a column on the `users` table
+   - Send a reset email with a link: `https://debatemebro.com/reset-password?token=<token>`
+   - Rate-limit: max 3 reset requests per email per hour
+
+2. **`POST /api/auth/reset-password`** — accepts `{ token, new_password }`
+   - Validate the token: exists, not expired, not already used
+   - Hash the new password with passlib bcrypt (same as registration)
+   - Update the user's password in the DB
+   - Invalidate the token (single-use)
+   - Optionally invalidate all existing JWT sessions for that user (force re-login)
+
+**Email delivery:**
+- Use a transactional email provider (SendGrid, Resend, AWS SES, or Mailgun)
+- Email contains: reset link, expiration warning ("This link expires in 1 hour"), and a note that if they didn't request the reset, they can ignore it
+- Environment variable: `SMTP_URL` or provider-specific API key (e.g., `SENDGRID_API_KEY`)
+- For local dev: log the reset link to console instead of sending an email
+
+**Database changes:**
+- New `password_reset_tokens` table: `id`, `user_id`, `token_hash`, `expires_at`, `used_at`, `created_at`
+- Or alternatively: `reset_token_hash` and `reset_token_expires` columns on the existing `users` table (simpler but less flexible)
+
+#### Frontend: Reset Password Pages
+
+**Forgot password page (`/forgot-password`):**
+- Email input field + "Send Reset Link" button
+- On success: "If an account with that email exists, we've sent a reset link. Check your inbox."
+- Same dark theme styling as login/register pages
+
+**Reset password page (`/reset-password?token=...`):**
+- New password + confirm password fields
+- Password strength requirements displayed (min 8 chars, etc.)
+- On success: "Password reset! You can now log in." with link to login page
+- On invalid/expired token: "This reset link is invalid or has expired. Request a new one." with link to forgot-password page
+
+**Login page integration:**
+- Add "Forgot password?" link below the login form, linking to `/forgot-password`
+
+#### Security Considerations
+
+- **Never reveal whether an email exists** in the forgot-password response (prevents email enumeration attacks)
+- **Hash the reset token** before storing in DB (same principle as passwords — if DB is compromised, tokens are useless)
+- **Single-use tokens** — mark as used immediately after successful reset
+- **Short expiration** — 1 hour max; 15–30 minutes preferred
+- **Rate limiting** — prevent brute-force token guessing and spam email sending
+- **HTTPS only** — reset links must use HTTPS in production
+- **Password validation** — enforce same strength requirements as registration
+
+#### Acceptance Criteria
+
+- [ ] `POST /api/auth/forgot-password` generates a reset token and sends email (or logs link in dev)
+- [ ] `POST /api/auth/reset-password` validates token and updates password
+- [ ] Reset tokens are hashed before storage, single-use, and expire after 1 hour
+- [ ] Same 200 response whether email exists or not (no enumeration)
+- [ ] Rate-limited: max 3 requests per email per hour
+- [ ] `/forgot-password` page with email input and success message
+- [ ] `/reset-password` page with new password fields and token validation
+- [ ] "Forgot password?" link on login page
+- [ ] Transactional email provider integrated (SendGrid/Resend/SES)
+- [ ] Dev mode: reset link logged to console instead of emailed
+- [ ] Password strength validation on reset (same rules as registration)
+- [ ] Invalid/expired token shows clear error with link to retry
+- [ ] Integration tests for full forgot → reset flow
+- [ ] Security tests: expired token rejected, used token rejected, rate limiting enforced

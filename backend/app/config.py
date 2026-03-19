@@ -14,7 +14,16 @@ class Settings(BaseSettings):
     debate_mode: str = "demo"
     debate_model: str = "claude-sonnet-4-20250514"
     persona_model: str = "claude-haiku-4-5"
+    max_debates_per_user: int = 5
+    admin_emails: str = ""
     
     model_config = SettingsConfigDict(env_file=str(_ENV_FILE), env_file_encoding="utf-8", extra="ignore")
+
+    @property
+    def admin_email_set(self) -> set[str]:
+        """Parse comma-separated admin emails into a set."""
+        if not self.admin_emails:
+            return set()
+        return {e.strip().lower() for e in self.admin_emails.split(",") if e.strip()}
 
 settings = Settings()

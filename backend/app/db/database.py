@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import declarative_base
+from fastapi import HTTPException
 from app.config import settings
 import logging
 
@@ -33,6 +34,13 @@ def _get_session_factory():
 
 
 async def get_db():
-    factory = _get_session_factory()
-    async with factory() as session:
-        yield session
+    try:
+        factory = _get_session_factory()
+        async with factory() as session:
+            yield session
+    except Exception as exc:
+        logger.warning("Database unavailable: %s", exc)
+        raise HTTPException(
+            status_code=503,
+            detail="Database is temporarily unavailable",
+        )

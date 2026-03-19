@@ -27,13 +27,14 @@ def _validate_debate_id(debate_id: str) -> None:
         raise ValueError(f"Invalid debate_id: {debate_id!r}")
 
 
-async def save_debate(debate_id: str, data: Dict[str, Any]) -> None:
+async def save_debate(debate_id: str, data: Dict[str, Any], created_by: Optional[str] = None) -> None:
     """
     Save a completed debate to PostgreSQL.
 
     Args:
         debate_id: Unique debate identifier (e.g. "healthcare", or a UUID for custom)
         data: Complete debate data including turns, personas, judging results
+        created_by: Email of the user who generated this debate (optional)
     """
     _validate_debate_id(debate_id)
 
@@ -41,25 +42,33 @@ async def save_debate(debate_id: str, data: Dict[str, Any]) -> None:
     data.setdefault("id", debate_id)
     data.setdefault("status", "completed")
     data.setdefault("created_at", datetime.now(timezone.utc).isoformat())
+    if created_by:
+        data["created_by"] = created_by
 
     try:
         factory = _get_session_factory()
         async with factory() as session:
             # Upsert: insert or update on conflict
-            stmt = pg_insert(CachedDebate).values(
-                debate_id=debate_id,
-                data=data,
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
-            )
+            values = {
+                "debate_id": debate_id,
+                "data": data,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+            }
+            if created_by:
+                values["created_by"] = created_by
+            stmt = pg_insert(CachedDebate).values(**values)
+            update_set: Dict[str, Any] = {"data": data, "updated_at": datetime.utcnow()}
+            if created_by:
+                update_set["created_by"] = created_by
             stmt = stmt.on_conflict_do_update(
                 index_elements=["debate_id"],
-                set_={"data": data, "updated_at": datetime.utcnow()},
+                set_=update_set,
             )
             await session.execute(stmt)
             await session.commit()
 
-        logger.info("Saved debate '%s' to database", debate_id)
+        logger.info("Saved debate '%s' to database (by %s)", debate_id, created_by or "anonymous")
     except Exception as exc:
         logger.warning("DB unavailable, could not save debate '%s': %s", debate_id, exc)
 
@@ -89,6 +98,22 @@ async def load_debate(debate_id: str) -> Optional[Dict[str, Any]]:
     except Exception as exc:
         logger.warning("DB unavailable, could not load debate '%s': %s", debate_id, exc)
         return None
+
+
+async def count_user_debates(user_email: str) -> int:
+    """Count how many debates a user has generated (for usage cap enforcement)."""
+    try:
+        factory = _get_session_factory()
+        async with factory() as session:
+            result = await session.execute(
+                select(func.count()).select_from(CachedDebate).where(
+                    CachedDebate.created_by == user_email
+                )
+            )
+            return result.scalar_one()
+    except Exception as exc:
+        logger.warning("DB unavailable, count_user_debates('%s'): %s", user_email, exc)
+        return 0
 
 
 async def debate_exists(debate_id: str) -> bool:

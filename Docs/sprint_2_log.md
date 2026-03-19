@@ -210,7 +210,7 @@
 
 ## Deployment
 
-**Frontend:** Vercel (Next.js native) — `https://debatemebro.vercel.app`
+**Frontend:** Vercel (Next.js native) — `https://debate-me-bro.vercel.app`
 **Backend:** Render.com free tier (persistent FastAPI web service) — `https://debatemebro-api.onrender.com`
 
 **Why two platforms:** Vercel serverless has a 10-second execution limit (60s on Pro). Debate SSE streams run 2-5 minutes, making serverless incompatible. Render provides a persistent web service with no timeout.

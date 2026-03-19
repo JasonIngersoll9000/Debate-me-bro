@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse, JSONResponse
 
 from app.config import settings
 from app.debate.stream import stream_debate_events
-from app.debate.store import load_debate, list_debates, like_debate, get_like_count, get_likes, save_debate
+from app.debate.store import load_debate, list_debates, like_debate, get_like_count, get_likes, save_debate, delete_debate, count_user_debates
 from app.judging.panel import run_judging_panel
 
 router = APIRouter(prefix="/api/debates", tags=["debates"])
@@ -50,6 +50,28 @@ async def get_all_debates(authorization: Optional[str] = Header(None)):
     return debates
 
 
+@router.get("/usage")
+async def get_usage(authorization: Optional[str] = Header(None)):
+    """
+    Return the current user's debate generation usage and limit.
+    Requires authentication.
+    """
+    user_email = _get_user_email(authorization)
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Authentication required")
+
+    is_admin = user_email.lower() in settings.admin_email_set
+    used = await count_user_debates(user_email)
+    cap = settings.max_debates_per_user
+
+    return {
+        "used": used,
+        "limit": cap,
+        "remaining": max(cap - used, 0) if not is_admin else cap,
+        "is_admin": is_admin,
+    }
+
+
 @router.get("/{debate_id}")
 async def get_debate(debate_id: str):
     """
@@ -89,6 +111,26 @@ async def toggle_like(debate_id: str, authorization: Optional[str] = Header(None
         "liked": liked,
         "like_count": await get_like_count(debate_id),
     }
+
+
+@router.delete("/{debate_id}")
+async def remove_debate(debate_id: str, authorization: Optional[str] = Header(None)):
+    """
+    Delete a debate by ID. Requires authentication.
+    """
+    user_email = _get_user_email(authorization)
+    if not user_email:
+        raise HTTPException(status_code=401, detail="Authentication required to delete debates")
+
+    data = await load_debate(debate_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail=f"Debate '{debate_id}' not found")
+
+    deleted = await delete_debate(debate_id)
+    if not deleted:
+        raise HTTPException(status_code=500, detail="Failed to delete debate")
+
+    return {"detail": f"Debate '{debate_id}' deleted"}
 
 
 @router.post("/{debate_id}/rejudge")
@@ -135,15 +177,24 @@ async def rejudge_debate(debate_id: str, authorization: Optional[str] = Header(N
 async def stream_debate(
     debate_id: str,
     mode: Optional[str] = Query(None, description="Override debate mode: 'demo' or 'live'"),
+    token: Optional[str] = Query(None, description="JWT token for auth (EventSource can't send headers)"),
+    authorization: Optional[str] = Header(None),
 ):
     """
     Server-Sent Events endpoint that streams debate content.
     If the debate is already cached, replays from storage (no LLM calls).
     If not cached, runs the full AI debate pipeline and saves the result.
     The ?mode= query param overrides the server-wide DEBATE_MODE setting.
+    User email is extracted from JWT for usage cap enforcement.
+    Accepts token via query param because EventSource API doesn't support headers.
     """
     effective_mode = mode if mode in ("demo", "live") else settings.debate_mode
+    # Try header first, fall back to query param (for EventSource)
+    auth_header = authorization
+    if not auth_header and token:
+        auth_header = f"Bearer {token}"
+    user_email = _get_user_email(auth_header)
     return StreamingResponse(
-        stream_debate_events(debate_id, mode=effective_mode),
+        stream_debate_events(debate_id, mode=effective_mode, user_email=user_email),
         media_type="text/event-stream",
     )
