@@ -1,37 +1,90 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400&family=Inter:wght@300;400;500;600;700&display=swap');
 @plugin "@tailwindcss/typography";
 
+/* ── Design Tokens ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --surface: #0e0e0e;
+  --surface-low: #131313;
+  --surface-container: #191a1a;
+  --surface-high: #1f2020;
+  --surface-highest: #252626;
+  --surface-bright: #2b2c2c;
+
+  --on-surface: #e7e5e5;
+  --on-surface-variant: #acabaa;
+
+  --primary: #c6c6c7;
+  --on-primary: #3f4041;
+
+  --secondary: #7c98ff;
+  --on-secondary: #00195b;
+
+  --tertiary: #ff7168;
+  --on-tertiary: #4a0004;
+
+  --outline: #767575;
+  --outline-variant: #484848;
+
+  --background: #0e0e0e;
+  --foreground: #e7e5e5;
+
+  --font-headline: 'Space Grotesk', sans-serif;
+  --font-body: 'Newsreader', Georgia, serif;
+  --font-label: 'Inter', system-ui, sans-serif;
 }
 
 @theme inline {
+  --color-surface: var(--surface);
+  --color-surface-low: var(--surface-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-high: var(--surface-high);
+  --color-surface-highest: var(--surface-highest);
+  --color-surface-bright: var(--surface-bright);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-pro: var(--secondary);
+  --color-con: var(--tertiary);
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-label);
+  --font-headline: var(--font-headline);
+  --font-body: var(--font-body);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-label);
 }
 
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--surface-highest); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* ── Keyframes ── */
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(30px); }
   to { opacity: 1; transform: translateY(0); }
 }
+@keyframes stream-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* ── Helpers ── */
+.font-headline { font-family: var(--font-headline); }
+.font-body { font-family: var(--font-body); }
+.font-label { font-family: var(--font-label); }
+
+.border-sharp { border-radius: 0 !important; }
