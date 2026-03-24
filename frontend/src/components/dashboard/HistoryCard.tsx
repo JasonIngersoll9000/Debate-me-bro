@@ -6,7 +6,7 @@ interface HistoryCardProps {
   /**
    * Temporarily optional until Issue #14 (Human Voting) is implemented.
    */
-  yourVote?: "pro" | "con"; 
+  yourVote?: "pro" | "con";
 }
 
 export default function HistoryCard({ debate, yourVote }: HistoryCardProps) {
@@ -18,46 +18,46 @@ export default function HistoryCard({ debate, yourVote }: HistoryCardProps) {
 
   const winner = debate.winner === "pro" ? "Pro" : debate.winner === "con" ? "Con" : null;
   const winnerColor = debate.winner === "pro"
-    ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30"
-    : "bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30";
+    ? "bg-pro/10 text-pro border-pro/30"
+    : "bg-con/10 text-con border-con/30";
 
   return (
     <Link
       href={`/debates/${debate.id}`}
-      className="block group p-6 rounded-2xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] hover:border-white/20 transition-all"
+      className="block group p-6 rounded-none bg-surface-container border border-outline-variant hover:bg-surface-high hover:border-outline transition-all"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 mb-1.5">
-            <h3 className="text-base font-bold text-white group-hover:text-cyan-300 transition-colors truncate">
+            <h3 className="text-base font-bold text-on-surface group-hover:text-pro transition-colors truncate">
               {debate.topic}
             </h3>
             {winner && (
-              <span className={`shrink-0 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${winnerColor}`}>
+              <span className={`shrink-0 px-2.5 py-0.5 rounded-none text-[10px] font-black uppercase border ${winnerColor}`}>
                 {winner} wins
               </span>
             )}
           </div>
           {debate.resolution && (
-            <p className="text-xs text-gray-500 mb-2 truncate">{debate.resolution}</p>
+            <p className="text-xs text-on-surface-variant mb-2 truncate">{debate.resolution}</p>
           )}
-          <div className="flex items-center flex-wrap gap-4 text-xs text-gray-500">
+          <div className="flex items-center flex-wrap gap-4 text-xs text-on-surface-variant">
             <span>{formattedDate}</span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-cyan-400" />
+              <span className="w-2 h-2 rounded-none bg-pro" />
               Pro: {debate.pro_score?.toFixed(1) || "0.0"}
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-fuchsia-400" />
+              <span className="w-2 h-2 rounded-none bg-con" />
               Con: {debate.con_score?.toFixed(1) || "0.0"}
             </span>
             {debate.turn_count > 0 && <span>{debate.turn_count} turns</span>}
             {yourVote && (
               <span
-                className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                className={`px-2 py-0.5 rounded-none text-[10px] font-bold uppercase ${
                   yourVote === "pro"
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
-                    : "bg-fuchsia-500/20 text-fuchsia-400 border border-fuchsia-500/30"
+                    ? "bg-pro/10 text-pro border border-pro/30"
+                    : "bg-con/10 text-con border border-con/30"
                 }`}
               >
                 Voted {yourVote}
@@ -65,7 +65,7 @@ export default function HistoryCard({ debate, yourVote }: HistoryCardProps) {
             )}
           </div>
         </div>
-        <span className="text-gray-600 group-hover:text-gray-400 transition-colors text-sm">
+        <span className="text-on-surface-variant group-hover:text-on-surface transition-colors text-sm">
           →
         </span>
       </div>
