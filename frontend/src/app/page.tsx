@@ -154,8 +154,8 @@ function HomeInner() {
           {/* Badge */}
           <div className="inline-flex items-center gap-2 px-5 py-2 rounded-none bg-surface-high border border-outline-variant mb-10">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-pro opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-pro" />
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-none bg-pro opacity-75" />
+              <span className="relative inline-flex rounded-none h-2.5 w-2.5 bg-pro" />
             </span>
             <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Live AI Debate Engine</span>
           </div>
@@ -229,7 +229,7 @@ function HomeInner() {
               <div className="flex flex-wrap gap-4 justify-center min-h-[48px]">
                 {loading ? (
                   <div className="flex items-center gap-3 text-sm font-medium text-pro">
-                    <span className="w-5 h-5 border-2 border-pro/30 border-t-pro rounded-full animate-spin" />
+                    <span className="w-5 h-5 border-2 border-pro/30 border-t-pro rounded-none animate-spin" />
                     Loading presets...
                   </div>
                 ) : (
