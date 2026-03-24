@@ -246,18 +246,18 @@ function ResearchDocModal({ side, topicId, onClose }: { side: "pro" | "con"; top
       if (match.index > lastIndex) {
         // `escaped` is already HTML-sanitized; bold captures from it are safe
         const escaped = escapeHtml(text.slice(lastIndex, match.index));
-        parts.push(escaped.replace(/\*\*([^*]+)\*\*/g, (_, inner) => `<strong class="text-gray-200 font-bold">${inner}</strong>`));
+        parts.push(escaped.replace(/\*\*([^*]+)\*\*/g, (_, inner) => `<strong class="text-on-surface font-bold">${inner}</strong>`));
       }
       const safeUrl = sanitizeMdUrl(match[2]);
       parts.push(
-        `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline underline-offset-2 decoration-emerald-500/40 hover:decoration-emerald-400 transition-colors">${escapeHtml(match[1])}</a>`
+        `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer" class="text-pro hover:text-pro/80 underline underline-offset-2 decoration-pro/40 hover:decoration-pro/60 transition-colors">${escapeHtml(match[1])}</a>`
       );
       lastIndex = linkRegex.lastIndex;
     }
     if (lastIndex < text.length) {
       // `escaped` is already HTML-sanitized; bold captures from it are safe
       const escaped = escapeHtml(text.slice(lastIndex));
-      parts.push(escaped.replace(/\*\*([^*]+)\*\*/g, (_, inner) => `<strong class="text-gray-200 font-bold">${inner}</strong>`));
+      parts.push(escaped.replace(/\*\*([^*]+)\*\*/g, (_, inner) => `<strong class="text-on-surface font-bold">${inner}</strong>`));
     }
     return parts.join("");
   }
@@ -268,10 +268,10 @@ function ResearchDocModal({ side, topicId, onClose }: { side: "pro" | "con"; top
       .split("\n")
       .map((line) => {
         // Headings
-        if (line.startsWith("### ")) return `<h3 class="text-base font-bold text-gray-200 mt-6 mb-2">${escapeHtml(line.slice(4))}</h3>`;
-        if (line.startsWith("## ")) return `<h2 class="text-lg font-black text-white mt-10 mb-3 pb-2 border-b border-white/10">${escapeHtml(line.slice(3))}</h2>`;
-        if (line.startsWith("# ")) return `<h1 class="text-2xl font-black text-white mt-8 mb-4">${escapeHtml(line.slice(2))}</h1>`;
-        if (line.startsWith("---")) return `<hr class="border-white/10 my-8" />`;
+        if (line.startsWith("### ")) return `<h3 class="text-base font-bold text-on-surface mt-6 mb-2">${escapeHtml(line.slice(4))}</h3>`;
+        if (line.startsWith("## ")) return `<h2 class="text-lg font-black text-on-surface mt-10 mb-3 pb-2 border-b border-outline-variant">${escapeHtml(line.slice(3))}</h2>`;
+        if (line.startsWith("# ")) return `<h1 class="text-2xl font-black text-on-surface mt-8 mb-4">${escapeHtml(line.slice(2))}</h1>`;
+        if (line.startsWith("---")) return `<hr class="border-outline-variant my-8" />`;
         if (line.trim() === "") return `<div class="h-3"></div>`;
 
         // List items
@@ -279,12 +279,12 @@ function ResearchDocModal({ side, topicId, onClose }: { side: "pro" | "con"; top
         if (processed.startsWith("- ")) {
           processed = processed.slice(2);
           processed = inlineFormat(processed);
-          return `<div class="flex items-start gap-2 mb-2 ml-1"><span class="text-emerald-500 mt-1 shrink-0">•</span><span class="text-sm text-gray-400 leading-relaxed">${processed}</span></div>`;
+          return `<div class="flex items-start gap-2 mb-2 ml-1"><span class="text-pro mt-1 shrink-0">•</span><span class="text-sm text-on-surface-variant leading-relaxed">${processed}</span></div>`;
         }
 
         // Regular paragraphs
         processed = inlineFormat(processed);
-        return `<p class="text-sm text-gray-400 leading-relaxed mb-3">${processed}</p>`;
+        return `<p class="text-sm text-on-surface-variant leading-relaxed mb-3">${processed}</p>`;
       })
       .join("\n");
   };
@@ -296,32 +296,32 @@ function ResearchDocModal({ side, topicId, onClose }: { side: "pro" | "con"; top
 
       {/* Modal container */}
       <div
-        className={`relative w-full max-w-6xl max-h-full rounded-3xl border-2 shadow-[0_0_80px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden ${
-          isPro ? "border-cyan-500/30 bg-[#0a0f1a]" : "border-fuchsia-500/30 bg-[#0a0f1a]"
+        className={`relative w-full max-w-6xl max-h-full rounded-none border-2 flex flex-col overflow-hidden ${
+          isPro ? "border-pro/30 bg-surface-container" : "border-con/30 bg-surface-container"
         }`}
       >
         {/* Sticky Header */}
         <div className={`px-6 lg:px-8 py-4 border-b flex items-center justify-between shrink-0 ${
-          isPro ? "border-cyan-500/20 bg-cyan-950/40" : "border-fuchsia-500/20 bg-fuchsia-950/40"
+          isPro ? "border-pro/20 bg-pro/10" : "border-con/20 bg-con/10"
         }`}>
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-black text-white shadow-lg ${
-              isPro ? "bg-gradient-to-br from-cyan-400 to-blue-600" : "bg-gradient-to-br from-fuchsia-400 to-purple-600"
+            <div className={`w-10 h-10 rounded-none flex items-center justify-center text-sm font-black text-white ${
+              isPro ? "bg-pro" : "bg-con"
             }`}>{isPro ? "P" : "C"}</div>
             <div>
-              <div className={`text-sm font-black uppercase tracking-widest ${isPro ? "text-cyan-400" : "text-fuchsia-400"}`}>
+              <div className={`text-sm font-black uppercase tracking-widest ${isPro ? "text-pro" : "text-con"}`}>
                 {isPro ? "Pro" : "Con"} Research Document
               </div>
-              <div className="text-xs text-gray-500 font-mono">healthcare/{side}_research.md</div>
+              <div className="text-xs text-on-surface-variant font-mono">healthcare/{side}_research.md</div>
             </div>
           </div>
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all text-lg font-bold cursor-pointer ${
+            className={`w-10 h-10 rounded-none flex items-center justify-center transition-all text-lg font-bold cursor-pointer ${
               isPro
-                ? "bg-cyan-500/10 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30"
-                : "bg-fuchsia-500/10 hover:bg-fuchsia-500/30 text-fuchsia-400 border border-fuchsia-500/30"
+                ? "bg-pro/10 hover:bg-pro/30 text-pro border border-pro/30"
+                : "bg-con/10 hover:bg-con/30 text-con border border-con/30"
             }`}
           >
             ×
@@ -332,7 +332,7 @@ function ResearchDocModal({ side, topicId, onClose }: { side: "pro" | "con"; top
         <div className="flex-1 overflow-y-auto px-6 lg:px-10 py-8">
           {loading ? (
             <div className="flex items-center justify-center h-40">
-              <div className="w-8 h-8 rounded-full border-2 border-purple-400 border-t-transparent animate-spin" />
+              <div className="w-8 h-8 rounded-none border-2 border-pro border-t-transparent animate-spin" />
             </div>
           ) : (
             <div
@@ -344,13 +344,13 @@ function ResearchDocModal({ side, topicId, onClose }: { side: "pro" | "con"; top
 
         {/* Footer */}
         <div className={`px-6 lg:px-8 py-3 border-t flex items-center justify-between shrink-0 ${
-          isPro ? "border-cyan-500/10 bg-cyan-950/20" : "border-fuchsia-500/10 bg-fuchsia-950/20"
+          isPro ? "border-pro/10 bg-pro/10" : "border-con/10 bg-con/10"
         }`}>
-          <span className="text-xs text-gray-600">{content.split("\n").length} lines • {(content.length / 1024).toFixed(0)} KB</span>
+          <span className="text-xs text-on-surface-variant">{content.split("\n").length} lines • {(content.length / 1024).toFixed(0)} KB</span>
           <button
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); onClose(); }}
-            className="px-5 py-2 text-xs font-black uppercase tracking-widest bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl border border-white/10 transition-all"
+            className="px-5 py-2 text-xs font-black uppercase tracking-widest bg-surface-high hover:bg-surface-bright text-on-surface-variant hover:text-on-surface rounded-none border border-outline-variant transition-all"
           >
             Close
           </button>
@@ -364,36 +364,35 @@ function ResearchDocModal({ side, topicId, onClose }: { side: "pro" | "con"; top
 function ResearchCard({ side, sections }: { side: "pro" | "con"; sections: typeof MOCK_PRO_RESEARCH }) {
   const [expanded, setExpanded] = useState<number | null>(null);
   const isPro = side === "pro";
-  const accentText = isPro ? "text-cyan-400" : "text-fuchsia-400";
-  const accentBorder = isPro ? "border-cyan-500/20" : "border-fuchsia-500/20";
-  const accentBg = isPro ? "bg-cyan-500/5" : "bg-fuchsia-500/5";
-  const dotColor = isPro ? "bg-cyan-400" : "bg-fuchsia-400";
+  const accentText = isPro ? "text-pro" : "text-con";
+  const accentBorder = isPro ? "border-pro/20" : "border-con/20";
+  const dotColor = isPro ? "bg-pro" : "bg-con";
 
   return (
     <div className="space-y-3">
       {sections.map((section, i) => (
-        <div key={i} className={`rounded-2xl border ${accentBorder} ${accentBg} backdrop-blur-xl overflow-hidden transition-all`}>
-          <button onClick={() => setExpanded(expanded === i ? null : i)} className="w-full text-left px-5 py-4 flex items-center gap-3 hover:bg-white/[0.02] transition-colors">
-            <span className={`w-2 h-2 rounded-full ${dotColor} shrink-0`} />
-            <span className="font-bold text-sm text-gray-200 flex-1">{section.title}</span>
-            <span className="text-gray-500 text-xs">{section.keyStats.length} key stats</span>
+        <div key={i} className={`rounded-none border-l-2 ${accentBorder} bg-surface-container overflow-hidden transition-all`}>
+          <button onClick={() => setExpanded(expanded === i ? null : i)} className="w-full text-left px-5 py-4 flex items-center gap-3 hover:bg-surface-high transition-colors">
+            <span className={`w-2 h-2 rounded-none ${dotColor} shrink-0`} />
+            <span className="font-bold text-sm text-on-surface flex-1">{section.title}</span>
+            <span className="text-on-surface-variant text-xs">{section.keyStats.length} key stats</span>
             <span className={`text-xs transition-transform ${expanded === i ? "rotate-180" : ""}`}>▼</span>
           </button>
           {expanded === i && (
-            <div className="px-5 pb-5 space-y-3 border-t border-white/[0.04]">
+            <div className="px-5 pb-5 space-y-3 border-t border-outline-variant">
               <div className="pt-4 space-y-2">
                 {section.keyStats.map((stat, j) => (
                   <div key={j} className="flex items-start gap-2 text-sm">
                     <span className={`${accentText} mt-0.5 shrink-0`}>→</span>
-                    <span className="text-gray-300">{stat}</span>
+                    <span className="text-on-surface-variant">{stat}</span>
                   </div>
                 ))}
               </div>
-              <div className="pt-3 border-t border-white/[0.04]">
-                <div className="text-xs text-gray-500 font-bold uppercase tracking-widest mb-2">Sources</div>
+              <div className="pt-3 border-t border-outline-variant">
+                <div className="text-xs text-on-surface-variant font-bold uppercase tracking-widest mb-2">Sources</div>
                 {section.sources.map((src, j) => (
-                  <div key={j} className="text-xs text-gray-500 flex gap-2 mb-1">
-                    <span className="text-emerald-600">📄</span>
+                  <div key={j} className="text-xs text-on-surface-variant flex gap-2 mb-1">
+                    <span className="text-pro">📄</span>
                     <span>{src}</span>
                   </div>
                 ))}
@@ -443,48 +442,46 @@ function normalizeScores(raw: Record<string, Record<string, number>> | undefined
 function PersonaCard({ persona, side, position }: { persona: Persona; side: "pro" | "con"; position: string }) {
   const [open, setOpen] = useState(false);
   const isPro = side === "pro";
-  const iconBg = isPro ? "bg-gradient-to-br from-cyan-400 to-blue-600" : "bg-gradient-to-br from-fuchsia-400 to-purple-600";
-  const iconShadow = isPro ? "shadow-[0_0_20px_rgba(6,182,212,0.3)]" : "shadow-[0_0_20px_rgba(217,70,239,0.3)]";
-  const borderColor = isPro ? "border-cyan-500/20" : "border-fuchsia-500/20";
-  const bgColor = isPro ? "bg-cyan-950/20" : "bg-fuchsia-950/20";
-  const labelColor = isPro ? "text-cyan-400" : "text-fuchsia-400";
-  const tagBg = isPro ? "bg-cyan-500/10 text-cyan-300 border-cyan-500/20" : "bg-fuchsia-500/10 text-fuchsia-300 border-fuchsia-500/20";
+  const iconBg = isPro ? "bg-pro" : "bg-con";
+  const borderColor = isPro ? "border-pro" : "border-con";
+  const labelColor = isPro ? "text-pro" : "text-con";
+  const tagBg = isPro ? "bg-pro/10 text-pro border-pro/20" : "bg-con/10 text-con border-con/20";
   const align = isPro ? "text-left" : "text-right";
   return (
-    <div className={`rounded-2xl border ${borderColor} ${bgColor} overflow-hidden transition-all`}>
-      <button onClick={() => setOpen(!open)} className={`w-full px-5 py-4 flex items-center gap-4 hover:bg-white/[0.02] transition-colors ${!isPro ? "flex-row-reverse" : ""}`}>
-        <div className={`w-12 h-12 rounded-2xl ${iconBg} ${iconShadow} flex items-center justify-center text-lg font-black text-white shrink-0`}>{isPro ? "P" : "C"}</div>
+    <div className={`rounded-none border-l-4 ${borderColor} bg-surface-container overflow-hidden transition-all`}>
+      <button onClick={() => setOpen(!open)} className={`w-full px-5 py-4 flex items-center gap-4 hover:bg-surface-high transition-colors ${!isPro ? "flex-row-reverse" : ""}`}>
+        <div className={`w-12 h-12 rounded-none ${iconBg} flex items-center justify-center text-lg font-black text-white shrink-0`}>{isPro ? "P" : "C"}</div>
         <div className={`min-w-0 flex-1 ${align}`}>
           <div className={`text-xs font-black uppercase tracking-widest ${labelColor} mb-0.5`}>{isPro ? "Pro" : "Con"}</div>
-          <div className="font-black text-white text-base truncate">{persona.name}</div>
-          <div className="text-sm text-gray-400 truncate">{persona.role}</div>
+          <div className="font-black text-on-surface text-base truncate">{persona.name}</div>
+          <div className="text-sm text-on-surface-variant truncate">{persona.role}</div>
         </div>
-        <span className={`text-xs text-gray-500 transition-transform shrink-0 ${open ? "rotate-180" : ""}`}>▼</span>
+        <span className={`text-xs text-on-surface-variant transition-transform shrink-0 ${open ? "rotate-180" : ""}`}>▼</span>
       </button>
       {open && (
-        <div className={`px-5 pb-5 pt-3 border-t border-white/[0.06] space-y-3 ${align}`}>
+        <div className={`px-5 pb-5 pt-3 border-t border-outline-variant space-y-3 ${align}`}>
           {position && (
             <div>
-              <div className={`text-xs font-black uppercase tracking-widest text-gray-500 mb-1`}>Position</div>
-              <p className="text-sm text-gray-300 leading-relaxed">{position}</p>
+              <div className={`text-xs font-black uppercase tracking-widest text-on-surface-variant mb-1`}>Position</div>
+              <p className="text-sm text-on-surface-variant leading-relaxed">{position}</p>
             </div>
           )}
           {persona.expertise_areas && persona.expertise_areas.length > 0 && (
             <div>
-              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1.5">Expertise</div>
-              <div className={`flex flex-wrap gap-1.5 ${!isPro ? "justify-end" : ""}`}>{persona.expertise_areas.map((e, i) => <span key={i} className={`text-xs px-2.5 py-1 rounded-full border ${tagBg}`}>{e}</span>)}</div>
+              <div className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-1.5">Expertise</div>
+              <div className={`flex flex-wrap gap-1.5 ${!isPro ? "justify-end" : ""}`}>{persona.expertise_areas.map((e, i) => <span key={i} className={`text-xs px-2.5 py-1 rounded-none border ${tagBg}`}>{e}</span>)}</div>
             </div>
           )}
           {persona.core_values && persona.core_values.length > 0 && (
             <div>
-              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1.5">Core Values</div>
-              <div className={`flex flex-wrap gap-1.5 ${!isPro ? "justify-end" : ""}`}>{persona.core_values.map((v, i) => <span key={i} className={`text-xs px-2.5 py-1 rounded-full border ${tagBg}`}>{v}</span>)}</div>
+              <div className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-1.5">Core Values</div>
+              <div className={`flex flex-wrap gap-1.5 ${!isPro ? "justify-end" : ""}`}>{persona.core_values.map((v, i) => <span key={i} className={`text-xs px-2.5 py-1 rounded-none border ${tagBg}`}>{v}</span>)}</div>
             </div>
           )}
           {persona.rhetorical_approach && (
             <div>
-              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-1">Approach</div>
-              <p className="text-sm text-gray-400 leading-relaxed">{persona.rhetorical_approach}</p>
+              <div className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-1">Approach</div>
+              <p className="text-sm text-on-surface-variant leading-relaxed">{persona.rhetorical_approach}</p>
             </div>
           )}
         </div>
@@ -1072,12 +1069,12 @@ export default function DebatePage() {
           <div className="flex items-center gap-3">
             {isDemoMode
               ? <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-900/30 px-2.5 py-1 rounded-none border border-amber-500/30">Demo</span>
-              : <span className="text-[10px] font-bold text-sky-400 uppercase tracking-widest bg-sky-900/30 px-2.5 py-1 rounded-none border border-sky-500/30">Live</span>
+              : <span className="text-[10px] font-bold text-on-surface uppercase tracking-widest bg-surface-container px-2.5 py-1 rounded-none border border-outline-variant">Live</span>
             }
-            {isFromCache && <span className="text-[10px] font-bold text-violet-400 uppercase tracking-widest bg-violet-900/30 px-2.5 py-1 rounded-none border border-violet-500/30">Cached</span>}
+            {isFromCache && <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-container px-2.5 py-1 rounded-none border border-outline-variant">Cached</span>}
             {isStreaming ? (
-              <span className="flex items-center gap-2 text-[10px] font-bold text-emerald-400 uppercase tracking-widest bg-emerald-900/30 px-2.5 py-1 rounded-none border border-emerald-500/30 shadow-[0_0_10px_rgba(52,211,153,0.2)]">
-                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-none animate-pulse shadow-[0_0_6px_rgba(52,211,153,0.8)]" /> Live
+              <span className="flex items-center gap-2 text-[10px] font-bold text-pro uppercase tracking-widest bg-pro/10 px-2.5 py-1 rounded-none border border-pro/30">
+                <span className="w-1.5 h-1.5 bg-pro rounded-none animate-pulse" /> Live
               </span>
             ) : (
               <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest bg-surface-container px-2.5 py-1 rounded-none border border-outline-variant">
@@ -1116,65 +1113,65 @@ export default function DebatePage() {
           <div className="max-w-5xl w-full mx-4 animate-[fadeIn_0.5s_ease-out]">
             <div className="text-center mb-8">
               <div className="text-5xl mb-3">⚔️</div>
-              <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Meet Your Debaters</h2>
-              <p className="text-sm text-gray-400 font-medium">Two AI advocates have been generated for this debate. Review their profiles, then start the debate.</p>
+              <h2 className="text-3xl font-headline font-black text-on-surface mb-2 tracking-tight">Meet Your Debaters</h2>
+              <p className="text-sm text-on-surface-variant font-medium">Two AI advocates have been generated for this debate. Review their profiles, then start the debate.</p>
             </div>
             <div className="grid md:grid-cols-2 gap-6 mb-8">
               {/* Pro Persona Card */}
-              <div className="p-6 rounded-[2rem] bg-gradient-to-b from-cyan-950/40 to-slate-950/80 border border-cyan-500/20 shadow-[0_0_40px_rgba(6,182,212,0.1)] animate-[slideUp_0.6s_ease-out]">
+              <div className="p-6 rounded-none bg-surface-container border-l-4 border-pro animate-[slideUp_0.6s_ease-out]">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center text-xl font-black text-white shadow-lg">P</div>
+                  <div className="w-14 h-14 rounded-none bg-pro flex items-center justify-center text-xl font-black text-white">P</div>
                   <div>
-                    <div className="text-xs font-black uppercase tracking-widest text-cyan-400">Pro</div>
-                    <div className="font-black text-white text-lg">{proPersona.name}</div>
-                    <div className="text-xs text-gray-400">{proPersona.role}</div>
+                    <div className="text-xs font-black uppercase tracking-widest text-pro">Pro</div>
+                    <div className="font-black text-on-surface text-lg">{proPersona.name}</div>
+                    <div className="text-xs text-on-surface-variant">{proPersona.role}</div>
                   </div>
                 </div>
                 {proPersona.expertise_areas && proPersona.expertise_areas.length > 0 && (
                   <div className="mb-3">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Expertise</div>
-                    <div className="flex flex-wrap gap-1.5">{proPersona.expertise_areas.map((e, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">{e}</span>)}</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1.5">Expertise</div>
+                    <div className="flex flex-wrap gap-1.5">{proPersona.expertise_areas.map((e, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-none bg-pro/10 text-pro border border-pro/20">{e}</span>)}</div>
                   </div>
                 )}
                 {proPersona.core_values && proPersona.core_values.length > 0 && (
                   <div className="mb-3">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Core Values</div>
-                    <div className="flex flex-wrap gap-1.5">{proPersona.core_values.map((v, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/20">{v}</span>)}</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1.5">Core Values</div>
+                    <div className="flex flex-wrap gap-1.5">{proPersona.core_values.map((v, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-none bg-pro/10 text-pro border border-pro/20">{v}</span>)}</div>
                   </div>
                 )}
                 {proPersona.rhetorical_approach && (
                   <div>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Approach</div>
-                    <p className="text-xs text-gray-400 leading-relaxed">{proPersona.rhetorical_approach}</p>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Approach</div>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">{proPersona.rhetorical_approach}</p>
                   </div>
                 )}
               </div>
               {/* Con Persona Card */}
-              <div className="p-6 rounded-[2rem] bg-gradient-to-b from-fuchsia-950/40 to-slate-950/80 border border-fuchsia-500/20 shadow-[0_0_40px_rgba(217,70,239,0.1)] animate-[slideUp_0.6s_ease-out_0.15s_both]">
+              <div className="p-6 rounded-none bg-surface-container border-l-4 border-con animate-[slideUp_0.6s_ease-out_0.15s_both]">
                 <div className="flex items-center gap-4 mb-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-fuchsia-400 to-purple-600 flex items-center justify-center text-xl font-black text-white shadow-lg">C</div>
+                  <div className="w-14 h-14 rounded-none bg-con flex items-center justify-center text-xl font-black text-white">C</div>
                   <div>
-                    <div className="text-xs font-black uppercase tracking-widest text-fuchsia-400">Con</div>
-                    <div className="font-black text-white text-lg">{conPersona.name}</div>
-                    <div className="text-xs text-gray-400">{conPersona.role}</div>
+                    <div className="text-xs font-black uppercase tracking-widest text-con">Con</div>
+                    <div className="font-black text-on-surface text-lg">{conPersona.name}</div>
+                    <div className="text-xs text-on-surface-variant">{conPersona.role}</div>
                   </div>
                 </div>
                 {conPersona.expertise_areas && conPersona.expertise_areas.length > 0 && (
                   <div className="mb-3">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Expertise</div>
-                    <div className="flex flex-wrap gap-1.5">{conPersona.expertise_areas.map((e, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20">{e}</span>)}</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1.5">Expertise</div>
+                    <div className="flex flex-wrap gap-1.5">{conPersona.expertise_areas.map((e, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-none bg-con/10 text-con border border-con/20">{e}</span>)}</div>
                   </div>
                 )}
                 {conPersona.core_values && conPersona.core_values.length > 0 && (
                   <div className="mb-3">
-                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1.5">Core Values</div>
-                    <div className="flex flex-wrap gap-1.5">{conPersona.core_values.map((v, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20">{v}</span>)}</div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1.5">Core Values</div>
+                    <div className="flex flex-wrap gap-1.5">{conPersona.core_values.map((v, i) => <span key={i} className="text-[10px] px-2 py-0.5 rounded-none bg-con/10 text-con border border-con/20">{v}</span>)}</div>
                   </div>
                 )}
                 {conPersona.rhetorical_approach && (
                   <div>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">Approach</div>
-                    <p className="text-xs text-gray-400 leading-relaxed">{conPersona.rhetorical_approach}</p>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Approach</div>
+                    <p className="text-xs text-on-surface-variant leading-relaxed">{conPersona.rhetorical_approach}</p>
                   </div>
                 )}
               </div>
@@ -1186,7 +1183,7 @@ export default function DebatePage() {
                   setPersonaRevealed(true);
                   handleContinue();
                 }}
-                className="px-10 py-4 text-sm font-black uppercase tracking-widest bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-2xl border border-white/20 shadow-[0_0_40px_rgba(168,85,247,0.4)] transition-all hover:scale-105 hover:shadow-[0_0_60px_rgba(168,85,247,0.6)]"
+                className="px-10 py-4 text-sm font-black uppercase tracking-widest bg-pro text-white rounded-none border border-pro/40 transition-all hover:bg-pro/80"
               >Start Debate →</button>
             </div>
           </div>
@@ -1239,9 +1236,9 @@ export default function DebatePage() {
                   <div className="max-w-md mx-auto space-y-3 text-left">
                     {MOCK_RESEARCH_STEPS.slice(0, researchStepIdx).map((step, i) => (
                       <div key={i} className="flex items-center gap-3 text-sm p-3 rounded-none bg-surface-container border border-outline-variant">
-                        <span className="text-purple-400">🔍</span>
+                        <span className="text-pro">🔍</span>
                         <span className="text-on-surface flex-1">{step.query}</span>
-                        <span className="text-emerald-400 font-mono font-bold text-xs">{step.results}</span>
+                        <span className="text-pro font-mono font-bold text-xs">{step.results}</span>
                       </div>
                     ))}
                     {researchStepIdx < MOCK_RESEARCH_STEPS.length && (
