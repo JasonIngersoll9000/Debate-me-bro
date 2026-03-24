@@ -80,11 +80,8 @@ function AuthPageInner() {
 
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col relative font-sans overflow-hidden">
-      {/* Animated Background */}
+      {/* Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-[20%] -left-[10%] w-[50vw] h-[50vw] bg-fuchsia-600/15 blur-[120px] rounded-none mix-blend-screen animate-[pulse_8s_ease-in-out_infinite]" />
-        <div className="absolute top-[40%] -right-[15%] w-[60vw] h-[60vw] bg-blue-600/15 blur-[120px] rounded-none mix-blend-screen animate-[pulse_10s_ease-in-out_infinite_1s]" />
-        <div className="absolute -bottom-[10%] left-[30%] w-[40vw] h-[40vw] bg-violet-600/15 blur-[120px] rounded-none mix-blend-screen animate-[pulse_9s_ease-in-out_infinite_2s]" />
       </div>
 
       {/* Header */}
@@ -210,7 +207,7 @@ function AuthPageInner() {
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 rounded-none border-2 border-white/40 border-t-white animate-spin" />
+                    <span className="w-4 h-4 rounded-none border-2 border-outline border-t-on-surface animate-spin" />
                     {mode === "login" ? "Signing in..." : "Creating account..."}
                   </span>
                 ) : (

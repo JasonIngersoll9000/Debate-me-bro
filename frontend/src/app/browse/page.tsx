@@ -60,11 +60,6 @@ export default function BrowsePage() {
 
   return (
     <div className="min-h-screen bg-surface text-on-surface flex flex-col relative font-sans overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-[20%] -left-[10%] w-[50vw] h-[50vw] bg-purple-600/10 blur-[120px] rounded-none mix-blend-screen animate-[pulse_8s_ease-in-out_infinite]" />
-        <div className="absolute top-[40%] -right-[15%] w-[60vw] h-[60vw] bg-blue-600/10 blur-[120px] rounded-none mix-blend-screen animate-[pulse_10s_ease-in-out_infinite_1s]" />
-      </div>
 
       {/* Header */}
       <header className="relative z-10 border-b border-outline-variant bg-black/40 backdrop-blur-3xl px-8 py-5 flex items-center justify-between shadow-sm">
@@ -201,8 +196,8 @@ export default function BrowsePage() {
                       onClick={(e) => { e.preventDefault(); handleLike(debate.id); }}
                       className={`shrink-0 flex flex-col items-center gap-1 px-3 py-2.5 rounded-none transition-all duration-200 ${
                         debate.user_liked
-                          ? "bg-pink-500/20 text-pink-400 border border-pink-500/30"
-                          : "bg-surface-high text-on-surface-variant border border-outline-variant hover:bg-pink-500/10 hover:text-pink-400 hover:border-pink-500/20"
+                          ? "bg-con/20 text-con border border-con/30"
+                          : "bg-surface-high text-on-surface-variant border border-outline-variant hover:bg-con/10 hover:text-con hover:border-con/20"
                       }`}
                       aria-label={debate.user_liked ? "Unlike debate" : "Like debate"}
                     >
