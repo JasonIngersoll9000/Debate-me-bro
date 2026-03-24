@@ -79,21 +79,21 @@ function AuthPageInner() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-gray-100 flex flex-col relative font-sans overflow-hidden">
+    <div className="min-h-screen bg-surface text-on-surface flex flex-col relative font-sans overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-[20%] -left-[10%] w-[50vw] h-[50vw] bg-fuchsia-600/15 blur-[120px] rounded-full mix-blend-screen animate-[pulse_8s_ease-in-out_infinite]" />
-        <div className="absolute top-[40%] -right-[15%] w-[60vw] h-[60vw] bg-blue-600/15 blur-[120px] rounded-full mix-blend-screen animate-[pulse_10s_ease-in-out_infinite_1s]" />
-        <div className="absolute -bottom-[10%] left-[30%] w-[40vw] h-[40vw] bg-violet-600/15 blur-[120px] rounded-full mix-blend-screen animate-[pulse_9s_ease-in-out_infinite_2s]" />
+        <div className="absolute -top-[20%] -left-[10%] w-[50vw] h-[50vw] bg-fuchsia-600/15 blur-[120px] rounded-none mix-blend-screen animate-[pulse_8s_ease-in-out_infinite]" />
+        <div className="absolute top-[40%] -right-[15%] w-[60vw] h-[60vw] bg-blue-600/15 blur-[120px] rounded-none mix-blend-screen animate-[pulse_10s_ease-in-out_infinite_1s]" />
+        <div className="absolute -bottom-[10%] left-[30%] w-[40vw] h-[40vw] bg-violet-600/15 blur-[120px] rounded-none mix-blend-screen animate-[pulse_9s_ease-in-out_infinite_2s]" />
       </div>
 
       {/* Header */}
-      <header className="relative z-10 border-b border-white/10 bg-black/40 backdrop-blur-3xl px-8 py-5 flex items-center justify-between shadow-sm">
+      <header className="relative z-10 border-b border-outline-variant bg-black/40 backdrop-blur-3xl px-8 py-5 flex items-center justify-between shadow-sm">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 flex items-center justify-center shadow-[0_0_20px_rgba(56,189,248,0.5)] group-hover:shadow-[0_0_30px_rgba(56,189,248,0.7)] transition-shadow">
-            <span className="text-white font-bold text-sm">🎯</span>
+          <div className="w-8 h-8 rounded-none bg-pro flex items-center justify-center">
+            <span className="text-[#00195b] font-bold text-sm">🎯</span>
           </div>
-          <span className="text-xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+          <span className="text-xl font-black tracking-tighter text-on-surface">
             DebateMeBro
           </span>
         </Link>
@@ -103,15 +103,15 @@ function AuthPageInner() {
       <main className="relative z-10 flex-1 flex items-center justify-center px-6 py-16">
         <div className="w-full max-w-md">
           {/* Card */}
-          <div className="rounded-3xl border border-white/10 bg-white/[0.03] backdrop-blur-2xl shadow-[0_8px_60px_rgba(0,0,0,0.5)] overflow-hidden">
+          <div className="rounded-none border border-outline-variant bg-surface-container overflow-hidden">
             {/* Tab Switcher */}
-            <div className="flex border-b border-white/10">
+            <div className="flex border-b border-outline-variant">
               <button
                 onClick={() => { setMode("login"); setError(null); }}
                 className={`flex-1 py-4 text-sm font-black uppercase tracking-widest transition-all ${
                   mode === "login"
-                    ? "text-white bg-white/[0.05] border-b-2 border-cyan-400"
-                    : "text-gray-500 hover:text-gray-300"
+                    ? "text-on-surface bg-surface-container border-b-2 border-pro"
+                    : "border-b-2 border-transparent text-on-surface-variant hover:bg-surface-high"
                 }`}
               >
                 Sign In
@@ -120,8 +120,8 @@ function AuthPageInner() {
                 onClick={() => { setMode("register"); setError(null); }}
                 className={`flex-1 py-4 text-sm font-black uppercase tracking-widest transition-all ${
                   mode === "register"
-                    ? "text-white bg-white/[0.05] border-b-2 border-fuchsia-400"
-                    : "text-gray-500 hover:text-gray-300"
+                    ? "text-on-surface bg-surface-container border-b-2 border-pro"
+                    : "border-b-2 border-transparent text-on-surface-variant hover:bg-surface-high"
                 }`}
               >
                 Sign Up
@@ -131,10 +131,10 @@ function AuthPageInner() {
             {/* Form */}
             <form onSubmit={handleSubmit} className="p-8 space-y-5">
               <div className="text-center mb-6">
-                <h1 className="text-2xl font-black text-white mb-2">
+                <h1 className="text-2xl font-black text-on-surface mb-2">
                   {mode === "login" ? "Welcome back" : "Create your account"}
                 </h1>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-on-surface-variant">
                   {mode === "login"
                     ? "Sign in to vote, view history, and track debates."
                     : "Join to participate in AI-powered debates."}
@@ -143,14 +143,14 @@ function AuthPageInner() {
 
               {/* Error */}
               {error && (
-                <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium flex items-center gap-2">
+                <div className="px-4 py-3 rounded-none bg-con/10 border border-con/30 text-con text-sm font-medium flex items-center gap-2">
                   <span>⚠️</span> {error}
                 </div>
               )}
 
               {/* Email */}
               <div>
-                <label htmlFor="email" className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
+                <label htmlFor="email" className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
                   Email
                 </label>
                 <input
@@ -160,13 +160,13 @@ function AuthPageInner() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
+                  className="w-full px-4 py-3 rounded-none border-0 border-b border-outline bg-surface-high text-on-surface placeholder-on-surface-variant text-sm focus:outline-none focus:border-pro transition-all"
                 />
               </div>
 
               {/* Password */}
               <div>
-                <label htmlFor="password" className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
+                <label htmlFor="password" className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
                   Password
                 </label>
                 <input
@@ -176,14 +176,14 @@ function AuthPageInner() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-cyan-500/50 transition-all"
+                  className="w-full px-4 py-3 rounded-none border-0 border-b border-outline bg-surface-high text-on-surface placeholder-on-surface-variant text-sm focus:outline-none focus:border-pro transition-all"
                 />
               </div>
 
               {/* Confirm Password (register only) */}
               {mode === "register" && (
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">
+                  <label htmlFor="confirmPassword" className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2">
                     Confirm Password
                   </label>
                   <input
@@ -193,7 +193,7 @@ function AuthPageInner() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-500/50 focus:border-fuchsia-500/50 transition-all"
+                    className="w-full px-4 py-3 rounded-none border-0 border-b border-outline bg-surface-high text-on-surface placeholder-on-surface-variant text-sm focus:outline-none focus:border-pro transition-all"
                   />
                 </div>
               )}
@@ -202,15 +202,15 @@ function AuthPageInner() {
               <button
                 type="submit"
                 disabled={loading}
-                className={`w-full py-3.5 rounded-xl text-sm font-black uppercase tracking-widest transition-all border ${
+                className={`w-full py-3.5 rounded-none uppercase tracking-widest text-sm font-black transition-all border ${
                   mode === "login"
-                    ? "bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 border-cyan-500/30 shadow-[0_0_30px_rgba(56,189,248,0.2)] hover:shadow-[0_0_40px_rgba(56,189,248,0.4)]"
-                    : "bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 border-fuchsia-500/30 shadow-[0_0_30px_rgba(217,70,239,0.2)] hover:shadow-[0_0_40px_rgba(217,70,239,0.4)]"
-                } text-white disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.02]`}
+                    ? "bg-pro text-[#00195b] border-pro/30"
+                    : "bg-con text-[#4a0004] border-con/30"
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
-                    <span className="w-4 h-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    <span className="w-4 h-4 rounded-none border-2 border-white/40 border-t-white animate-spin" />
                     {mode === "login" ? "Signing in..." : "Creating account..."}
                   </span>
                 ) : (
@@ -219,18 +219,18 @@ function AuthPageInner() {
               </button>
 
               {/* Switch mode link */}
-              <p className="text-center text-sm text-gray-500 pt-2">
+              <p className="text-center text-sm text-on-surface-variant pt-2">
                 {mode === "login" ? (
                   <>
                     Don&apos;t have an account?{" "}
-                    <button type="button" onClick={() => { setMode("register"); setError(null); }} className="text-fuchsia-400 hover:text-fuchsia-300 font-bold transition-colors">
+                    <button type="button" onClick={() => { setMode("register"); setError(null); }} className="text-con hover:text-con font-bold transition-colors">
                       Sign up
                     </button>
                   </>
                 ) : (
                   <>
                     Already have an account?{" "}
-                    <button type="button" onClick={() => { setMode("login"); setError(null); }} className="text-cyan-400 hover:text-cyan-300 font-bold transition-colors">
+                    <button type="button" onClick={() => { setMode("login"); setError(null); }} className="text-pro hover:text-pro font-bold transition-colors">
                       Sign in
                     </button>
                   </>
@@ -240,7 +240,7 @@ function AuthPageInner() {
           </div>
 
           {/* Bottom text */}
-          <p className="text-center text-xs text-gray-600 mt-6">
+          <p className="text-center text-xs text-on-surface-variant mt-6">
             By signing up, you agree to participate in AI-powered debates for educational purposes.
           </p>
         </div>
@@ -252,8 +252,8 @@ function AuthPageInner() {
 export default function AuthPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-8 h-8 rounded-none border-2 border-pro border-t-transparent animate-spin" />
       </div>
     }>
       <AuthPageInner />
