@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useDebateStore, Persona, JudgeResult, CriterionScore } from "@/lib/store";
 import { useShallow } from "zustand/shallow";
@@ -1031,8 +1032,8 @@ export default function DebatePage() {
       const tally = await castVote(id, side, token);
       setVoteTally(tally);
       setUserVote(side);
-    } catch (e: any) {
-      alert(e.message || "Failed to cast vote.");
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : "Failed to cast vote.");
     } finally {
       setIsVoting(false);
     }
@@ -1063,9 +1064,9 @@ export default function DebatePage() {
       <header className="relative z-30 border-b border-outline-variant bg-surface-low">
         {/* Top bar */}
         <div className="px-6 py-3 flex items-center justify-between">
-          <a href="/" className="hover:opacity-80 transition-opacity">
+          <Link href="/" className="hover:opacity-80 transition-opacity">
             <span className="text-lg font-headline font-black tracking-tighter text-on-surface">DebateMeBro</span>
-          </a>
+          </Link>
           <div className="flex items-center gap-3">
             {isDemoMode
               ? <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest bg-amber-900/30 px-2.5 py-1 rounded-none border border-amber-500/30">Demo</span>
