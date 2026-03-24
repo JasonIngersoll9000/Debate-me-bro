@@ -29,9 +29,6 @@
   --background: #0e0e0e;
   --foreground: #e7e5e5;
 
-  --font-headline: 'Space Grotesk', sans-serif;
-  --font-body: 'Newsreader', Georgia, serif;
-  --font-label: 'Inter', system-ui, sans-serif;
 }
 
 @theme inline {
@@ -51,15 +48,16 @@
   --color-outline-variant: var(--outline-variant);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-label);
-  --font-headline: var(--font-headline);
-  --font-body: var(--font-body);
+  /* Fonts defined directly here (not via var) to avoid circular references */
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-headline: 'Space Grotesk', sans-serif;
+  --font-body: 'Newsreader', Georgia, serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-label);
+  font-family: var(--font-sans);
 }
 
 /* ── Scrollbar ── */
@@ -85,6 +83,6 @@ body {
 /* ── Helpers ── */
 .font-headline { font-family: var(--font-headline); }
 .font-body { font-family: var(--font-body); }
-.font-label { font-family: var(--font-label); }
+.font-label { font-family: var(--font-sans); }
 
 .border-sharp { border-radius: 0 !important; }
