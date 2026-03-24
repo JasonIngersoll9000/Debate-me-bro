@@ -219,43 +219,50 @@ async def get_like_count(debate_id: str) -> int:
 
 
 async def like_debate(debate_id: str, user_email: str) -> bool:
-    """Toggle like for a debate. Returns True if now liked, False if unliked."""
+    """
+    Toggle like for a debate atomically.
+
+    Uses INSERT ... ON CONFLICT DO NOTHING to avoid a read-then-write race
+    condition: if the insert lands (rowcount == 1), the debate is now liked;
+    if nothing was inserted (rowcount == 0), the row already existed and we
+    delete it (unlike).
+
+    Returns True if now liked, False if unliked.
+    """
     _validate_debate_id(debate_id)
 
     try:
         factory = _get_session_factory()
         async with factory() as session:
-            # Check if already liked
-            result = await session.execute(
-                select(DebateLike.id).where(
-                    DebateLike.debate_id == debate_id,
-                    DebateLike.user_email == user_email,
-                )
-            )
-            existing = result.scalar_one_or_none()
+            # Attempt atomic insert; no-op on duplicate
+            stmt = pg_insert(DebateLike).values(
+                debate_id=debate_id,
+                user_email=user_email,
+                created_at=datetime.now(timezone.utc),
+            ).on_conflict_do_nothing(index_elements=["debate_id", "user_email"])
+            result = await session.execute(stmt)
 
-            if existing is not None:
-                # Unlike
+            if result.rowcount == 1:
+                # Row was inserted → user just liked the debate
+                await session.commit()
+                return True
+            else:
+                # Row already existed → user is unliking; delete it
                 await session.execute(
-                    sa_delete(DebateLike).where(DebateLike.id == existing)
+                    sa_delete(DebateLike).where(
+                        DebateLike.debate_id == debate_id,
+                        DebateLike.user_email == user_email,
+                    )
                 )
                 await session.commit()
                 return False
-            else:
-                # Like
-                session.add(DebateLike(
-                    debate_id=debate_id,
-                    user_email=user_email,
-                ))
-                await session.commit()
-                return True
     except Exception as exc:
         logger.warning("DB unavailable, like_debate('%s', '%s'): %s", debate_id, user_email, exc)
         return False
 
 
 async def delete_debate(debate_id: str) -> bool:
-    """Delete a debate from the store. Returns True if deleted."""
+    """Delete a debate and its associated likes from the store. Returns True if deleted."""
     try:
         _validate_debate_id(debate_id)
     except ValueError:
@@ -264,6 +271,10 @@ async def delete_debate(debate_id: str) -> bool:
     try:
         factory = _get_session_factory()
         async with factory() as session:
+            # Delete associated likes first (in case FK cascade is not yet applied)
+            await session.execute(
+                sa_delete(DebateLike).where(DebateLike.debate_id == debate_id)
+            )
             result = await session.execute(
                 sa_delete(CachedDebate).where(
                     CachedDebate.debate_id == debate_id
@@ -274,3 +285,54 @@ async def delete_debate(debate_id: str) -> bool:
     except Exception as exc:
         logger.warning("DB unavailable, delete_debate('%s'): %s", debate_id, exc)
         return False
+
+
+async def get_bulk_like_counts(debate_ids: List[str]) -> Dict[str, int]:
+    """
+    Get like counts for multiple debates in a single query.
+
+    Returns a dict mapping debate_id → like count. Debates with zero
+    likes are omitted from the result; callers should default to 0.
+    """
+    if not debate_ids:
+        return {}
+
+    try:
+        factory = _get_session_factory()
+        async with factory() as session:
+            result = await session.execute(
+                select(DebateLike.debate_id, func.count().label("cnt"))
+                .where(DebateLike.debate_id.in_(debate_ids))
+                .group_by(DebateLike.debate_id)
+            )
+            return {row[0]: row[1] for row in result.all()}
+    except Exception as exc:
+        logger.warning("DB unavailable, get_bulk_like_counts: %s", exc)
+        return {}
+
+
+async def get_bulk_user_liked(
+    debate_ids: List[str], user_email: str
+) -> Dict[str, bool]:
+    """
+    Check which debates a user has liked in a single query.
+
+    Returns a dict mapping debate_id → bool.
+    """
+    if not debate_ids:
+        return {}
+
+    try:
+        factory = _get_session_factory()
+        async with factory() as session:
+            result = await session.execute(
+                select(DebateLike.debate_id).where(
+                    DebateLike.debate_id.in_(debate_ids),
+                    DebateLike.user_email == user_email,
+                )
+            )
+            liked_ids = {row[0] for row in result.all()}
+            return {d: d in liked_ids for d in debate_ids}
+    except Exception as exc:
+        logger.warning("DB unavailable, get_bulk_user_liked: %s", exc)
+        return {}

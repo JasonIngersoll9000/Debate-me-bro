@@ -6,8 +6,6 @@ Provides:
 - Mock Anthropic client to prevent real API calls
 - Sample debate state and data factories
 """
-import os
-import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest

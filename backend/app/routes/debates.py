@@ -41,12 +41,17 @@ async def get_all_debates(authorization: Optional[str] = Header(None)):
     """
     user_email = _get_user_email(authorization)
     debates = await list_debates()
+    if not debates:
+        return debates
+
+    debate_ids = [d["id"] for d in debates]
+    like_counts = await get_bulk_like_counts(debate_ids)
+    user_liked = (
+        await get_bulk_user_liked(debate_ids, user_email) if user_email else {}
+    )
     for d in debates:
-        d["like_count"] = await get_like_count(d["id"])
-        if user_email:
-            d["user_liked"] = user_email in await get_likes(d["id"])
-        else:
-            d["user_liked"] = False
+        d["like_count"] = like_counts.get(d["id"], 0)
+        d["user_liked"] = user_liked.get(d["id"], False)
     return debates
 
 

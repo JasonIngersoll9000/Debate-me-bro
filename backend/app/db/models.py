@@ -136,7 +136,12 @@ class CachedDebate(Base):
 class DebateLike(Base):
     __tablename__ = "debate_likes"
     id = Column(Integer, primary_key=True, autoincrement=True)
-    debate_id = Column(String(255), nullable=False, index=True)
+    debate_id = Column(
+        String(255),
+        ForeignKey("cached_debates.debate_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     user_email = Column(String(255), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
