@@ -1355,7 +1355,7 @@ export default function DebatePage() {
                     <div className="text-5xl mb-4">📊</div>
                     <h2 className="text-2xl font-headline font-black text-on-surface mb-2">Judging Results</h2>
                     <div className={`inline-block px-6 py-2 rounded-none text-sm font-black uppercase tracking-widest mt-2 ${rawWinner === "pro" ? "bg-pro/20 text-pro border border-pro/30" : rawWinner === "con" ? "bg-con/20 text-con border border-con/30" : "bg-surface-high text-on-surface-variant border border-outline-variant"}`}>
-                      {debateWinner} wins — {proTotal.toFixed(2)} vs {conTotal.toFixed(2)}
+                      {rawWinner === "tie" ? "It's a Tie" : `${debateWinner} wins`} — {proTotal.toFixed(2)} vs {conTotal.toFixed(2)}
                     </div>
                   </div>
 
@@ -1385,7 +1385,7 @@ export default function DebatePage() {
                   {judgeVerdict && (
                     <div className="p-6 rounded-none bg-surface-container border border-outline-variant shadow-lg mb-8">
                       <div className="text-xs text-on-surface-variant mb-3 uppercase tracking-widest font-black">AI Judges Verdict</div>
-                      <p className="text-sm text-on-surface leading-relaxed"><strong className="text-on-surface">{debateWinner} wins.</strong> {judgeVerdict.summary}</p>
+                      <p className="text-sm text-on-surface leading-relaxed"><strong className="text-on-surface">{rawWinner === "tie" ? "It's a Tie." : `${debateWinner} wins.`}</strong> {judgeVerdict.summary}</p>
                     </div>
                   )}
 
