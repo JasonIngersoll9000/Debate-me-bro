@@ -146,24 +146,19 @@ function NewDebatePageInner() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-gray-100 font-sans relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-[20%] -left-[10%] w-[50vw] h-[50vw] bg-purple-600/10 blur-[120px] rounded-full mix-blend-screen" />
-        <div className="absolute top-[40%] -right-[15%] w-[60vw] h-[60vw] bg-blue-600/10 blur-[120px] rounded-full mix-blend-screen" />
-      </div>
+    <div className="min-h-screen bg-surface text-on-surface font-sans relative overflow-hidden">
 
       {/* Header */}
-      <header className="relative z-10 border-b border-white/10 bg-black/40 backdrop-blur-3xl px-8 py-5 flex items-center justify-between">
+      <header className="relative z-10 border-b border-outline-variant bg-black/40 backdrop-blur-3xl px-8 py-5 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 flex items-center justify-center shadow-[0_0_20px_rgba(56,189,248,0.5)]">
-            <span className="text-white font-bold text-sm">🎯</span>
+          <div className="w-8 h-8 rounded-none bg-pro flex items-center justify-center">
+            <span className="text-[#00195b] font-bold text-sm">🎯</span>
           </div>
-          <span className="text-xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+          <span className="text-xl font-black tracking-tighter text-on-surface">
             DebateMeBro
           </span>
         </Link>
-        <div className="text-sm text-gray-500">Custom Topic</div>
+        <div className="text-sm text-on-surface-variant">Custom Topic</div>
       </header>
 
       {/* Main */}
@@ -177,20 +172,20 @@ function NewDebatePageInner() {
           ].map((s, i) => (
             <div key={s.id} className="flex items-center gap-3">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-black transition-all ${
+                className={`w-10 h-10 rounded-none flex items-center justify-center text-sm font-black transition-all ${
                   step === s.id
-                    ? "bg-gradient-to-br from-cyan-500 to-blue-600 text-white shadow-[0_0_20px_rgba(6,182,212,0.4)]"
+                    ? "bg-pro text-[#00195b]"
                     : (["input", "research", "upload"].indexOf(step) > i)
-                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                    : "bg-white/5 text-gray-600 border border-white/10"
+                    ? "bg-surface-bright text-on-surface border border-outline-variant"
+                    : "bg-surface-high text-on-surface-variant border border-outline-variant"
                 }`}
               >
                 {["input", "research", "upload"].indexOf(step) > i ? "✓" : s.num}
               </div>
-              <span className={`text-sm font-medium ${step === s.id ? "text-white" : "text-gray-500"}`}>
+              <span className={`text-sm font-medium ${step === s.id ? "text-on-surface" : "text-on-surface-variant"}`}>
                 {s.label}
               </span>
-              {i < 2 && <div className="w-12 h-px bg-white/10" />}
+              {i < 2 && <div className="w-12 h-px bg-outline-variant" />}
             </div>
           ))}
         </div>
@@ -199,36 +194,36 @@ function NewDebatePageInner() {
         {step === "input" && (
           <div className="space-y-8">
             <div>
-              <h1 className="text-3xl font-black text-white mb-2">Create a Custom Debate</h1>
-              <p className="text-gray-500">Enter any resolution. Our AI will analyze it and generate research prompts for both sides.</p>
+              <h1 className="text-3xl font-black text-on-surface mb-2">Create a Custom Debate</h1>
+              <p className="text-on-surface-variant">Enter any resolution. Our AI will analyze it and generate research prompts for both sides.</p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-400 mb-2">Debate Resolution</label>
+                <label className="block text-sm font-bold text-on-surface-variant mb-2">Debate Resolution</label>
                 <input
                   type="text"
                   value={resolution}
                   onChange={(e) => setResolution(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
                   placeholder="e.g. Should the US ban TikTok?"
-                  className="w-full px-5 py-4 bg-white/[0.03] border border-white/10 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10 text-lg"
+                  className="w-full px-5 py-4 bg-surface-container border border-outline-variant rounded-none text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-pro text-lg"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-bold text-gray-400 mb-2">Additional Context (optional)</label>
+                <label className="block text-sm font-bold text-on-surface-variant mb-2">Additional Context (optional)</label>
                 <textarea
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
                   placeholder="Any specific angle, framing, or context you want the debate to focus on..."
                   rows={3}
-                  className="w-full px-5 py-4 bg-white/[0.03] border border-white/10 rounded-2xl text-white placeholder-gray-600 focus:outline-none focus:border-cyan-500/50 focus:ring-2 focus:ring-cyan-500/10"
+                  className="w-full px-5 py-4 bg-surface-container border border-outline-variant rounded-none text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-pro"
                 />
               </div>
 
               {error && (
-                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                <div className="p-4 rounded-none bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                   {error}
                 </div>
               )}
@@ -236,7 +231,7 @@ function NewDebatePageInner() {
               <button
                 onClick={handleAnalyze}
                 disabled={!resolution.trim() || loading}
-                className="px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-bold text-lg transition-all hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-8 py-4 bg-pro text-[#00195b] rounded-none font-bold text-lg transition-all uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Analyzing..." : "Analyze Topic →"}
               </button>
@@ -249,15 +244,15 @@ function NewDebatePageInner() {
           <div className="space-y-10">
             {/* Header */}
             <div>
-              <h1 className="text-3xl font-black text-white mb-3">Research Prompts</h1>
-              <p className="text-gray-400 leading-relaxed max-w-2xl">
+              <h1 className="text-3xl font-black text-on-surface mb-3">Research Prompts</h1>
+              <p className="text-on-surface-variant leading-relaxed max-w-2xl">
                 We&apos;ve analyzed your topic. Follow the steps below to gather deep research for both sides, then upload the results to start your debate.
               </p>
             </div>
 
             {/* How-to Steps */}
-            <div className="rounded-2xl bg-white/[0.03] border border-white/10 p-6">
-              <div className="text-xs font-black uppercase tracking-widest text-gray-500 mb-4">How It Works</div>
+            <div className="rounded-none bg-surface-container border border-outline-variant p-6">
+              <div className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-4">How It Works</div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                   { num: "1", icon: "📋", title: "Copy a prompt below", desc: "Each prompt is tailored to research one side of the debate" },
@@ -265,12 +260,12 @@ function NewDebatePageInner() {
                   { num: "3", icon: "📤", title: "Upload the results", desc: "Save as Markdown and upload in the next step" },
                 ].map((s) => (
                   <div key={s.num} className="flex gap-3 items-start">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/20 flex items-center justify-center text-sm font-black text-cyan-400 shrink-0">
+                    <div className="w-8 h-8 rounded-none bg-pro/20 border border-pro/30 flex items-center justify-center text-sm font-black text-pro shrink-0">
                       {s.num}
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-white mb-0.5">{s.title}</div>
-                      <div className="text-xs text-gray-500 leading-snug">{s.desc}</div>
+                      <div className="text-sm font-bold text-on-surface mb-0.5">{s.title}</div>
+                      <div className="text-xs text-on-surface-variant leading-snug">{s.desc}</div>
                     </div>
                   </div>
                 ))}
@@ -279,96 +274,96 @@ function NewDebatePageInner() {
 
             {/* Position Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="rounded-2xl bg-gradient-to-br from-cyan-500/[0.08] to-blue-600/[0.04] border border-cyan-500/20 p-5">
+              <div className="rounded-none bg-surface-container border-l-4 border-pro p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-lg bg-cyan-500/20 flex items-center justify-center text-xs font-black text-cyan-400">P</div>
-                  <span className="text-xs font-black text-cyan-400 uppercase tracking-widest">Pro Position</span>
+                  <div className="w-6 h-6 rounded-none bg-pro/20 flex items-center justify-center text-xs font-black text-pro">P</div>
+                  <span className="text-xs font-black text-pro uppercase tracking-widest">Pro Position</span>
                 </div>
                 <textarea
                   aria-label="Pro position"
                   value={analysis.pro_position}
                   onChange={(e) => setAnalysis({ ...analysis, pro_position: e.target.value })}
                   rows={8}
-                  className="w-full bg-black/20 text-lg text-gray-200 border border-cyan-500/15 rounded-xl px-5 py-4 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 resize-vertical leading-relaxed"
+                  className="w-full bg-black/20 text-lg text-on-surface border border-pro/15 rounded-none px-5 py-4 focus:outline-none focus:border-pro resize-vertical leading-relaxed"
                 />
               </div>
-              <div className="rounded-2xl bg-gradient-to-br from-fuchsia-500/[0.08] to-purple-600/[0.04] border border-fuchsia-500/20 p-5">
+              <div className="rounded-none bg-surface-container border-l-4 border-con p-5">
                 <div className="flex items-center gap-2 mb-3">
-                  <div className="w-6 h-6 rounded-lg bg-fuchsia-500/20 flex items-center justify-center text-xs font-black text-fuchsia-400">C</div>
-                  <span className="text-xs font-black text-fuchsia-400 uppercase tracking-widest">Con Position</span>
+                  <div className="w-6 h-6 rounded-none bg-con/20 flex items-center justify-center text-xs font-black text-con">C</div>
+                  <span className="text-xs font-black text-con uppercase tracking-widest">Con Position</span>
                 </div>
                 <textarea
                   aria-label="Con position"
                   value={analysis.con_position}
                   onChange={(e) => setAnalysis({ ...analysis, con_position: e.target.value })}
                   rows={8}
-                  className="w-full bg-black/20 text-lg text-gray-200 border border-fuchsia-500/15 rounded-xl px-5 py-4 focus:outline-none focus:border-fuchsia-500/50 focus:ring-1 focus:ring-fuchsia-500/20 resize-vertical leading-relaxed"
+                  className="w-full bg-black/20 text-lg text-on-surface border border-con/15 rounded-none px-5 py-4 focus:outline-none focus:border-con resize-vertical leading-relaxed"
                 />
               </div>
             </div>
 
             {/* Pro Prompt Card */}
-            <div className="rounded-2xl bg-white/[0.02] border border-cyan-500/15 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-cyan-500/[0.04]">
+            <div className="rounded-none bg-surface-container border-l-4 border-pro overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant bg-pro/[0.04]">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center">
-                    <span className="text-cyan-400 text-sm">📋</span>
+                  <div className="w-8 h-8 rounded-none bg-pro/15 flex items-center justify-center">
+                    <span className="text-pro text-sm">📋</span>
                   </div>
                   <div>
-                    <div className="text-sm font-black text-cyan-400">PRO Research Prompt</div>
-                    <div className="text-[11px] text-gray-500">Copy and paste into ChatGPT, Claude, or Gemini</div>
+                    <div className="text-sm font-black text-pro">PRO Research Prompt</div>
+                    <div className="text-[11px] text-on-surface-variant">Copy and paste into ChatGPT, Claude, or Gemini</div>
                   </div>
                 </div>
                 <button
                   onClick={() => copyToClipboard(analysis.pro_prompt, "pro")}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all shrink-0 ${
+                  className={`px-5 py-2.5 rounded-none text-sm font-bold transition-all shrink-0 ${
                     proCopied
-                      ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"
-                      : "bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+                      ? "bg-pro/20 border border-pro/30 text-pro"
+                      : "bg-pro/20 border border-pro/30 text-pro hover:bg-pro/30"
                   }`}
                 >
                   {proCopied ? "✓ Copied!" : "Copy to Clipboard"}
                 </button>
               </div>
-              <div className="p-6 max-h-[32rem] overflow-y-auto scrollbar-thin prose prose-invert prose-base max-w-none prose-headings:text-cyan-300 prose-headings:font-black prose-strong:text-gray-200 prose-li:text-gray-300 prose-p:text-gray-300 prose-ul:list-disc prose-ol:list-decimal">
+              <div className="p-6 max-h-[32rem] overflow-y-auto scrollbar-thin prose prose-invert prose-base max-w-none prose-headings:text-pro prose-headings:font-black prose-strong:text-on-surface prose-li:text-on-surface-variant prose-p:text-on-surface-variant prose-ul:list-disc prose-ol:list-decimal">
                 <ReactMarkdown>{analysis.pro_prompt}</ReactMarkdown>
               </div>
             </div>
 
             {/* Con Prompt Card */}
-            <div className="rounded-2xl bg-white/[0.02] border border-fuchsia-500/15 overflow-hidden">
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.06] bg-fuchsia-500/[0.04]">
+            <div className="rounded-none bg-surface-container border-l-4 border-con overflow-hidden">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant bg-con/[0.04]">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-fuchsia-500/15 flex items-center justify-center">
-                    <span className="text-fuchsia-400 text-sm">📋</span>
+                  <div className="w-8 h-8 rounded-none bg-con/15 flex items-center justify-center">
+                    <span className="text-con text-sm">📋</span>
                   </div>
                   <div>
-                    <div className="text-sm font-black text-fuchsia-400">CON Research Prompt</div>
-                    <div className="text-[11px] text-gray-500">Copy and paste into ChatGPT, Claude, or Gemini</div>
+                    <div className="text-sm font-black text-con">CON Research Prompt</div>
+                    <div className="text-[11px] text-on-surface-variant">Copy and paste into ChatGPT, Claude, or Gemini</div>
                   </div>
                 </div>
                 <button
                   onClick={() => copyToClipboard(analysis.con_prompt, "con")}
-                  className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all shrink-0 ${
+                  className={`px-5 py-2.5 rounded-none text-sm font-bold transition-all shrink-0 ${
                     conCopied
-                      ? "bg-emerald-500/20 border border-emerald-500/30 text-emerald-400"
-                      : "bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-400 hover:bg-fuchsia-500/20 hover:shadow-[0_0_15px_rgba(217,70,239,0.2)]"
+                      ? "bg-con/20 border border-con/30 text-con"
+                      : "bg-con/20 border border-con/30 text-con hover:bg-con/30"
                   }`}
                 >
                   {conCopied ? "✓ Copied!" : "Copy to Clipboard"}
                 </button>
               </div>
-              <div className="p-6 max-h-[32rem] overflow-y-auto scrollbar-thin prose prose-invert prose-base max-w-none prose-headings:text-fuchsia-300 prose-headings:font-black prose-strong:text-gray-200 prose-li:text-gray-300 prose-p:text-gray-300 prose-ul:list-disc prose-ol:list-decimal">
+              <div className="p-6 max-h-[32rem] overflow-y-auto scrollbar-thin prose prose-invert prose-base max-w-none prose-headings:text-con prose-headings:font-black prose-strong:text-on-surface prose-li:text-on-surface-variant prose-p:text-on-surface-variant prose-ul:list-disc prose-ol:list-decimal">
                 <ReactMarkdown>{analysis.con_prompt}</ReactMarkdown>
               </div>
             </div>
 
             {/* Internal Research Teaser */}
-            <div className="rounded-2xl bg-gradient-to-r from-amber-500/[0.06] to-orange-500/[0.04] border border-amber-500/20 p-5 flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center text-lg shrink-0">🔬</div>
+            <div className="rounded-none bg-surface-container border border-outline-variant p-5 flex items-center gap-4">
+              <div className="w-10 h-10 rounded-none bg-amber-500/15 flex items-center justify-center text-lg shrink-0">🔬</div>
               <div>
                 <div className="text-sm font-bold text-amber-400">Internal AI Research — Coming Soon</div>
-                <div className="text-xs text-gray-500 leading-relaxed">Paid members will be able to skip the manual step — our AI will automatically research both sides for you.</div>
+                <div className="text-xs text-on-surface-variant leading-relaxed">Paid members will be able to skip the manual step — our AI will automatically research both sides for you.</div>
               </div>
             </div>
 
@@ -376,16 +371,16 @@ function NewDebatePageInner() {
             <div className="flex items-center gap-4 pt-2">
               <button
                 onClick={() => setStep("input")}
-                className="px-6 py-3 rounded-xl text-sm font-bold bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                className="px-6 py-3 rounded-none text-sm font-bold bg-surface-container border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-high transition-all"
               >
                 ← Back
               </button>
               <button
                 onClick={() => setStep("upload")}
-                className="px-8 py-3.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-bold transition-all hover:shadow-[0_0_30px_rgba(6,182,212,0.4)] flex items-center gap-2"
+                className="px-8 py-3.5 bg-pro text-[#00195b] rounded-none font-bold uppercase tracking-widest transition-all flex items-center gap-2"
               >
                 I&apos;ve Done My Research
-                <span className="text-white/60">→</span>
+                <span className="opacity-60">→</span>
                 Upload Results
               </button>
             </div>
@@ -396,8 +391,8 @@ function NewDebatePageInner() {
         {step === "upload" && analysis && (
           <div className="space-y-8">
             <div>
-              <h1 className="text-3xl font-black text-white mb-3">Upload Research</h1>
-              <p className="text-gray-400 leading-relaxed max-w-2xl">
+              <h1 className="text-3xl font-black text-on-surface mb-3">Upload Research</h1>
+              <p className="text-on-surface-variant leading-relaxed max-w-2xl">
                 Upload or paste the Markdown research generated by your AI tool. Both Pro and Con research are required to start the debate.
               </p>
             </div>
@@ -405,28 +400,28 @@ function NewDebatePageInner() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Pro Upload */}
               {proUploaded ? (
-                <div className="rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/25 p-8 text-center space-y-3">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center text-3xl mx-auto">✅</div>
-                  <div className="text-sm font-black text-emerald-400 uppercase tracking-widest">Pro Research Uploaded</div>
-                  <p className="text-xs text-gray-500">Ready for debate</p>
+                <div className="rounded-none bg-pro/[0.06] border border-pro/25 p-8 text-center space-y-3">
+                  <div className="w-14 h-14 rounded-none bg-pro/15 flex items-center justify-center text-3xl mx-auto">✅</div>
+                  <div className="text-sm font-black text-pro uppercase tracking-widest">Pro Research Uploaded</div>
+                  <p className="text-xs text-on-surface-variant">Ready for debate</p>
                 </div>
               ) : (
-                <div className="rounded-2xl bg-white/[0.02] border border-cyan-500/15 overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-cyan-500/[0.04]">
+                <div className="rounded-none bg-surface-container border-l-4 border-pro overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-outline-variant bg-pro/[0.04]">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-cyan-500/20 flex items-center justify-center text-xs font-black text-cyan-400">P</div>
-                      <span className="text-sm font-black text-cyan-400">PRO Research</span>
+                      <div className="w-6 h-6 rounded-none bg-pro/20 flex items-center justify-center text-xs font-black text-pro">P</div>
+                      <span className="text-sm font-black text-pro">PRO Research</span>
                     </div>
-                    <div className="flex rounded-lg overflow-hidden border border-white/10">
+                    <div className="flex rounded-none overflow-hidden border border-outline-variant">
                       <button
                         onClick={() => setProInputMode("file")}
-                        className={`px-3 py-1 text-[11px] font-bold transition-all ${proInputMode === "file" ? "bg-cyan-500/20 text-cyan-400" : "text-gray-500 hover:text-gray-300"}`}
+                        className={`px-3 py-1 text-[11px] font-bold transition-all ${proInputMode === "file" ? "bg-pro/20 text-pro" : "text-on-surface-variant hover:text-on-surface"}`}
                       >
                         File
                       </button>
                       <button
                         onClick={() => setProInputMode("paste")}
-                        className={`px-3 py-1 text-[11px] font-bold transition-all ${proInputMode === "paste" ? "bg-cyan-500/20 text-cyan-400" : "text-gray-500 hover:text-gray-300"}`}
+                        className={`px-3 py-1 text-[11px] font-bold transition-all ${proInputMode === "paste" ? "bg-pro/20 text-pro" : "text-on-surface-variant hover:text-on-surface"}`}
                       >
                         Paste
                       </button>
@@ -438,21 +433,21 @@ function NewDebatePageInner() {
                       onDragOver={handleDragOver("pro")}
                       onDragLeave={handleDragLeave("pro")}
                       onDrop={handleDrop("pro")}
-                      className={`p-8 text-center space-y-4 transition-all cursor-pointer ${
-                        proDragOver ? "bg-cyan-500/10 border-cyan-500/40" : "hover:bg-white/[0.02]"
+                      className={`p-8 text-center space-y-4 transition-all cursor-pointer border-2 border-dashed ${
+                        proDragOver ? "bg-pro/10 border-pro/40" : "border-outline-variant hover:bg-surface-high"
                       }`}
                       onClick={() => proFileRef.current?.click()}
                     >
-                      <div className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-3xl transition-all ${
-                        proDragOver ? "bg-cyan-500/20 scale-110" : "bg-white/5"
+                      <div className={`w-14 h-14 rounded-none mx-auto flex items-center justify-center text-3xl transition-all ${
+                        proDragOver ? "bg-pro/20 scale-110" : "bg-surface-high"
                       }`}>
                         {proDragOver ? "📥" : "📄"}
                       </div>
                       <div>
-                        <p className="text-sm text-gray-300 font-medium">
+                        <p className="text-sm text-on-surface font-medium">
                           {proDragOver ? "Drop file here" : "Drag & drop your file here"}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">or click to browse &middot; .md, .txt, .markdown</p>
+                        <p className="text-xs text-on-surface-variant mt-1">or click to browse &middot; .md, .txt, .markdown</p>
                       </div>
                       <input
                         ref={proFileRef}
@@ -473,12 +468,12 @@ function NewDebatePageInner() {
                         onChange={(e) => setProPasteText(e.target.value)}
                         placeholder="Paste your Pro research Markdown here..."
                         rows={8}
-                        className="w-full bg-black/30 text-sm text-gray-300 border border-cyan-500/15 rounded-xl px-4 py-3 focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 resize-none font-mono placeholder-gray-600"
+                        className="w-full bg-black/30 text-sm text-on-surface border border-pro/15 rounded-none px-4 py-3 focus:outline-none focus:border-pro resize-none font-mono placeholder-on-surface-variant"
                       />
                       <button
                         onClick={() => handlePasteUpload("pro")}
                         disabled={!proPasteText.trim() || uploading}
-                        className="w-full px-4 py-2.5 rounded-xl text-sm font-bold bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="w-full px-4 py-2.5 rounded-none text-sm font-bold bg-pro/20 border border-pro/30 text-pro hover:bg-pro/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {uploading ? "Uploading..." : "Upload Pasted Content"}
                       </button>
@@ -489,28 +484,28 @@ function NewDebatePageInner() {
 
               {/* Con Upload */}
               {conUploaded ? (
-                <div className="rounded-2xl bg-emerald-500/[0.06] border border-emerald-500/25 p-8 text-center space-y-3">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-500/15 flex items-center justify-center text-3xl mx-auto">✅</div>
-                  <div className="text-sm font-black text-emerald-400 uppercase tracking-widest">Con Research Uploaded</div>
-                  <p className="text-xs text-gray-500">Ready for debate</p>
+                <div className="rounded-none bg-pro/[0.06] border border-pro/25 p-8 text-center space-y-3">
+                  <div className="w-14 h-14 rounded-none bg-pro/15 flex items-center justify-center text-3xl mx-auto">✅</div>
+                  <div className="text-sm font-black text-pro uppercase tracking-widest">Con Research Uploaded</div>
+                  <p className="text-xs text-on-surface-variant">Ready for debate</p>
                 </div>
               ) : (
-                <div className="rounded-2xl bg-white/[0.02] border border-fuchsia-500/15 overflow-hidden">
-                  <div className="flex items-center justify-between px-5 py-3 border-b border-white/[0.06] bg-fuchsia-500/[0.04]">
+                <div className="rounded-none bg-surface-container border-l-4 border-con overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-3 border-b border-outline-variant bg-con/[0.04]">
                     <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-lg bg-fuchsia-500/20 flex items-center justify-center text-xs font-black text-fuchsia-400">C</div>
-                      <span className="text-sm font-black text-fuchsia-400">CON Research</span>
+                      <div className="w-6 h-6 rounded-none bg-con/20 flex items-center justify-center text-xs font-black text-con">C</div>
+                      <span className="text-sm font-black text-con">CON Research</span>
                     </div>
-                    <div className="flex rounded-lg overflow-hidden border border-white/10">
+                    <div className="flex rounded-none overflow-hidden border border-outline-variant">
                       <button
                         onClick={() => setConInputMode("file")}
-                        className={`px-3 py-1 text-[11px] font-bold transition-all ${conInputMode === "file" ? "bg-fuchsia-500/20 text-fuchsia-400" : "text-gray-500 hover:text-gray-300"}`}
+                        className={`px-3 py-1 text-[11px] font-bold transition-all ${conInputMode === "file" ? "bg-con/20 text-con" : "text-on-surface-variant hover:text-on-surface"}`}
                       >
                         File
                       </button>
                       <button
                         onClick={() => setConInputMode("paste")}
-                        className={`px-3 py-1 text-[11px] font-bold transition-all ${conInputMode === "paste" ? "bg-fuchsia-500/20 text-fuchsia-400" : "text-gray-500 hover:text-gray-300"}`}
+                        className={`px-3 py-1 text-[11px] font-bold transition-all ${conInputMode === "paste" ? "bg-con/20 text-con" : "text-on-surface-variant hover:text-on-surface"}`}
                       >
                         Paste
                       </button>
@@ -522,21 +517,21 @@ function NewDebatePageInner() {
                       onDragOver={handleDragOver("con")}
                       onDragLeave={handleDragLeave("con")}
                       onDrop={handleDrop("con")}
-                      className={`p-8 text-center space-y-4 transition-all cursor-pointer ${
-                        conDragOver ? "bg-fuchsia-500/10 border-fuchsia-500/40" : "hover:bg-white/[0.02]"
+                      className={`p-8 text-center space-y-4 transition-all cursor-pointer border-2 border-dashed ${
+                        conDragOver ? "bg-con/10 border-con/40" : "border-outline-variant hover:bg-surface-high"
                       }`}
                       onClick={() => conFileRef.current?.click()}
                     >
-                      <div className={`w-14 h-14 rounded-2xl mx-auto flex items-center justify-center text-3xl transition-all ${
-                        conDragOver ? "bg-fuchsia-500/20 scale-110" : "bg-white/5"
+                      <div className={`w-14 h-14 rounded-none mx-auto flex items-center justify-center text-3xl transition-all ${
+                        conDragOver ? "bg-con/20 scale-110" : "bg-surface-high"
                       }`}>
                         {conDragOver ? "📥" : "📄"}
                       </div>
                       <div>
-                        <p className="text-sm text-gray-300 font-medium">
+                        <p className="text-sm text-on-surface font-medium">
                           {conDragOver ? "Drop file here" : "Drag & drop your file here"}
                         </p>
-                        <p className="text-xs text-gray-500 mt-1">or click to browse &middot; .md, .txt, .markdown</p>
+                        <p className="text-xs text-on-surface-variant mt-1">or click to browse &middot; .md, .txt, .markdown</p>
                       </div>
                       <input
                         ref={conFileRef}
@@ -557,12 +552,12 @@ function NewDebatePageInner() {
                         onChange={(e) => setConPasteText(e.target.value)}
                         placeholder="Paste your Con research Markdown here..."
                         rows={8}
-                        className="w-full bg-black/30 text-sm text-gray-300 border border-fuchsia-500/15 rounded-xl px-4 py-3 focus:outline-none focus:border-fuchsia-500/50 focus:ring-1 focus:ring-fuchsia-500/20 resize-none font-mono placeholder-gray-600"
+                        className="w-full bg-black/30 text-sm text-on-surface border border-con/15 rounded-none px-4 py-3 focus:outline-none focus:border-con resize-none font-mono placeholder-on-surface-variant"
                       />
                       <button
                         onClick={() => handlePasteUpload("con")}
                         disabled={!conPasteText.trim() || uploading}
-                        className="w-full px-4 py-2.5 rounded-xl text-sm font-bold bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-400 hover:bg-fuchsia-500/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                        className="w-full px-4 py-2.5 rounded-none text-sm font-bold bg-con/20 border border-con/30 text-con hover:bg-con/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         {uploading ? "Uploading..." : "Upload Pasted Content"}
                       </button>
@@ -573,7 +568,7 @@ function NewDebatePageInner() {
             </div>
 
             {error && (
-              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              <div className="p-4 rounded-none bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                 {error}
               </div>
             )}
@@ -581,14 +576,14 @@ function NewDebatePageInner() {
             <div className="flex items-center gap-4 pt-2">
               <button
                 onClick={() => setStep("research")}
-                className="px-6 py-3 rounded-xl text-sm font-bold bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all"
+                className="px-6 py-3 rounded-none text-sm font-bold bg-surface-container border border-outline-variant text-on-surface-variant hover:text-on-surface hover:bg-surface-high transition-all"
               >
                 ← Back to Prompts
               </button>
               <button
                 onClick={handleStartDebate}
                 disabled={!proUploaded || !conUploaded}
-                className="px-8 py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white rounded-xl font-bold text-lg transition-all hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] disabled:opacity-30 disabled:cursor-not-allowed"
+                className="px-8 py-4 bg-pro text-[#00195b] rounded-none font-bold text-lg uppercase tracking-widest transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 Start Debate →
               </button>
@@ -603,8 +598,8 @@ function NewDebatePageInner() {
 export default function NewDebatePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
+      <div className="min-h-screen bg-surface flex items-center justify-center">
+        <div className="w-8 h-8 rounded-none border-2 border-pro border-t-transparent animate-spin" />
       </div>
     }>
       <NewDebatePageInner />

@@ -9,7 +9,7 @@ import HistoryCard from "@/components/dashboard/HistoryCard";
 export default function DashboardPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  
+
   const [debates, setDebates] = useState<DebateSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,30 +51,25 @@ export default function DashboardPage() {
   if (!isLoggedIn) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-gray-100 flex flex-col relative font-sans overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        <div className="absolute -top-[20%] -left-[10%] w-[50vw] h-[50vw] bg-purple-600/10 blur-[120px] rounded-full mix-blend-screen animate-[pulse_8s_ease-in-out_infinite]" />
-        <div className="absolute top-[40%] -right-[15%] w-[60vw] h-[60vw] bg-blue-600/10 blur-[120px] rounded-full mix-blend-screen animate-[pulse_10s_ease-in-out_infinite_1s]" />
-      </div>
+    <div className="min-h-screen bg-surface text-on-surface flex flex-col relative font-sans overflow-hidden">
 
       {/* Header */}
-      <header className="relative z-10 border-b border-white/10 bg-black/40 backdrop-blur-3xl px-8 py-5 flex items-center justify-between shadow-sm">
+      <header className="relative z-10 border-b border-outline-variant bg-black/40 backdrop-blur-3xl px-8 py-5 flex items-center justify-between shadow-sm">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-cyan-400 via-blue-500 to-purple-600 flex items-center justify-center shadow-[0_0_20px_rgba(56,189,248,0.5)] group-hover:shadow-[0_0_30px_rgba(56,189,248,0.7)] transition-shadow">
-            <span className="text-white font-bold text-sm">🎯</span>
+          <div className="w-8 h-8 rounded-none bg-pro flex items-center justify-center">
+            <span className="text-[#00195b] font-bold text-sm">🎯</span>
           </div>
-          <span className="text-xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+          <span className="text-xl font-black tracking-tighter text-on-surface">
             DebateMeBro
           </span>
         </Link>
         <div className="flex items-center gap-5">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center text-xs font-black text-white uppercase">
+            <div className="w-8 h-8 rounded-none bg-con flex items-center justify-center text-xs font-black text-[#4a0004] uppercase">
               {userEmail?.[0] || "U"}
             </div>
-            <span className="text-sm text-gray-400 hidden sm:inline">{userEmail}</span>
-            <button onClick={handleLogout} className="text-xs font-bold text-gray-500 hover:text-gray-300 transition-colors ml-2">
+            <span className="text-sm text-on-surface-variant hidden sm:inline">{userEmail}</span>
+            <button onClick={handleLogout} className="text-xs font-bold text-on-surface-variant hover:text-on-surface transition-colors ml-2">
               Logout
             </button>
           </div>
@@ -84,50 +79,50 @@ export default function DashboardPage() {
       {/* Main Content */}
       <main className="relative z-10 flex-1 px-6 py-12 max-w-5xl mx-auto w-full">
         <div className="mb-12">
-          <h1 className="text-3xl md:text-4xl font-black text-white mb-2">My Debates</h1>
-          <p className="text-gray-500">Your debate history and voting record</p>
+          <h1 className="text-3xl md:text-4xl font-black text-on-surface mb-2">My Debates</h1>
+          <p className="text-on-surface-variant">Your debate history and voting record</p>
         </div>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-12">
-          <Link href="/" className="group p-6 rounded-2xl bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border border-cyan-500/20 hover:border-cyan-500/40 transition-all hover:-translate-y-1">
+          <Link href="/" className="group p-6 rounded-none bg-surface-container border-l-2 border-pro border border-outline-variant hover:bg-surface-high transition-all">
             <div className="text-2xl mb-3">💡</div>
-            <div className="text-sm font-black text-white mb-1">New Debate</div>
-            <div className="text-xs text-gray-500">Pick a topic and start</div>
+            <div className="text-sm font-black text-on-surface mb-1">New Debate</div>
+            <div className="text-xs text-on-surface-variant">Pick a topic and start</div>
           </Link>
-          <Link href="/browse" className="group p-6 rounded-2xl bg-gradient-to-br from-purple-500/10 to-fuchsia-600/10 border border-purple-500/20 hover:border-purple-500/40 transition-all hover:-translate-y-1">
+          <Link href="/browse" className="group p-6 rounded-none bg-surface-container border-l-2 border-con border border-outline-variant hover:bg-surface-high transition-all">
             <div className="text-2xl mb-3">🌐</div>
-            <div className="text-sm font-black text-white mb-1">Browse All</div>
-            <div className="text-xs text-gray-500">Explore public debates</div>
+            <div className="text-sm font-black text-on-surface mb-1">Browse All</div>
+            <div className="text-xs text-on-surface-variant">Explore public debates</div>
           </Link>
-          <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
+          <div className="p-6 rounded-none bg-surface-container border border-outline-variant">
             <div className="text-2xl mb-3">📊</div>
-            <div className="text-sm font-black text-white mb-1">{isLoading ? "..." : debates.length}</div>
-            <div className="text-xs text-gray-500">Debates Watched</div>
+            <div className="text-sm font-black text-on-surface mb-1">{isLoading ? "..." : debates.length}</div>
+            <div className="text-xs text-on-surface-variant">Debates Watched</div>
           </div>
-          <div className="p-6 rounded-2xl bg-white/[0.03] border border-white/10">
+          <div className="p-6 rounded-none bg-surface-container border border-outline-variant">
             <div className="text-2xl mb-3">🗳️</div>
-            <div className="text-sm font-black text-white mb-1">Coming Soon</div>
-            <div className="text-xs text-gray-500">Votes Cast</div>
+            <div className="text-sm font-black text-on-surface mb-1">Coming Soon</div>
+            <div className="text-xs text-on-surface-variant">Votes Cast</div>
           </div>
         </div>
 
         {/* Debate History */}
         <div>
-          <h2 className="text-lg font-black text-white mb-6 uppercase tracking-widest">Recent Debates</h2>
+          <h2 className="text-lg font-black text-on-surface mb-6 uppercase tracking-widest">Recent Debates</h2>
 
           {isLoading ? (
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="animate-pulse bg-white/[0.03] border border-white/10 rounded-2xl p-6 h-32" />
+                <div key={i} className="animate-pulse bg-surface-container border border-outline-variant rounded-none p-6 h-32" />
               ))}
             </div>
           ) : error ? (
-            <div className="text-center py-20 bg-red-500/10 border border-red-500/20 rounded-2xl">
-              <p className="text-red-400 mb-4">{error}</p>
-              <button 
+            <div className="text-center py-20 bg-con/10 border border-con/30 rounded-none">
+              <p className="text-con mb-4">{error}</p>
+              <button
                 onClick={loadDebates}
-                className="px-6 py-2 bg-red-500/20 text-red-300 rounded-xl hover:bg-red-500/30 transition-colors"
+                className="px-6 py-2 bg-con/20 text-con rounded-none hover:bg-con/30 transition-colors"
               >
                 Retry
               </button>
@@ -135,8 +130,8 @@ export default function DashboardPage() {
           ) : debates.length === 0 ? (
             <div className="text-center py-20">
               <div className="text-5xl mb-4 opacity-30">🎯</div>
-              <p className="text-gray-500 text-lg mb-6">No debates yet. Start your first one!</p>
-              <Link href="/" className="inline-block px-8 py-3 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-xl font-bold transition-all hover:shadow-[0_0_30px_rgba(6,182,212,0.4)]">
+              <p className="text-on-surface-variant text-lg mb-6">No debates yet. Start your first one!</p>
+              <Link href="/" className="inline-block bg-pro text-[#00195b] rounded-none uppercase tracking-widest px-6 py-3 font-bold transition-all">
                 Start a Debate →
               </Link>
             </div>

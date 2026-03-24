@@ -67,7 +67,7 @@ function parseBold(text: string, keyPrefix: string): ReactNode[] {
   const segments = text.split(/(\*\*.*?\*\*)/g);
   return segments.map((seg, j) => {
     if (seg.startsWith("**") && seg.endsWith("**")) {
-      return <strong key={`${keyPrefix}-b${j}`} className="font-bold text-white tracking-normal">{seg.slice(2, -2)}</strong>;
+      return <strong key={`${keyPrefix}-b${j}`} className="font-bold text-on-surface tracking-normal">{seg.slice(2, -2)}</strong>;
     }
     return seg ? <span key={`${keyPrefix}-t${j}`}>{seg}</span> : null;
   }).filter(Boolean);
@@ -80,36 +80,36 @@ export function StreamingText({ text, citations, isStreaming, side }: Props) {
     return text.split("\n");
   }, [text]);
 
-  const cursorColor = side === "pro" ? "bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)]" : "bg-fuchsia-400 shadow-[0_0_10px_rgba(232,121,249,0.8)]";
+  const cursorColor = side === "pro" ? "bg-pro" : "bg-con";
 
   return (
-    <div className="text-base leading-relaxed text-gray-200 font-medium tracking-wide space-y-1">
+    <div className="font-body text-base leading-relaxed text-on-surface-variant font-medium tracking-wide space-y-1">
       {blocks.map((line, i) => {
         const trimmed = line.trimStart();
 
         // Horizontal rule
         if (/^-{3,}\s*$/.test(trimmed)) {
-          return <hr key={`hr-${i}`} className="border-white/10 my-4" />;
+          return <hr key={`hr-${i}`} className="border-outline-variant my-4" />;
         }
 
         // Headings
         if (trimmed.startsWith("### ")) {
           return (
-            <h4 key={`h3-${i}`} className="text-base font-black text-white mt-4 mb-1 tracking-tight">
+            <h4 key={`h3-${i}`} className="text-base font-black text-on-surface mt-4 mb-1 tracking-tight">
               {parseInline(trimmed.slice(4), citations, expandedCitation, setExpandedCitation, `h3-${i}`)}
             </h4>
           );
         }
         if (trimmed.startsWith("## ")) {
           return (
-            <h3 key={`h2-${i}`} className="text-lg font-black text-white mt-5 mb-1.5 tracking-tight">
+            <h3 key={`h2-${i}`} className="text-lg font-black text-on-surface mt-5 mb-1.5 tracking-tight">
               {parseInline(trimmed.slice(3), citations, expandedCitation, setExpandedCitation, `h2-${i}`)}
             </h3>
           );
         }
         if (trimmed.startsWith("# ")) {
           return (
-            <h2 key={`h1-${i}`} className="text-xl font-black text-white mt-6 mb-2 tracking-tight">
+            <h2 key={`h1-${i}`} className="text-xl font-black text-on-surface mt-6 mb-2 tracking-tight">
               {parseInline(trimmed.slice(2), citations, expandedCitation, setExpandedCitation, `h1-${i}`)}
             </h2>
           );
@@ -119,7 +119,7 @@ export function StreamingText({ text, citations, isStreaming, side }: Props) {
         if (/^[-*]\s/.test(trimmed)) {
           return (
             <div key={`li-${i}`} className="flex gap-2 pl-2">
-              <span className="text-gray-500 select-none shrink-0">•</span>
+              <span className="text-on-surface-variant select-none shrink-0">•</span>
               <span>{parseInline(trimmed.slice(2), citations, expandedCitation, setExpandedCitation, `li-${i}`)}</span>
             </div>
           );
@@ -132,7 +132,7 @@ export function StreamingText({ text, citations, isStreaming, side }: Props) {
           const rest = trimmed.replace(/^\d+\.\s/, "");
           return (
             <div key={`ol-${i}`} className="flex gap-2 pl-2">
-              <span className="text-gray-500 select-none shrink-0">{num}.</span>
+              <span className="text-on-surface-variant select-none shrink-0">{num}.</span>
               <span>{parseInline(rest, citations, expandedCitation, setExpandedCitation, `ol-${i}`)}</span>
             </div>
           );
@@ -151,7 +151,7 @@ export function StreamingText({ text, citations, isStreaming, side }: Props) {
         );
       })}
       {isStreaming && (
-        <span className={`inline-block w-2.5 h-4 ml-1 align-middle animate-pulse rounded-sm ${cursorColor}`}></span>
+        <span className={`inline-block w-2.5 h-4 ml-1 align-middle animate-pulse rounded-none ${cursorColor}`}></span>
       )}
     </div>
   );
