@@ -19,9 +19,11 @@ def mock_db_store(monkeypatch):
     """In-memory store that replaces async DB calls for test isolation."""
     _debates = {}
 
-    async def _save(debate_id, data):
+    async def _save(debate_id, data, created_by=None):
         data.setdefault("id", debate_id)
         data.setdefault("status", "completed")
+        if created_by:
+            data["created_by"] = created_by
         _debates[debate_id] = data
 
     async def _load(debate_id):
@@ -33,13 +35,18 @@ def mock_db_store(monkeypatch):
     async def _list():
         return list(_debates.values())
 
+    async def _count(user_email):
+        return sum(1 for d in _debates.values() if d.get("created_by") == user_email)
+
     monkeypatch.setattr(store, "save_debate", _save)
     monkeypatch.setattr(store, "load_debate", _load)
     monkeypatch.setattr(store, "debate_exists", _exists)
     monkeypatch.setattr(store, "list_debates", _list)
+    monkeypatch.setattr(store, "count_user_debates", _count)
     # Also patch the import in stream module
     monkeypatch.setattr(stream, "save_debate", _save)
     monkeypatch.setattr(stream, "load_debate", _load)
+    monkeypatch.setattr(stream, "count_user_debates", _count)
     yield _debates
 
 
@@ -319,7 +326,7 @@ async def test_stream_live_preset_emits_evidence_and_personas(
     mock_create_graph.return_value = mock_graph
 
     events = []
-    async for event in stream.stream_debate_events("healthcare", mode="live"):
+    async for event in stream.stream_debate_events("healthcare", mode="live", user_email="test@test.com"):
         if event.startswith("data: "):
             events.append(json.loads(event[len("data: "):].strip()))
 
@@ -359,7 +366,7 @@ async def test_stream_live_evidence_not_found_fallback(
     mock_create_graph.return_value = mock_graph
 
     events = []
-    async for event in stream.stream_debate_events("unknown-topic", mode="live"):
+    async for event in stream.stream_debate_events("unknown-topic", mode="live", user_email="test@test.com"):
         if event.startswith("data: "):
             events.append(json.loads(event[len("data: "):].strip()))
 
@@ -387,7 +394,7 @@ async def test_stream_live_persona_generation_fallback(
     mock_create_graph.return_value = mock_graph
 
     events = []
-    async for event in stream.stream_debate_events("healthcare", mode="live"):
+    async for event in stream.stream_debate_events("healthcare", mode="live", user_email="test@test.com"):
         if event.startswith("data: "):
             events.append(json.loads(event[len("data: "):].strip()))
 

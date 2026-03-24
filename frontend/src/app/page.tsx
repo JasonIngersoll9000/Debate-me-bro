@@ -3,7 +3,7 @@
 import { Suspense, useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { fetchPresetTopics, PresetTopic } from "@/lib/api";
+import { fetchPresetTopics, PresetTopic, fetchUsage, UsageInfo } from "@/lib/api";
 import { useDebateStore } from "@/lib/store";
 
 function HomeInner() {
@@ -12,6 +12,7 @@ function HomeInner() {
   const [loading, setLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [usage, setUsage] = useState<UsageInfo | null>(null);
   const topicInputRef = useRef<HTMLInputElement>(null);
   const isTypingRef = useRef(false);
 
@@ -40,6 +41,7 @@ function HomeInner() {
     if (token) {
       setIsLoggedIn(true);
       setUserEmail(email);
+      fetchUsage().then((u) => { if (u) setUsage(u); });
     }
 
     fetchPresetTopics()
@@ -213,6 +215,19 @@ function HomeInner() {
             {!isLoggedIn && (
               <p className="text-xs text-gray-500 mt-3 text-center">
                 <Link href="/auth" className="text-cyan-500 hover:text-cyan-400 font-bold transition-colors">Sign in</Link> to start debating
+              </p>
+            )}
+            {isLoggedIn && usage && !usage.is_admin && (
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                <span className={`font-bold ${usage.remaining > 0 ? "text-cyan-400" : "text-red-400"}`}>
+                  {usage.used} of {usage.limit}
+                </span>{" "}
+                debates used{usage.remaining === 0 && " — limit reached"}
+              </p>
+            )}
+            {isLoggedIn && usage && usage.is_admin && (
+              <p className="text-xs text-gray-500 mt-3 text-center">
+                <span className="font-bold text-amber-400">Admin</span> — unlimited debates
               </p>
             )}
 

@@ -128,6 +128,7 @@ class CachedDebate(Base):
     __tablename__ = "cached_debates"
     debate_id = Column(String(255), primary_key=True)
     data = Column(JSONB, nullable=False)
+    created_by = Column(String(255), nullable=True, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

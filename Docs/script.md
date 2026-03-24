@@ -174,7 +174,7 @@
 
 **J:** But the core vision is already working. You can pick any topic, watch two AI agents argue it with genuine intellectual honesty, see transparent judging, and form your own opinion based on the strongest arguments both sides have to offer.
 
-**S:** The app is live at debatemebro.vercel.app. Try it out. Pick a topic you care about and see what happens when AI is forced to argue in good faith.
+**S:** The app is live at debate-me-bro.vercel.app. Try it out. Pick a topic you care about and see what happens when AI is forced to argue in good faith.
 
 **J:** Thanks for watching.
 

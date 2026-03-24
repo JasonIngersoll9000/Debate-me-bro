@@ -795,8 +795,12 @@ export default function DebatePage() {
     setConnectionError(null);
     setPersonas({ name: "Proponent Agent", role: "AI Debater" }, { name: "Opponent Agent", role: "AI Debater" });
     setStreaming(true);
-    const modeParam = serverMode ? `?mode=${serverMode}` : "";
-    const es = new EventSource(`${API_BASE_URL}/api/debates/${id}/stream${modeParam}`);
+    const params = new URLSearchParams();
+    if (serverMode) params.set("mode", serverMode);
+    const authToken = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (authToken) params.set("token", authToken);
+    const qs = params.toString();
+    const es = new EventSource(`${API_BASE_URL}/api/debates/${id}/stream${qs ? `?${qs}` : ""}`);
     eventSourceRef.current = es;
 
     // Track current and previous phase transitions for completion marking
