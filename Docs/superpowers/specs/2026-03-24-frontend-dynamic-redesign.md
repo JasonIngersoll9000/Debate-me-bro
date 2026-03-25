@@ -20,7 +20,7 @@ Animation library: **Framer Motion** — enables scroll-triggered reveals, layou
 
 All implementation must follow `Docs/stitch/DESIGN.md` — "Intellectual Modernism / The Digital Rostrum":
 
-- **Colors:** `--pro: #7c98ff` (Trust Blue), `--con: #ff7168` (Urgent Red), `--surface: #0e0e0e`
+- **Colors:** Use Tailwind utilities (`text-pro`, `bg-pro`, `text-con`, `bg-con`) — these map to `--color-pro` / `--color-con` in `globals.css`. In raw CSS `var()` calls, use `--secondary` (#7c98ff) and `--tertiary` (#ff7168) — there are no `--pro` / `--con` `:root` variables. **Foundation step must add `--pro` and `--con` as `:root` aliases** (e.g. `--pro: var(--secondary); --con: var(--tertiary);`) to unify usage.
 - **Typography:** Space Grotesk (headlines/UI), Newsreader (body/argument text), Inter (labels/metadata) — all already loaded in `globals.css`
 - **Corners:** `0px` border radius everywhere — no exceptions
 - **Borders:** Use surface color shifts for separation, not 1px lines. Ghost borders (`outline-variant` at low opacity) only when accessibility requires it
@@ -31,26 +31,35 @@ All implementation must follow `Docs/stitch/DESIGN.md` — "Intellectual Moderni
 
 ## 3. Shared Foundation
 
-### 3a. `<Header>` Component
-Extract a single `frontend/src/components/layout/Header.tsx` used by all pages. Props:
+### 3a. CSS Token Aliases
+As part of the foundation step, add to `:root` in `globals.css`:
+```css
+--pro: var(--secondary);   /* #7c98ff */
+--con: var(--tertiary);    /* #ff7168 */
+```
+This allows `var(--pro)` / `var(--con)` in raw CSS while Tailwind utilities (`bg-pro`, `text-con`) continue to work unchanged. Also confirm that `bg-surface-high` (Tailwind class for `--surface-high: #1f2020`) is the correct class for hover/active states — use it consistently; do not coin `bg-surface-container-high` which does not exist in `globals.css`.
+
+### 3b. `<Header>` Component
+Extract a single `frontend/src/components/layout/Header.tsx` used by **all** pages including `/dashboard` and `/auth` (mechanical swap — no visual changes to those pages). Props:
 - `activePage?: 'home' | 'browse' | 'dashboard' | 'new'`
 - Auth state read from localStorage (token + email)
 - Logout handler
 
 Consistent across all pages: logo, Browse link, My Debates (auth), avatar/logout (auth), Sign In (unauth).
 
-### 3b. Motion Variants (`frontend/src/lib/motion-variants.ts`)
-Shared Framer Motion animation vocabulary:
+### 3c. Motion Variants (`frontend/src/lib/motion-variants.ts`)
+Shared Framer Motion animation vocabulary — **declarative variants only** (no hooks):
 
 ```ts
-fadeUp        // opacity 0→1, y 20→0, ease out, 0.5s
-staggerContainer // staggerChildren: 0.08s
-slideInLeft   // x -30→0, opacity 0→1
-slideInRight  // x 30→0, opacity 0→1
-scaleIn       // scale 0.95→1, opacity 0→1
-counter       // number increment from 0 to target over 1.2s, ease out
-pageEnter     // used on every page root: opacity 0→1, 0.3s
+fadeUp           // { hidden: { opacity:0, y:20 }, visible: { opacity:1, y:0, transition:{ duration:0.5, ease:"easeOut" } } }
+staggerContainer // { visible: { transition: { staggerChildren: 0.08 } } }
+slideInLeft      // { hidden: { opacity:0, x:-30 }, visible: { opacity:1, x:0, transition:{ duration:0.4, ease:"easeOut" } } }
+slideInRight     // { hidden: { opacity:0, x:30 },  visible: { opacity:1, x:0, transition:{ duration:0.4, ease:"easeOut" } } }
+scaleIn          // { hidden: { opacity:0, scale:0.95 }, visible: { opacity:1, scale:1, transition:{ duration:0.4, ease:"easeOut" } } }
+pageEnter        // { hidden: { opacity:0 }, visible: { opacity:1, transition:{ duration:0.3 } } }
 ```
+
+**Number counters** cannot be declarative variants (they require React hooks). Implement as a separate `<AnimatedCounter value={n} duration={1.2} />` component in `frontend/src/components/ui/AnimatedCounter.tsx` using `useMotionValue` + `animate()`. Export a `COUNTER_CONFIG = { duration: 1.2, ease: "easeOut" }` constant from `motion-variants.ts` for consistency.
 
 All scroll-triggered variants use `whileInView` with `viewport: { once: true, margin: "-80px" }`.
 
@@ -107,14 +116,13 @@ Each row is a horizontal card:
 - Topic tags on each row match the sidebar filter tags — clicking a row tag activates that filter
 
 ### Topic Tags (backend requirement)
-Topics need a `tags` field. Implementation options:
-1. Add tags to the `TopicAnalysis` response from the backend (AI-generated at analysis time)
-2. Derive tags client-side from topic title keywords
-Recommend option 1 — surfaced in the plan.
+Add `tags: string[]` to the `TopicAnalysis` response schema (`backend/app/models/schemas.py`) — AI-generated at topic analysis time (`POST /api/research/analyze`). Also include `tags` in the debate list response (`GET /api/debates`) so the browse page can filter without a second request. Each debate should carry `tags: string[]` in `DebateSummary`.
+
+The sidebar tag cloud is a **static list** (the 14 categories listed above). Filtering applies case-insensitive substring matching between the selected tag label and the debate's `tags` array. Tags not in the static list are ignored by the sidebar but still stored — this allows future expansion without a schema change.
 
 ### Animation
 - Sidebar animates in with `slideInLeft` on mount
-- Rows stagger in with `fadeUp` (staggerContainer, 0.05s children)
+- Rows stagger in with `fadeUp` (`staggerContainer`, `staggerChildren: 0.05s`)
 
 ---
 
@@ -144,8 +152,11 @@ Active step: `--pro` blue label. Completed: checkmark. Inactive: muted.
 - File/Paste toggle: clean tab switch within the card header
 
 ### Animation
-- Step transitions: `AnimatePresence` + `slideInLeft` for forward, `slideInRight` for back
-- Each step content fades up on entry
+- Step transitions use `AnimatePresence` with direction-aware variants:
+  - **Forward** (step increases): entering page uses `slideInLeft` (`x: -30→0`); exiting page uses `{ x: 30, opacity: 0, transition: { duration: 0.3 } }`
+  - **Back** (step decreases): entering page uses `slideInRight` (`x: 30→0`); exiting page uses `{ x: -30, opacity: 0, transition: { duration: 0.3 } }`
+  - Track direction with a `direction` state variable (`"forward" | "back"`) updated on step change
+- Each step content fades up on entry (`fadeUp`, 0.5s)
 
 ---
 
@@ -155,11 +166,12 @@ Active step: `--pro` blue label. Completed: checkmark. Inactive: muted.
 Split-screen layout is correct — no structural changes needed.
 
 ### Phase Progress Bar
-Thin bar at the very top of the viewport (below nav), full width:
-- Pro phases: fills `--pro` blue
-- Con phases: fills `--con` red
-- Advances as phases complete
-- No rounded caps — sharp block per design system
+Thin (`4px` height) bar directly below the nav, full viewport width, `position: sticky; top: [nav height]`:
+- **Segmented:** 10 equal-width blocks (one per LangGraph phase in order: `research_consultation`, `opening_pro`, `opening_con`, `eval_openings`, `rebuttal_pro`, `rebuttal_con`, `eval_full_debate`, `closing_pro`, `closing_con`, `judging`)
+- Each block fills when its phase appears in `completedPhases` from the Zustand store
+- Block color: Pro-side phases (`opening_pro`, `rebuttal_pro`, `closing_pro`) use `bg-pro`; Con-side phases (`opening_con`, `rebuttal_con`, `closing_con`) use `bg-con`; shared phases (`research_consultation`, `eval_openings`, `eval_full_debate`, `judging`) use `bg-primary`
+- No rounded caps — sharp blocks, `0px` gap between segments
+- Unfilled blocks: `bg-surface-high`
 
 ### Phase Transitions
 When a new phase begins:
@@ -177,9 +189,9 @@ When a new phase begins:
 - On stream complete: cursor disappears, no other change
 
 ### Judging Reveal
-- Score numbers count up from `0` to final value using Framer Motion `useMotionValue` + `useTransform` over 1.2s
-- Judge cards stagger in with `fadeUp` (0.1s between each)
-- Score bars animate width from `0%` to final value, 1s ease-out
+- Score numbers count up from `0` to final value using `<AnimatedCounter>` component (see Section 3c)
+- Judge cards stagger in with `fadeUp`, `staggerChildren: 0.1s`
+- Score bars animate width from `0%` to final value, `1s ease-out` (CSS transition on `width`)
 
 ---
 
@@ -188,12 +200,15 @@ When a new phase begins:
 ### Verdict Banner (full-width, above the fold)
 - Meta strip across top: topic · date · turns · votes cast
 - Left column:
-  - `"Verdict"` kicker with `--pro` left rule
-  - Headline: `"Pro Argument"` in `--pro`, `"Prevails."` in white — Space Grotesk 900, ~6.5rem
-  - Newsreader summary (2–3 sentences, substantive)
-  - Community vote bar: 8px split bar, Pro blue / Con red, percentage labels
+  - `"Verdict"` kicker with winner-colored left rule
+  - Headline at ~6.5rem Space Grotesk 900 — **three states:**
+    - Pro win: `"Pro Argument"` in `text-pro` + `"Prevails."` in white
+    - Con win: `"Con Argument"` in `text-con` + `"Prevails."` in white
+    - Tie: `"The Debate"` in `text-primary` + `"Is Tied."` in white
+  - Newsreader summary (2–3 sentences, generated from judge reasoning — not hardcoded)
+  - Community vote bar: `8px` split bar, Pro blue / Con red, percentage labels
 - Right column (`340px`): `surface-container` bg, score numbers at `4.5rem`, individual bars, margin chip
-- Radial glow behind winner side (CSS `radial-gradient`, no JS needed)
+- Radial glow behind winner side (CSS `radial-gradient` — `--pro` tint for Pro win, `--con` tint for Con win, `--primary` tint for Tie)
 
 ### AI Judging Panel
 Three toggleable judge cards. Each card:
@@ -209,7 +224,7 @@ Three toggleable judge cards. Each card:
 - Full reasoning (Newsreader, full text, `--on-surface-variant`)
 - All sections separated by `outline-variant` lines
 
-**Animation:** `AnimatePresence` height transition on expand/collapse (no jump — smooth height tween).
+**Animation:** `AnimatePresence` height transition on expand/collapse — `duration: 0.35s`, `ease: "easeInOut"`. Use `motion.div` with `overflow: hidden` and animate `height` from `0` to `"auto"` using Framer Motion's layout animation (`layout` prop on the card) or `initial={{ height: 0 }} animate={{ height: "auto" }}`.
 
 ### Voting + Stats (right aside)
 - Vote buttons: Pro, Con, Tie — full width, color-coded
@@ -231,7 +246,8 @@ Three toggleable judge cards. Each card:
 
 ## 10. Out of Scope
 
-- Dashboard page (`/dashboard`) — not part of this redesign
-- Auth page (`/auth`) — not part of this redesign
-- Backend changes except: adding `tags` field to topic analysis response
+- Dashboard page (`/dashboard`) — visual redesign out of scope; receives shared `<Header>` as a mechanical refactor only (no layout or style changes)
+- Auth page (`/auth`) — visual redesign out of scope; receives shared `<Header>` as a mechanical refactor only
+- Backend changes except: adding `tags: string[]` to `TopicAnalysis` response and `DebateSummary` schema
 - Any new debate flow steps — the 3-step wizard structure is preserved as-is
+- Virtualised scrolling — pagination (20/page) is sufficient for current scale; virtualisation is a future concern
